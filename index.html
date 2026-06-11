@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FLAP BOARD">
+<meta name="theme-color" content="#0b0d10">
+<title>SPLIT-FLAP BOARD</title>
+<style>
+:root{
+  --bg:#0b0d10; --frame:#14161a; --cellbg1:#2b2e34; --cellbg2:#1c1f24;
+  --ink:#f2efe9; --amber:#ffb627; --green:#6fe08a; --red:#ff6464; --dim:#8a8f98;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink); overflow:hidden;
+  font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;
+  -webkit-user-select:none; user-select:none;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+}
+#app{display:flex;flex-direction:column;height:100dvh}
+
+/* ---------- header ---------- */
+#topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px 6px;flex:0 0 auto;
+}
+.brand{display:flex;align-items:baseline;gap:8px;min-width:0}
+.brand b{font-size:18px;letter-spacing:.12em;white-space:nowrap}
+.brand .jp{font-size:11px;color:var(--dim);white-space:nowrap}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.led{
+  font-family:"SF Mono",Menlo,monospace;color:var(--amber);
+  text-shadow:0 0 6px rgba(255,182,39,.45);font-size:14px;letter-spacing:.06em;
+}
+.iconbtn{
+  background:#1a1d22;border:1px solid #2c3038;color:#cfd3da;border-radius:8px;
+  font-size:15px;padding:5px 9px;cursor:pointer;
+}
+
+/* ---------- screens ---------- */
+main{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.screen{flex:1;min-height:0;display:flex;flex-direction:column;padding:4px 10px 8px}
+.hidden{display:none!important}
+
+.boardframe{
+  flex:1;min-height:0;display:flex;flex-direction:column;
+  background:var(--frame);border:1px solid #23262c;border-radius:16px;
+  box-shadow:inset 0 2px 14px rgba(0,0,0,.6), 0 4px 18px rgba(0,0,0,.4);
+  padding:10px 8px;
+}
+.subbar{display:flex;align-items:center;justify-content:space-between;padding:0 6px 8px;flex:0 0 auto}
+.seg{display:flex;border:1px solid #2c3038;border-radius:8px;overflow:hidden}
+.seg button{background:#15181d;color:#9aa0a6;border:0;font-size:12px;letter-spacing:.08em;padding:6px 12px;cursor:pointer}
+.seg button.on{background:#2a2e35;color:var(--amber)}
+.colhead{display:flex;justify-content:center;gap:0;flex:0 0 auto;margin-bottom:6px}
+.colhead .cg{display:flex}
+.colhead span{
+  font-size:10px;letter-spacing:.15em;color:var(--dim);display:block;text-align:left;
+}
+.boardrows{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start;gap:var(--rg,6px)}
+.boardrows.scroll{overflow-y:auto;-webkit-overflow-scrolling:touch}
+.boardfoot{flex:0 0 auto;display:flex;justify-content:space-between;padding:8px 6px 0}
+.boardfoot .led{font-size:11px}
+
+/* ---------- flap cells ---------- */
+.frow{display:flex;justify-content:center;gap:12px;flex:0 0 auto}
+.cgrp{display:flex;gap:2px}
+.cell{
+  position:relative;width:var(--cw);height:var(--ch);
+  border-radius:3px;background:#000;
+  perspective:calc(var(--ch) * 4);
+}
+.half{
+  position:absolute;left:0;width:100%;height:50%;overflow:hidden;
+  background:linear-gradient(180deg,var(--cellbg1),var(--cellbg2));
+}
+.half span{
+  position:absolute;left:0;width:100%;height:var(--ch);line-height:var(--ch);
+  text-align:center;font-weight:700;font-size:calc(var(--ch) * .72);color:var(--ink);
+  font-family:"Helvetica Neue",Arial,sans-serif;
+}
+.topH{top:0;border-radius:3px 3px 0 0;background:linear-gradient(180deg,#33363d,#26292f)}
+.botH{bottom:0;border-radius:0 0 3px 3px;background:linear-gradient(180deg,#202329,#16181d)}
+.topH span,.lf span{top:0}
+.botH span,.lb span{top:calc(var(--ch) / -2)}
+.cell::after{ /* hinge */
+  content:"";position:absolute;left:0;top:50%;width:100%;height:1.5px;
+  background:rgba(0,0,0,.65);transform:translateY(-50%);z-index:5;pointer-events:none;
+}
+.leaf{
+  position:absolute;top:0;left:0;width:100%;height:50%;
+  transform-origin:50% 100%;transform-style:preserve-3d;z-index:4;display:none;
+}
+.leaf.go{display:block;animation:flapflip var(--fd,90ms) ease-in forwards}
+@keyframes flapflip{from{transform:rotateX(0)}to{transform:rotateX(-180deg)}}
+.lf,.lb{top:0;height:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:3px}
+.lf{background:linear-gradient(180deg,#33363d,#26292f)}
+.lb{transform:rotateX(180deg);background:linear-gradient(180deg,#202329,#16181d)}
+/* status colors */
+.c-green .half span{color:var(--green)}
+.c-amber .half span{color:var(--amber)}
+.c-red .half span{color:var(--red)}
+.c-dim .half span{color:var(--dim)}
+.blink{animation:blk 1.1s steps(1) infinite}
+@keyframes blk{50%{opacity:.25}}
+
+/* ---------- stopwatch ---------- */
+#scr-sw .boardframe{justify-content:center;align-items:center;gap:14px}
+#sw-flaps{display:flex;gap:3px}
+#sw-flaps .cell{--cw:var(--swc);--ch:var(--swh);width:var(--swc);height:var(--swh)}
+#sw-flaps .half span{height:var(--swh);line-height:var(--swh);font-size:calc(var(--swh) * .72)}
+#sw-flaps .botH span,#sw-flaps .lb span{top:calc(var(--swh) / -2)}
+#sw-cs{font-size:26px}
+.swbtns{display:flex;gap:12px}
+.swbtn{
+  border:1px solid #2c3038;border-radius:12px;background:#1a1d22;color:var(--ink);
+  font-size:14px;letter-spacing:.1em;padding:12px 22px;cursor:pointer;font-weight:600;
+}
+.swbtn.primary{background:#2c4a33;border-color:#3c6a47;color:var(--green)}
+.swbtn.stop{background:#4a2c2c;border-color:#6a3c3c;color:var(--red)}
+#sw-laps{min-height:0;overflow-y:auto;max-height:30%;text-align:center}
+#sw-laps div{font-size:13px;padding:2px 0}
+
+/* ---------- tabs ---------- */
+#tabs{
+  flex:0 0 auto;display:flex;background:#101216;border-top:1px solid #22252b;
+  padding:6px 8px calc(6px + env(safe-area-inset-bottom));gap:6px;
+}
+#tabs button{
+  flex:1;background:none;border:0;color:#7c828c;font-size:11px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;border-radius:10px;
+}
+#tabs button .ic{font-size:18px}
+#tabs button.on{color:var(--amber);background:#1a1d22}
+
+/* ---------- modal ---------- */
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;z-index:50}
+#modal.open{display:flex;align-items:flex-end;justify-content:center}
+.sheet{
+  background:#15181d;border-radius:18px 18px 0 0;width:100%;max-width:560px;
+  max-height:85dvh;overflow-y:auto;padding:18px 18px calc(18px + env(safe-area-inset-bottom));
+  border:1px solid #262a31;
+}
+.sheet h2{font-size:15px;letter-spacing:.1em;margin-bottom:14px;color:var(--amber)}
+.sheet label{display:block;font-size:12px;color:var(--dim);margin:14px 0 6px;letter-spacing:.05em}
+.sheet select,.sheet input[type=text]{
+  width:100%;background:#0e1013;border:1px solid #2c3038;color:var(--ink);
+  border-radius:10px;padding:10px;font-size:15px;
+}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{
+  border:1px solid #2c3038;background:#0e1013;color:#9aa0a6;border-radius:999px;
+  padding:7px 12px;font-size:12px;cursor:pointer;
+}
+.chip.on{border-color:var(--amber);color:var(--amber);background:#241d0d}
+.sheet .note{font-size:11px;color:var(--dim);margin-top:6px;line-height:1.6}
+.sheet .closebtn{margin-top:18px;width:100%;padding:13px;border-radius:12px;border:0;background:var(--amber);color:#1a1405;font-weight:700;font-size:15px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand"><b id="hdrTitle">DEPARTURES</b><span class="jp" id="hdrJp">出発案内</span></div>
+    <div class="hdr-right">
+      <span class="led" id="hdrClock">--:--:--</span>
+      <button class="iconbtn" id="sndBtn" title="フラップ音">🔇</button>
+      <button class="iconbtn" id="setBtn" title="設定">⚙︎</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- FLIGHTS -->
+    <section class="screen" id="scr-flights">
+      <div class="boardframe">
+        <div class="subbar">
+          <div class="seg">
+            <button id="depBtn" class="on">DEPARTURES</button>
+            <button id="arrBtn">ARRIVALS</button>
+          </div>
+          <span class="led" id="fl-ap">HND</span>
+        </div>
+        <div class="colhead" id="fl-cols"></div>
+        <div class="boardrows" id="fl-board"></div>
+        <div class="boardfoot">
+          <span class="led" id="fl-src">DEMO DATA</span>
+          <span class="led" id="fl-apname">TOKYO HANEDA</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- WORLD CLOCK -->
+    <section class="screen hidden" id="scr-clock">
+      <div class="boardframe">
+        <div class="colhead" id="ck-cols"></div>
+        <div class="boardrows scroll" id="ck-board"></div>
+        <div class="boardfoot"><span class="led">WORLD CLOCK</span><span class="led" id="ck-date"></span></div>
+      </div>
+    </section>
+
+    <!-- STOPWATCH -->
+    <section class="screen hidden" id="scr-sw">
+      <div class="boardframe">
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <div id="sw-flaps"></div>
+          <span class="led" id="sw-cs">.00</span>
+        </div>
+        <div class="swbtns">
+          <button class="swbtn primary" id="swStart">START</button>
+          <button class="swbtn" id="swLap">LAP</button>
+          <button class="swbtn" id="swReset">RESET</button>
+        </div>
+        <div id="sw-laps" class="led"></div>
+      </div>
+    </section>
+  </main>
+
+  <nav id="tabs">
+    <button data-scr="flights" class="on"><span class="ic">✈</span>FLIGHTS</button>
+    <button data-scr="clock"><span class="ic">🌐</span>WORLD CLOCK</button>
+    <button data-scr="sw"><span class="ic">⏱</span>STOPWATCH</button>
+  </nav>
+</div>
+
+<!-- SETTINGS -->
+<div id="modal">
+  <div class="sheet">
+    <h2>SETTINGS / 設定</h2>
+    <label>空港 / AIRPORT</label>
+    <select id="setAirport"></select>
+    <label>AviationStack APIキー(任意・空欄ならデモデータ)</label>
+    <input type="text" id="setKey" placeholder="例: 1a2b3c4d..." autocapitalize="off" autocorrect="off">
+    <div class="note">aviationstack.com で無料登録するとキーを取得できます(無料枠 月100回)。キーを入れると約5分ごとに実データを取得します。取得に失敗した場合は自動でデモ表示に戻ります。</div>
+    <label>世界時計の都市 / CITIES</label>
+    <div class="chips" id="setCities"></div>
+    <button class="closebtn" id="setClose">保存して閉じる</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================= split-flap engine ================= */
+const CHARSET=" ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:/.-";
+const CIDX={};[...CHARSET].forEach((c,i)=>CIDX[c]=i);
+const norm=c=>{c=(c||" ").toUpperCase();return CIDX[c]===undefined?" ":c};
+
+/* throttled "pata-pata" flap sound: filtered noise tick, like card flaps hitting */
+let audioCtx=null,noiseBuf=null,soundOn=false,lastTick=0;
+function clack(){
+  if(!soundOn||!audioCtx||!noiseBuf)return;
+  const now=performance.now();if(now-lastTick<20)return;lastTick=now;
+  const t=audioCtx.currentTime;
+  const src=audioCtx.createBufferSource();
+  src.buffer=noiseBuf;src.playbackRate.value=.7+Math.random()*.6;
+  const bp=audioCtx.createBiquadFilter();
+  bp.type="bandpass";bp.frequency.value=800+Math.random()*1100;bp.Q.value=1.1;
+  const g=audioCtx.createGain();
+  g.gain.setValueAtTime(.0001,t);
+  g.gain.exponentialRampToValueAtTime(.32,t+.0025);   // sharp attack
+  g.gain.exponentialRampToValueAtTime(.0001,t+.028);  // fast decay
+  src.connect(bp).connect(g).connect(audioCtx.destination);
+  src.start(t);src.stop(t+.05);
+}
+
+class Cell{
+  constructor(parent){
+    const el=document.createElement("div");el.className="cell";
+    el.innerHTML='<div class="half topH"><span></span></div><div class="half botH"><span></span></div>'+
+      '<div class="leaf"><div class="half lf"><span></span></div><div class="half lb"><span></span></div></div>';
+    parent.appendChild(el);
+    this.el=el;
+    this.topS=el.children[0].firstChild;this.botS=el.children[1].firstChild;
+    this.leaf=el.children[2];
+    this.lfS=this.leaf.children[0].firstChild;this.lbS=this.leaf.children[1].firstChild;
+    this.cur=" ";this.target=" ";this.busy=false;
+    this.topS.textContent=this.botS.textContent=" ";
+    this.leaf.addEventListener("animationend",()=>this._end());
+  }
+  set(ch,instant){
+    ch=norm(ch);this.target=ch;
+    if(instant||document.hidden){this._jump(ch);return}
+    if(!this.busy&&this.cur!==ch)this._step();
+  }
+  setColor(cls){
+    const el=this.el;
+    ["c-green","c-amber","c-red","c-dim","blink"].forEach(c=>el.classList.remove(c));
+    if(cls)cls.split(" ").forEach(c=>el.classList.add(c));
+  }
+  _jump(ch){
+    this.busy=false;this.leaf.classList.remove("go");
+    this.cur=ch;this.topS.textContent=ch;this.botS.textContent=ch;
+  }
+  _step(){
+    if(this.cur===this.target)return;
+    this.busy=true;
+    let ci=CIDX[this.cur],ti=CIDX[this.target];
+    let d=(ti-ci+CHARSET.length)%CHARSET.length;
+    if(d>9){ci=(ti-9+CHARSET.length)%CHARSET.length;this.cur=CHARSET[ci]}
+    const next=CHARSET[(ci+1)%CHARSET.length];
+    this.next=next;
+    this.topS.textContent=next;        // static top shows incoming char
+    this.lfS.textContent=this.cur;     // leaf front = current top half
+    this.lbS.textContent=next;         // leaf back  = incoming bottom half
+    this.leaf.style.setProperty("--fd",(65+Math.random()*45).toFixed(0)+"ms");
+    this.leaf.classList.remove("go");void this.leaf.offsetWidth;
+    this.leaf.classList.add("go");
+    clack();
+    // safety in case animationend is missed
+    clearTimeout(this._safety);
+    this._safety=setTimeout(()=>{if(this.busy)this._end()},220);
+  }
+  _end(){
+    if(!this.busy)return;
+    clearTimeout(this._safety);
+    this.leaf.classList.remove("go");
+    this.cur=this.next;this.botS.textContent=this.cur;
+    this.busy=false;
+    if(this.cur!==this.target)setTimeout(()=>{if(!this.busy)this._step()},8);
+  }
+}
+
+class Group{ /* fixed-width run of cells */
+  constructor(parent,n){
+    const g=document.createElement("div");g.className="cgrp";parent.appendChild(g);
+    this.cells=[];for(let i=0;i<n;i++)this.cells.push(new Cell(g));
+    this.n=n;
+  }
+  set(text,instant,color){
+    text=(text||"").toUpperCase().padEnd(this.n," ").slice(0,this.n);
+    this.cells.forEach((c,i)=>{c.set(text[i],instant);if(color!==undefined)c.setColor(color)});
+  }
+}
+
+function buildRows(container,layout,rowCount){
+  container.innerHTML="";
+  const rows=[];
+  for(let r=0;r<rowCount;r++){
+    const row=document.createElement("div");row.className="frow";container.appendChild(row);
+    const groups={};
+    layout.forEach(([key,n])=>groups[key]=new Group(row,n));
+    rows.push(groups);
+  }
+  return rows;
+}
+function buildColhead(el,layout,labels,cw){
+  el.innerHTML="";
+  const inner=document.createElement("div");inner.className="frow";inner.style.setProperty("--cw",cw+"px");
+  el.appendChild(inner);
+  layout.forEach(([key,n])=>{
+    const d=document.createElement("div");d.className="cg";
+    d.style.width=(n*cw+(n-1)*2)+"px";
+    d.innerHTML="<span>"+(labels[key]||"")+"</span>";
+    inner.appendChild(d);
+  });
+}
+
+/* ================= data: airports & demo flights ================= */
+const AIRPORTS={
+  HND:{name:"TOKYO HANEDA",city:"TOKYO",
+    dom:[["CTS","SAPPORO"],["FUK","FUKUOKA"],["OKA","OKINAWA"],["ITM","OSAKA ITAMI","OSAKA"],["KIX","OSAKA KANSAI","OSAKA"],["HIJ","HIROSHIMA","HIROSHMA"],["KOJ","KAGOSHIMA","KAGOSHMA"],["KMJ","KUMAMOTO"],["NGS","NAGASAKI"],["TAK","TAKAMATSU","TAKAMATU"],["MYJ","MATSUYAMA","MATUYAMA"],["KCZ","KOCHI"],["AOJ","AOMORI"],["AXT","AKITA"],["HKD","HAKODATE"],["ISG","ISHIGAKI"],["UBJ","YAMAGUCHI","UBE"]],
+    intl:[["LAX","LOS ANGELES","L.A."],["JFK","NEW YORK","NEWYORK"],["SFO","S.FRANCISCO","S.F."],["LHR","LONDON"],["CDG","PARIS"],["FRA","FRANKFURT","FRANKFRT"],["SIN","SINGAPORE","SINGAPOR"],["BKK","BANGKOK"],["TPE","TAIPEI"],["ICN","SEOUL"],["HKG","HONG KONG","HONGKONG"],["PEK","BEIJING"],["PVG","SHANGHAI","SHANGHAI"],["HNL","HONOLULU"],["SYD","SYDNEY"]]},
+  NRT:{name:"TOKYO NARITA",city:"TOKYO",
+    dom:[["CTS","SAPPORO"],["FUK","FUKUOKA"],["OKA","OKINAWA"],["ITM","OSAKA ITAMI","OSAKA"],["NGO","NAGOYA"]],
+    intl:[["LAX","LOS ANGELES","L.A."],["JFK","NEW YORK","NEWYORK"],["ORD","CHICAGO"],["LHR","LONDON"],["CDG","PARIS"],["AMS","AMSTERDAM","AMSTRDAM"],["SIN","SINGAPORE","SINGAPOR"],["BKK","BANGKOK"],["DEL","DELHI"],["TPE","TAIPEI"],["ICN","SEOUL"],["HKG","HONG KONG","HONGKONG"],["MNL","MANILA"],["SGN","HO CHI MINH","HCMC"],["HNL","HONOLULU"],["GUM","GUAM"],["MEX","MEXICO CITY","MEXICO"]]},
+  KIX:{name:"OSAKA KANSAI",city:"OSAKA",
+    dom:[["CTS","SAPPORO"],["HND","TOKYO HANEDA","TOKYO"],["NRT","TOKYO NARITA","TOKYO"],["FUK","FUKUOKA"],["OKA","OKINAWA"],["SDJ","SENDAI"]],
+    intl:[["ICN","SEOUL"],["PUS","BUSAN"],["TPE","TAIPEI"],["HKG","HONG KONG","HONGKONG"],["BKK","BANGKOK"],["SIN","SINGAPORE","SINGAPOR"],["PVG","SHANGHAI","SHANGHAI"],["LAX","LOS ANGELES","L.A."],["HNL","HONOLULU"],["CDG","PARIS"]]},
+  ITM:{name:"OSAKA ITAMI",city:"OSAKA",
+    dom:[["HND","TOKYO HANEDA","TOKYO"],["CTS","SAPPORO"],["FUK","FUKUOKA"],["OKA","OKINAWA"],["KOJ","KAGOSHIMA","KAGOSHMA"],["SDJ","SENDAI"],["NGS","NAGASAKI"],["AOJ","AOMORI"]],intl:[]},
+  CTS:{name:"SAPPORO NEW CHITOSE",city:"SAPPORO",
+    dom:[["HND","TOKYO HANEDA","TOKYO"],["NRT","TOKYO NARITA","TOKYO"],["KIX","OSAKA KANSAI","OSAKA"],["ITM","OSAKA ITAMI","OSAKA"],["NGO","NAGOYA"],["FUK","FUKUOKA"],["SDJ","SENDAI"]],
+    intl:[["ICN","SEOUL"],["TPE","TAIPEI"],["HKG","HONG KONG","HONGKONG"],["BKK","BANGKOK"]]},
+  FUK:{name:"FUKUOKA",city:"FUKUOKA",
+    dom:[["HND","TOKYO HANEDA","TOKYO"],["NRT","TOKYO NARITA","TOKYO"],["ITM","OSAKA ITAMI","OSAKA"],["CTS","SAPPORO"],["OKA","OKINAWA"],["NGO","NAGOYA"]],
+    intl:[["ICN","SEOUL"],["PUS","BUSAN"],["TPE","TAIPEI"],["HKG","HONG KONG","HONGKONG"],["BKK","BANGKOK"],["SIN","SINGAPORE","SINGAPOR"]]},
+  OKA:{name:"OKINAWA NAHA",city:"OKINAWA",
+    dom:[["HND","TOKYO HANEDA","TOKYO"],["NRT","TOKYO NARITA","TOKYO"],["KIX","OSAKA KANSAI","OSAKA"],["FUK","FUKUOKA"],["NGO","NAGOYA"],["ISG","ISHIGAKI"],["MMY","MIYAKO"]],
+    intl:[["ICN","SEOUL"],["TPE","TAIPEI"],["HKG","HONG KONG","HONGKONG"]]},
+  NGO:{name:"NAGOYA CHUBU",city:"NAGOYA",
+    dom:[["CTS","SAPPORO"],["FUK","FUKUOKA"],["OKA","OKINAWA"],["SDJ","SENDAI"]],
+    intl:[["ICN","SEOUL"],["TPE","TAIPEI"],["HKG","HONG KONG","HONGKONG"],["BKK","BANGKOK"],["SIN","SINGAPORE","SINGAPOR"],["DTW","DETROIT"],["HNL","HONOLULU"]]}
+};
+const DOM_AL=["JL","NH","BC","6J","7G","HD"];
+const INTL_AL=["JL","NH","SQ","CX","KE","TG","BA","AF","EK","UA","AA","QF","LH","TK"];
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function hashStr(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))|0;return h}
+
+function genDemoFlights(apCode,type){ // deterministic per airport+date+type
+  const ap=AIRPORTS[apCode];
+  const d=new Date();
+  const seed=hashStr(apCode+type+d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate());
+  const rng=mulberry32(seed);
+  const list=[];let t=5*60+Math.floor(rng()*20);
+  while(t<24*60-20){
+    t+=6+Math.floor(rng()*16);
+    const intl=ap.intl.length>0&&rng()<.35;
+    const pool=intl?ap.intl:ap.dom;
+    const dest=pool[Math.floor(rng()*pool.length)];
+    const al=(intl?INTL_AL:DOM_AL)[Math.floor(rng()*(intl?INTL_AL:DOM_AL).length)];
+    const num=intl?(1+Math.floor(rng()*99)):(100+Math.floor(rng()*899));
+    const delay=rng()<.13?10+Math.floor(rng()*45):0;
+    const cancel=rng()<.02;
+    list.push({sched:t,delay,cancel,
+      flight:(al+" "+num).length>6?al+num:al+" "+num,
+      code:dest[0],wide:dest[1],narrow:dest[2]||dest[1].slice(0,8)});
+  }
+  return list;
+}
+function demoStatus(f,nowMin,isArr){
+  if(f.cancel)return{txt:"CANCELED",cls:"c-red"};
+  const eff=f.sched+f.delay;
+  if(isArr){
+    if(nowMin>eff)return{txt:"LANDED",cls:"c-dim"};
+    if(f.delay>0)return{txt:"DELAYED",cls:"c-amber"};
+    return{txt:"ON TIME",cls:"c-green"};
+  }
+  if(nowMin>eff+1)return{txt:"DEPARTED",cls:"c-dim"};
+  if(eff-nowMin<=7)return{txt:"FINAL",cls:"c-red blink"};
+  if(eff-nowMin<=25)return{txt:"BOARDING",cls:"c-green blink"};
+  if(f.delay>0)return{txt:"DELAYED",cls:"c-amber"};
+  return{txt:"ON TIME",cls:"c-green"};
+}
+const mm=n=>String(Math.floor(n/60)%24).padStart(2,"0")+":"+String(n%60).padStart(2,"0");
+
+/* ================= settings ================= */
+const CITIES=[
+  ["TOKYO","Asia/Tokyo"],["SEOUL","Asia/Seoul"],["BEIJING","Asia/Shanghai"],["TAIPEI","Asia/Taipei"],
+  ["HONG KONG","Asia/Hong_Kong"],["BANGKOK","Asia/Bangkok"],["SINGAPORE","Asia/Singapore"],["DELHI","Asia/Kolkata"],
+  ["DUBAI","Asia/Dubai"],["MOSCOW","Europe/Moscow"],["PARIS","Europe/Paris"],["BERLIN","Europe/Berlin"],["WIEN","Europe/Vienna"],
+  ["LONDON","Europe/London"],["NEW YORK","America/New_York"],["TORONTO","America/Toronto"],["CHICAGO","America/Chicago"],
+  ["LOS ANGELES","America/Los_Angeles"],["HONOLULU","Pacific/Honolulu"],["SYDNEY","Australia/Sydney"],["AUCKLAND","Pacific/Auckland"],
+  ["SAO PAULO","America/Sao_Paulo"]
+];
+let S={airport:"HND",mode:"dep",apiKey:"",cities:["TOKYO","NEW YORK","LONDON","PARIS","DUBAI","SINGAPORE","SYDNEY","LOS ANGELES"]};
+try{const sv=JSON.parse(localStorage.getItem("sfb")||"{}");S={...S,...sv}}catch(e){}
+function saveS(){try{localStorage.setItem("sfb",JSON.stringify(S))}catch(e){}}
+
+/* ================= flights screen ================= */
+const flBoard=document.getElementById("fl-board"),flCols=document.getElementById("fl-cols");
+let flRows=[],flLayout=null,flKey="",liveData=null,liveErr=false,lastLiveFetch=0;
+
+function flightLayout(){
+  const wide=flBoard.clientWidth>=620;
+  return wide
+    ?{cols:[["time",5],["flt",7],["dest",12],["rem",8]],labels:{time:"TIME",flt:"FLIGHT",dest:S.mode==="dep"?"DESTINATION":"ORIGIN",rem:"REMARK"},wide}
+    :{cols:[["time",5],["flt",6],["dest",8],["rem",8]],labels:{time:"TIME",flt:"FLIGHT",dest:S.mode==="dep"?"DEST":"FROM",rem:"REMARK"},wide};
+}
+function layoutFlights(force){
+  const L=flightLayout();
+  const w=flBoard.clientWidth;
+  const totalCells=L.cols.reduce((a,c)=>a+c[1],0);
+  const nGroups=L.cols.length;
+  let cw=Math.floor((w-(nGroups-1)*14-totalCells*2)/totalCells);
+  cw=Math.max(9,Math.min(34,cw));
+  const ch=Math.round(cw*1.5),rowH=ch+6;
+  const rows=Math.max(4,Math.min(11,Math.floor((flBoard.clientHeight)/rowH)));
+  const key=[L.wide,cw,rows,S.mode].join("|");
+  if(key===flKey&&!force)return;
+  flKey=key;flLayout=L;
+  flBoard.style.setProperty("--cw",cw+"px");
+  flBoard.style.setProperty("--ch",ch+"px");
+  flRows=buildRows(flBoard,L.cols,rows);
+  buildColhead(flCols,L.cols,L.labels,cw);
+  renderFlights(true);
+}
+function currentFlights(){
+  if(liveData&&S.apiKey)return liveData;
+  const now=new Date(),nowMin=now.getHours()*60+now.getMinutes();
+  const list=genDemoFlights(S.airport,S.mode);
+  return list
+    .filter(f=>{const eff=f.sched+f.delay;return eff>=nowMin-2&&!(f.cancel&&f.sched<nowMin-30)})
+    .map(f=>{
+      const st=demoStatus(f,nowMin,S.mode==="arr");
+      return{time:mm(f.sched),flight:f.flight,wide:f.wide,narrow:f.narrow,rem:st.txt,cls:st.cls};
+    });
+}
+function renderFlights(instant){
+  if(!flLayout)return;
+  const data=currentFlights();
+  flRows.forEach((g,i)=>{
+    const f=data[i];
+    if(!f){g.time.set("",instant);g.flt.set("",instant);g.dest.set("",instant);g.rem.set("",instant,"");return}
+    g.time.set(f.time,instant,"c-amber");
+    g.flt.set(f.flight,instant);
+    g.dest.set(flLayout.wide?f.wide:f.narrow,instant);
+    g.rem.set(f.rem,instant,f.cls);
+  });
+  document.getElementById("fl-ap").textContent=S.airport;
+  document.getElementById("fl-apname").textContent=AIRPORTS[S.airport].name;
+  document.getElementById("fl-src").textContent=(liveData&&S.apiKey)?"LIVE DATA":(liveErr?"DEMO ("+liveErrMsg+")":"DEMO DATA");
+}
+
+/* ---- aviationstack (optional) ---- */
+let liveErrMsg="";
+const API_ERR_JP={invalid_access_key:"KEY ERROR",missing_access_key:"KEY ERROR",
+  usage_limit_reached:"LIMIT REACHED",rate_limit_reached:"RATE LIMIT",
+  https_access_restricted:"HTTPS NG",function_access_restricted:"PLAN NG"};
+async function fetchLive(){
+  if(!S.apiKey){liveData=null;return}
+  if(Date.now()-lastLiveFetch<4.5*60*1000&&(liveData||liveErr))return;
+  lastLiveFetch=Date.now();
+  const p=S.mode==="dep"?"dep_iata":"arr_iata";
+  const q=`//api.aviationstack.com/v1/flights?access_key=${encodeURIComponent(S.apiKey)}&${p}=${S.airport}&limit=40`;
+  // candidate routes: direct https / direct http / CORS proxies (for file:// or https pages)
+  let routes=[
+    {k:"https",url:"https:"+q},
+    {k:"http",url:"http:"+q},
+    {k:"allorigins",url:"https://api.allorigins.win/raw?url="+encodeURIComponent("http:"+q)},
+    {k:"corsproxy",url:"https://corsproxy.io/?url="+encodeURIComponent("http:"+q)}
+  ];
+  // remember which route worked last time and try it first
+  if(S.apiRoute){const i=routes.findIndex(r=>r.k===S.apiRoute);if(i>0)routes.unshift(routes.splice(i,1)[0])}
+  try{
+    let j=null,used=null;
+    for(const rt of routes){
+      try{
+        const ctl=new AbortController();
+        const tm=setTimeout(()=>ctl.abort(),12000);
+        const r=await fetch(rt.url,{signal:ctl.signal});
+        clearTimeout(tm);
+        const jj=await r.json();
+        if(jj&&jj.error&&jj.error.type==="https_access_restricted")continue; // try next route
+        j=jj;used=rt.k;break;
+      }catch(e){/* next route */}
+    }
+    if(used){S.apiRoute=used;saveS()}
+    if(!j){liveErrMsg="NETWORK/CORS";throw new Error("net")}
+    if(j.error){liveErrMsg=API_ERR_JP[j.error.type]||(j.error.type||"API ERROR").toUpperCase().slice(0,14);throw new Error("api")}
+    if(!Array.isArray(j.data)){liveErrMsg="BAD RESPONSE";throw new Error("api")}
+    liveErrMsg="";
+    const isArr=S.mode==="arr";
+    const items=j.data.map(it=>{
+      const leg=isArr?it.arrival:it.departure;
+      const other=isArr?it.departure:it.arrival;
+      const sch=(leg&&leg.scheduled)?leg.scheduled.slice(11,16):"--:--";
+      const delay=leg&&leg.delay?leg.delay:0;
+      let rem="ON TIME",cls="c-green";
+      const st=(it.flight_status||"").toLowerCase();
+      if(st==="cancelled"){rem="CANCELED";cls="c-red"}
+      else if(st==="landed"){rem="LANDED";cls="c-dim"}
+      else if(st==="active"){rem=isArr?"EN ROUTE":"DEPARTED";cls="c-dim"}
+      else if(delay>=10){rem="DELAYED";cls="c-amber"}
+      const place=((other&&other.airport)||"").toUpperCase().replace(/INTERNATIONAL|AIRPORT/g,"").trim()||((other&&other.iata)||"");
+      return{time:sch,flight:((it.flight&&it.flight.iata)||"").replace(/^(\D+)/,"$1 ").slice(0,7).trim(),
+        wide:place.slice(0,12),narrow:place.slice(0,8),rem,cls,sortKey:sch};
+    }).filter(f=>f.time!=="--:--").sort((a,b)=>a.sortKey<b.sortKey?-1:1);
+    const nowHM=new Date().toTimeString().slice(0,5);
+    const upcoming=items.filter(f=>f.time>=nowHM);
+    liveData=(upcoming.length?upcoming:items);liveErr=false;
+  }catch(e){
+    liveData=null;liveErr=true;
+    if(!liveErrMsg)liveErrMsg="NETWORK/CORS";
+  }
+  renderFlights(false);
+}
+
+/* ================= world clock screen ================= */
+const ckBoard=document.getElementById("ck-board"),ckCols=document.getElementById("ck-cols");
+let ckRows=[],ckKey="",ckFmt={};
+function cityFmt(tz){
+  if(!ckFmt[tz])ckFmt[tz]=new Intl.DateTimeFormat("en-GB",{timeZone:tz,hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  return ckFmt[tz];
+}
+function layoutClock(force){
+  const w=ckBoard.clientWidth;
+  const wide=w>=620;
+  const nameN=wide?13:9;
+  const cols=[["name",nameN],["time",8]];
+  const totalCells=nameN+8;
+  let cw=Math.floor((w-14-totalCells*2)/totalCells);
+  cw=Math.max(10,Math.min(38,cw));
+  const key=[cw,S.cities.join(","),nameN].join("|");
+  if(key===ckKey&&!force)return;
+  ckKey=key;
+  ckBoard.style.setProperty("--cw",cw+"px");
+  ckBoard.style.setProperty("--ch",Math.round(cw*1.5)+"px");
+  ckRows=buildRows(ckBoard,cols,S.cities.length);
+  buildColhead(ckCols,cols,{name:"CITY",time:"LOCAL TIME"},cw);
+  renderClock(true);
+}
+function renderClock(instant){
+  const sel=CITIES.filter(c=>S.cities.includes(c[0]));
+  ckRows.forEach((g,i)=>{
+    const c=sel[i];if(!c){g.name.set("",instant);g.time.set("",instant);return}
+    g.name.set(c[0],instant);
+    g.time.set(cityFmt(c[1]).format(new Date()),instant,"c-amber");
+  });
+  document.getElementById("ck-date").textContent=new Date().toISOString().slice(0,10);
+}
+
+/* ================= stopwatch ================= */
+const swFlapsEl=document.getElementById("sw-flaps");
+let swCells=[],swRun=false,swStartT=0,swAcc=0,swLaps=[],swRaf=null;
+function layoutSW(){
+  const frame=document.querySelector("#scr-sw .boardframe");
+  const cw=Math.max(34,Math.min(72,Math.floor((frame.clientWidth-60)/6)));
+  document.documentElement.style.setProperty("--swc",cw+"px");
+  document.documentElement.style.setProperty("--swh",Math.round(cw*1.5)+"px");
+  if(!swCells.length){
+    swFlapsEl.innerHTML="";
+    for(let i=0;i<5;i++)swCells.push(new Cell(swFlapsEl));
+    swSet("00:00",true);
+  }
+}
+function swSet(str,instant){[...str].forEach((c,i)=>swCells[i]&&swCells[i].set(c,instant))}
+function swNow(){return swAcc+(swRun?performance.now()-swStartT:0)}
+function swTick(){
+  const t=swNow();
+  const cs=Math.floor(t/10)%100,sec=Math.floor(t/1000)%60,min=Math.floor(t/60000)%100;
+  document.getElementById("sw-cs").textContent="."+String(cs).padStart(2,"0");
+  swSet(String(min).padStart(2,"0")+":"+String(sec).padStart(2,"0"),false);
+  if(swRun)swRaf=requestAnimationFrame(swTick);
+}
+document.getElementById("swStart").addEventListener("click",e=>{
+  initAudio();
+  if(!swRun){swRun=true;swStartT=performance.now();e.target.textContent="STOP";e.target.classList.remove("primary");e.target.classList.add("stop");swTick()}
+  else{swRun=false;swAcc+=performance.now()-swStartT;cancelAnimationFrame(swRaf);e.target.textContent="START";e.target.classList.add("primary");e.target.classList.remove("stop")}
+});
+document.getElementById("swLap").addEventListener("click",()=>{
+  if(swNow()===0)return;
+  const t=swNow(),min=Math.floor(t/60000),sec=Math.floor(t/1000)%60,cs=Math.floor(t/10)%100;
+  swLaps.unshift(`LAP ${swLaps.length+1}  ${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}.${String(cs).padStart(2,"0")}`);
+  document.getElementById("sw-laps").innerHTML=swLaps.slice(0,8).map(l=>`<div>${l}</div>`).join("");
+});
+document.getElementById("swReset").addEventListener("click",()=>{
+  swRun=false;cancelAnimationFrame(swRaf);swAcc=0;swLaps=[];
+  document.getElementById("sw-laps").innerHTML="";
+  document.getElementById("sw-cs").textContent=".00";
+  const b=document.getElementById("swStart");b.textContent="START";b.classList.add("primary");b.classList.remove("stop");
+  swSet("00:00",false);
+});
+
+/* ================= tabs / header ================= */
+let curScr="flights";
+const TITLES={flights:["DEPARTURES","出発案内"],clock:["WORLD CLOCK","世界時計"],sw:["STOPWATCH","ストップウォッチ"]};
+function setScreen(id){
+  curScr=id;
+  document.querySelectorAll(".screen").forEach(s=>s.classList.add("hidden"));
+  document.getElementById("scr-"+id).classList.remove("hidden");
+  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.scr===id));
+  const t=id==="flights"?(S.mode==="arr"?["ARRIVALS","到着案内"]:TITLES.flights):TITLES[id];
+  document.getElementById("hdrTitle").textContent=t[0];
+  document.getElementById("hdrJp").textContent=t[1];
+  requestAnimationFrame(()=>{
+    if(id==="flights"){layoutFlights(true);fetchLive()}
+    if(id==="clock")layoutClock(true);
+    if(id==="sw")layoutSW();
+  });
+}
+document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{initAudio();setScreen(b.dataset.scr)}));
+
+document.getElementById("depBtn").addEventListener("click",()=>{setMode("dep")});
+document.getElementById("arrBtn").addEventListener("click",()=>{setMode("arr")});
+function setMode(m){
+  S.mode=m;saveS();liveData=null;lastLiveFetch=0;
+  document.getElementById("depBtn").classList.toggle("on",m==="dep");
+  document.getElementById("arrBtn").classList.toggle("on",m==="arr");
+  setScreen("flights");
+}
+
+/* sound */
+function initAudio(){
+  if(!audioCtx){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}
+  if(audioCtx&&!noiseBuf){
+    const len=Math.floor(audioCtx.sampleRate*.05);
+    noiseBuf=audioCtx.createBuffer(1,len,audioCtx.sampleRate);
+    const d=noiseBuf.getChannelData(0);
+    for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+  }
+}
+document.getElementById("sndBtn").addEventListener("click",e=>{
+  initAudio();soundOn=!soundOn;e.target.textContent=soundOn?"🔊":"🔇";
+});
+
+/* ================= settings modal ================= */
+const modal=document.getElementById("modal");
+function openSettings(){
+  const sel=document.getElementById("setAirport");
+  sel.innerHTML=Object.entries(AIRPORTS).map(([c,a])=>`<option value="${c}" ${c===S.airport?"selected":""}>${c} — ${a.name}</option>`).join("");
+  document.getElementById("setKey").value=S.apiKey;
+  const chips=document.getElementById("setCities");
+  chips.innerHTML="";
+  CITIES.forEach(([name])=>{
+    const b=document.createElement("button");b.className="chip"+(S.cities.includes(name)?" on":"");
+    b.textContent=name;
+    b.addEventListener("click",()=>{
+      if(S.cities.includes(name)){if(S.cities.length>1)S.cities=S.cities.filter(x=>x!==name)}
+      else S.cities.push(name);
+      b.classList.toggle("on",S.cities.includes(name));
+    });
+    chips.appendChild(b);
+  });
+  modal.classList.add("open");
+}
+document.getElementById("setBtn").addEventListener("click",openSettings);
+document.getElementById("setClose").addEventListener("click",()=>{
+  S.airport=document.getElementById("setAirport").value;
+  S.apiKey=document.getElementById("setKey").value.trim();
+  saveS();
+  liveData=null;liveErr=false;lastLiveFetch=0;
+  modal.classList.remove("open");
+  setScreen(curScr);
+});
+modal.addEventListener("click",e=>{if(e.target===modal)modal.classList.remove("open")});
+
+/* ================= loops ================= */
+setInterval(()=>{ // header clock + per-screen refresh
+  const n=new Date();
+  document.getElementById("hdrClock").textContent=n.toTimeString().slice(0,8);
+  if(curScr==="clock")renderClock(false);
+},1000);
+setInterval(()=>{if(curScr==="flights"){renderFlights(false);fetchLive()}},20000);
+
+let rsT=null;
+window.addEventListener("resize",()=>{clearTimeout(rsT);rsT=setTimeout(()=>setScreen(curScr),150)});
+window.addEventListener("orientationchange",()=>{clearTimeout(rsT);rsT=setTimeout(()=>setScreen(curScr),300)});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)setScreen(curScr)});
+
+/* boot */
+setMode(S.mode);
+</script>
+</body>
+</html>
