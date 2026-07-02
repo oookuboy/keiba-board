@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b0d10">
+<title>AUDIO ANALYZER</title>
+<style>
+:root{
+  --bg:#0b0d10; --frame:#14161a; --ink:#f2efe9; --amber:#ffb627;
+  --green:#6fe08a; --red:#ff6464; --cyan:#5ad0e6; --dim:#8a8f98;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--ink);overflow:hidden;
+  font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;
+  -webkit-user-select:none;user-select:none;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+#app{display:flex;flex-direction:column;height:100dvh;padding:8px 10px 10px;gap:8px}
+header{display:flex;align-items:baseline;justify-content:space-between;flex:0 0 auto;padding:2px 4px}
+.brand{display:flex;align-items:baseline;gap:8px}
+.brand b{font-size:16px;letter-spacing:.12em}
+.brand .jp{font-size:11px;color:var(--dim)}
+.led{font-family:"SF Mono",Menlo,monospace;color:var(--amber);
+  text-shadow:0 0 6px rgba(255,182,39,.45);letter-spacing:.06em}
+
+/* controls */
+#ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex:0 0 auto}
+.btn{
+  background:#15181d;color:#9aa0a6;border:1px solid #2c3038;border-radius:8px;
+  font-size:12px;letter-spacing:.08em;padding:8px 14px;cursor:pointer;font-weight:600;
+}
+.btn.on{background:#2a2e35;color:var(--amber);border-color:#3a3f48}
+.btn.rec{color:var(--red)}
+select{
+  background:#15181d;color:#cfd3da;border:1px solid #2c3038;border-radius:8px;
+  font-size:12px;padding:8px 6px;
+}
+.sl{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--dim);letter-spacing:.08em}
+.sl input{width:90px;accent-color:var(--amber)}
+#toneCtl{display:none;align-items:center;gap:6px}
+#toneCtl.show{display:flex}
+#toneCtl input{width:130px;accent-color:var(--amber)}
+#msg{font-size:11px;color:var(--red);font-family:"SF Mono",Menlo,monospace}
+
+/* meters */
+#meters{
+  display:flex;gap:10px;flex:0 0 auto;flex-wrap:wrap;
+  background:var(--frame);border:1px solid #23262c;border-radius:12px;padding:10px 12px;
+  box-shadow:inset 0 2px 10px rgba(0,0,0,.5);
+}
+.meter{min-width:120px;flex:1}
+.meter .lbl{font-size:9px;letter-spacing:.14em;color:var(--dim);margin-bottom:3px}
+.meter .val{font-family:"SF Mono",Menlo,monospace;font-size:19px;color:var(--amber);
+  text-shadow:0 0 6px rgba(255,182,39,.4);white-space:nowrap}
+.meter .val small{font-size:11px;color:var(--dim);text-shadow:none}
+.bar{height:6px;background:#0e1013;border-radius:3px;margin-top:5px;overflow:hidden;border:1px solid #23262c}
+.bar i{display:block;height:100%;width:0%;border-radius:3px;
+  background:linear-gradient(90deg,#2c4a33,var(--green) 60%,var(--amber) 85%,var(--red));
+  transition:width .05s linear}
+
+/* displays */
+.disp{
+  background:var(--frame);border:1px solid #23262c;border-radius:12px;
+  box-shadow:inset 0 2px 10px rgba(0,0,0,.5);padding:6px;position:relative;min-height:0;
+}
+.disp .tag{
+  position:absolute;top:8px;left:12px;font-size:9px;letter-spacing:.16em;
+  color:var(--dim);z-index:2;pointer-events:none;
+}
+#dSpec{flex:5}#dSg{flex:4}#dWave{flex:2}
+canvas{width:100%;height:100%;display:block;border-radius:8px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand"><b>AUDIO ANALYZER</b><span class="jp">音響アナライザー for Even G2</span></div>
+    <span class="led" id="stat" style="font-size:11px">STANDBY</span>
+  </header>
+
+  <div id="ctrl">
+    <button class="btn" id="bMic">🎙 MIC</button>
+    <button class="btn" id="bFile">♫ FILE</button>
+    <button class="btn" id="bTone">∿ TONE</button>
+    <button class="btn" id="bGlass">👓 CONNECT</button>
+    <button class="btn" id="bHud" disabled style="opacity:.5">HUD OFF</button>
+    <input type="file" id="fIn" accept="audio/*" style="display:none">
+    <span id="toneCtl" class="sl">20Hz<input type="range" id="toneF" min="0" max="1000" value="566">20k
+      <span class="led" id="toneV" style="font-size:11px">1000 Hz</span></span>
+    <select id="fft">
+      <option value="2048">FFT 2048</option>
+      <option value="4096" selected>FFT 4096</option>
+      <option value="8192">FFT 8192</option>
+      <option value="16384">FFT 16384</option>
+    </select>
+    <span class="sl">SMOOTH<input type="range" id="smooth" min="0" max="95" value="75"></span>
+    <button class="btn" id="bScale">LOG</button>
+    <button class="btn" id="bHold">PEAK RST</button>
+    <button class="btn" id="bPause">❚❚</button>
+    <span id="msg"></span>
+  </div>
+
+  <div id="meters">
+    <div class="meter"><div class="lbl">LEVEL RMS</div>
+      <div class="val" id="vRms">-∞ <small>dBFS</small></div><div class="bar"><i id="mRms"></i></div></div>
+    <div class="meter"><div class="lbl">PEAK</div>
+      <div class="val" id="vPeak">-∞ <small>dBFS</small></div><div class="bar"><i id="mPeak"></i></div></div>
+    <div class="meter"><div class="lbl">PEAK FREQ</div>
+      <div class="val" id="vFreq">--- <small>Hz</small></div></div>
+    <div class="meter"><div class="lbl">NOTE / 音名</div>
+      <div class="val" id="vNote">---</div></div>
+  </div>
+
+  <div class="disp" id="dSpec"><span class="tag">SPECTRUM — dBFS / Hz</span><canvas id="cSpec"></canvas></div>
+  <div class="disp" id="dSg"><span class="tag">SPECTROGRAM</span><canvas id="cSg"></canvas></div>
+  <div class="disp" id="dWave"><span class="tag">WAVEFORM</span><canvas id="cWave"></canvas></div>
+</div>
+
+<script>
+"use strict";
+/* ================= audio graph ================= */
+const FMIN=20,FMAX=20000,DBMAX=0,DBMIN=-100;
+let actx=null,analyser=null,srcNode=null,stream=null,mediaEl=null,osc=null,oscGain=null;
+let mode=null,paused=false,logScale=true;
+let freqData=null,timeData=null,peakHold=null;
+
+const $=id=>document.getElementById(id);
+const msg=t=>{$("msg").textContent=t||""};
+
+function ensureCtx(){
+  if(!actx){
+    actx=new (window.AudioContext||window.webkitAudioContext)();
+    analyser=actx.createAnalyser();
+    analyser.fftSize=+$("fft").value;
+    analyser.smoothingTimeConstant=+$("smooth").value/100;
+    alloc();
+  }
+  if(actx.state==="suspended")actx.resume();
+}
+function alloc(){
+  freqData=new Float32Array(analyser.frequencyBinCount);
+  timeData=new Float32Array(analyser.fftSize);
+  peakHold=null;
+}
+function teardown(){
+  if(srcNode){try{srcNode.disconnect()}catch(e){}srcNode=null}
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  if(mediaEl){mediaEl.pause();mediaEl.src="";mediaEl=null}
+  if(osc){try{osc.stop()}catch(e){}osc=null;oscGain=null}
+  mode=null;setBtns();
+}
+function setBtns(){
+  $("bMic").classList.toggle("on",mode==="mic");
+  $("bFile").classList.toggle("on",mode==="file");
+  $("bTone").classList.toggle("on",mode==="tone");
+  $("toneCtl").classList.toggle("show",mode==="tone");
+  $("stat").textContent=mode?({mic:"MIC LIVE",file:"FILE PLAYING",tone:"TEST TONE"})[mode]
+    +(actx?" · "+(actx.sampleRate/1000).toFixed(1)+"kHz":""):"STANDBY";
+}
+
+async function useMic(){
+  ensureCtx();
+  if(mode==="mic"){teardown();return}
+  teardown();msg("");
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({audio:{
+      echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    srcNode=actx.createMediaStreamSource(stream);
+    srcNode.connect(analyser);
+    mode="mic";
+  }catch(e){
+    msg("マイク取得失敗: "+e.name+" (https または localhost/file で開いてください)");
+  }
+  setBtns();
+}
+function useFile(f){
+  ensureCtx();teardown();msg("");
+  mediaEl=new Audio();
+  mediaEl.src=URL.createObjectURL(f);
+  mediaEl.loop=true;
+  srcNode=actx.createMediaElementSource(mediaEl);
+  srcNode.connect(analyser);
+  analyser.connect(actx.destination);
+  mediaEl.play().catch(e=>msg("再生失敗: "+e.message));
+  mode="file";setBtns();
+}
+function useTone(){
+  ensureCtx();
+  if(mode==="tone"){teardown();try{analyser.disconnect()}catch(e){};return}
+  teardown();msg("");
+  osc=actx.createOscillator();
+  oscGain=actx.createGain();oscGain.gain.value=.15;
+  osc.frequency.value=toneFreq();
+  osc.connect(oscGain);
+  oscGain.connect(analyser);
+  oscGain.connect(actx.destination);
+  osc.start();
+  mode="tone";setBtns();
+}
+function toneFreq(){return Math.round(20*Math.pow(1000,+$("toneF").value/1000))}
+
+$("bMic").addEventListener("click",useMic);
+$("bFile").addEventListener("click",()=>$("fIn").click());
+$("fIn").addEventListener("change",()=>{if($("fIn").files[0])useFile($("fIn").files[0]);$("fIn").value=""});
+$("bTone").addEventListener("click",useTone);
+$("toneF").addEventListener("input",()=>{
+  const f=toneFreq();$("toneV").textContent=f<1000?f+" Hz":(f/1000).toFixed(2)+" kHz";
+  if(osc)osc.frequency.setTargetAtTime(f,actx.currentTime,.01);
+});
+$("fft").addEventListener("change",()=>{if(analyser){analyser.fftSize=+$("fft").value;alloc()}});
+$("smooth").addEventListener("input",()=>{if(analyser)analyser.smoothingTimeConstant=+$("smooth").value/100});
+$("bScale").addEventListener("click",e=>{logScale=!logScale;e.target.textContent=logScale?"LOG":"LIN";peakHold=null});
+$("bHold").addEventListener("click",()=>peakHold=null);
+$("bPause").addEventListener("click",e=>{paused=!paused;e.target.textContent=paused?"▶":"❚❚";e.target.classList.toggle("on",paused)});
+
+/* ================= canvases ================= */
+const cSpec=$("cSpec"),gS=cSpec.getContext("2d");
+const cSg=$("cSg"),gG=cSg.getContext("2d");
+const cWave=$("cWave"),gW=cWave.getContext("2d");
+let dpr=1;
+function fit(){
+  dpr=Math.min(window.devicePixelRatio||1,2);
+  for(const c of[cSpec,cSg,cWave]){
+    const r=c.parentElement.getBoundingClientRect();
+    const w=Math.max(50,Math.floor((r.width-12)*dpr)),h=Math.max(30,Math.floor((r.height-12)*dpr));
+    if(c.width!==w||c.height!==h){c.width=w;c.height=h}
+  }
+  peakHold=null;
+  gG.fillStyle="#0e1013";gG.fillRect(0,0,cSg.width,cSg.height);
+  sgCol=gG.createImageData(1,cSg.height);
+}
+let rsT=null;
+window.addEventListener("resize",()=>{clearTimeout(rsT);rsT=setTimeout(fit,150)});
+window.addEventListener("orientationchange",()=>{clearTimeout(rsT);rsT=setTimeout(fit,300)});
+
+/* freq <-> x mapping */
+function xToF(x,W){
+  if(logScale)return FMIN*Math.pow(FMAX/FMIN,x/W);
+  return FMIN+(FMAX-FMIN)*x/W;
+}
+function fToX(f,W){
+  if(logScale)return W*Math.log(f/FMIN)/Math.log(FMAX/FMIN);
+  return W*(f-FMIN)/(FMAX-FMIN);
+}
+const dbToY=(db,H)=>H*(DBMAX-Math.max(DBMIN,Math.min(DBMAX,db)))/(DBMAX-DBMIN);
+
+/* spectrogram colormap: 黒→琥珀→白 */
+const CMAP=[];
+for(let i=0;i<256;i++){
+  const v=i/255;let r,g,b;
+  if(v<.4){r=v/.4*80;g=v/.4*30;b=v/.4*10}
+  else if(v<.75){const t=(v-.4)/.35;r=80+t*175;g=30+t*152;b=10+t*29}
+  else{const t=(v-.75)/.25;r=255;g=182+t*73;b=39+t*216}
+  CMAP.push([r|0,g|0,b|0]);
+}
+let sgCol=null;
+
+const GRID_F=[31.5,63,125,250,500,1000,2000,4000,8000,16000];
+const fLabel=f=>f>=1000?(f/1000)+"k":(""+f);
+
+function drawSpectrum(){
+  const W=cSpec.width,H=cSpec.height;
+  gS.fillStyle="#0e1013";gS.fillRect(0,0,W,H);
+  gS.strokeStyle="#1c1f24";gS.fillStyle="#5c626c";
+  gS.font=(10*dpr)+"px Menlo,monospace";gS.lineWidth=1;
+  for(const f of GRID_F){
+    const x=fToX(f,W);if(x<0||x>W)continue;
+    gS.beginPath();gS.moveTo(x,0);gS.lineTo(x,H);gS.stroke();
+    gS.fillText(fLabel(f),x+3,H-4*dpr);
+  }
+  for(let db=-20;db>DBMIN;db-=20){
+    const y=dbToY(db,H);
+    gS.beginPath();gS.moveTo(0,y);gS.lineTo(W,y);gS.stroke();
+    gS.fillText(db,4,y-3);
+  }
+  if(!analyser)return;
+  const binHz=actx.sampleRate/analyser.fftSize;
+  if(!peakHold||peakHold.length!==W){peakHold=new Float32Array(W).fill(DBMIN)}
+  // spectrum trace
+  gS.beginPath();
+  const pts=new Float32Array(W);
+  for(let x=0;x<W;x++){
+    const f0=xToF(x,W),f1=xToF(x+1,W);
+    let b0=Math.max(1,Math.floor(f0/binHz)),b1=Math.min(freqData.length-1,Math.max(b0,Math.ceil(f1/binHz)));
+    let v=-Infinity;
+    for(let b=b0;b<=b1;b++)if(freqData[b]>v)v=freqData[b];
+    pts[x]=v;
+    const y=dbToY(v,H);
+    x===0?gS.moveTo(x,y):gS.lineTo(x,y);
+  }
+  gS.strokeStyle="#ffb627";gS.lineWidth=1.5*dpr;
+  gS.shadowColor="rgba(255,182,39,.5)";gS.shadowBlur=6*dpr;
+  gS.stroke();gS.shadowBlur=0;
+  gS.lineTo(cSpec.width,H);gS.lineTo(0,H);gS.closePath();
+  gS.fillStyle="rgba(255,182,39,.09)";gS.fill();
+  // peak hold
+  gS.beginPath();
+  for(let x=0;x<W;x++){
+    peakHold[x]=Math.max(peakHold[x]-.25,pts[x]);
+    const y=dbToY(peakHold[x],H);
+    x===0?gS.moveTo(x,y):gS.lineTo(x,y);
+  }
+  gS.strokeStyle="rgba(111,224,138,.7)";gS.lineWidth=1;gS.stroke();
+}
+
+function drawSpectrogram(){
+  const W=cSg.width,H=cSg.height;
+  gG.drawImage(cSg,-1,0);
+  if(!analyser||!sgCol)return;
+  const binHz=actx.sampleRate/analyser.fftSize;
+  const d=sgCol.data;
+  for(let y=0;y<H;y++){
+    const f=logScale?FMAX*Math.pow(FMIN/FMAX,y/H):FMAX-(FMAX-FMIN)*y/H;
+    const b=Math.min(freqData.length-1,Math.max(1,Math.round(f/binHz)));
+    let v=(freqData[b]-DBMIN)/(DBMAX-DBMIN);
+    v=Math.max(0,Math.min(1,v));
+    const c=CMAP[(v*255)|0],o=y*4;
+    d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=255;
+  }
+  gG.putImageData(sgCol,W-1,0);
+}
+
+function drawWave(){
+  const W=cWave.width,H=cWave.height;
+  gW.fillStyle="#0e1013";gW.fillRect(0,0,W,H);
+  gW.strokeStyle="#1c1f24";
+  gW.beginPath();gW.moveTo(0,H/2);gW.lineTo(W,H/2);gW.stroke();
+  if(!analyser)return;
+  gW.beginPath();
+  const n=timeData.length;
+  for(let x=0;x<W;x++){
+    const v=timeData[(x/W*n)|0];
+    const y=H/2-v*H*.48;
+    x===0?gW.moveTo(x,y):gW.lineTo(x,y);
+  }
+  gW.strokeStyle="#5ad0e6";gW.lineWidth=1*dpr;gW.stroke();
+}
+
+/* ================= meters / pitch ================= */
+const NOTES=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+function noteName(f){
+  const n=Math.round(12*Math.log2(f/440))+69; // MIDI番号
+  if(n<0||n>135)return null;
+  const cents=Math.round(1200*Math.log2(f/(440*Math.pow(2,(n-69)/12))));
+  return{name:NOTES[n%12]+(Math.floor(n/12)-1),cents};
+}
+function peakFreq(){
+  const binHz=actx.sampleRate/analyser.fftSize;
+  let bi=1,bv=-Infinity;
+  const bMax=Math.min(freqData.length-1,Math.floor(FMAX/binHz));
+  for(let b=Math.max(1,Math.floor(FMIN/binHz));b<=bMax;b++)
+    if(freqData[b]>bv){bv=freqData[b];bi=b}
+  if(bv<DBMIN+15)return null; // ノイズフロア付近は無視
+  // 放物線補間でビン間を補正
+  const a=freqData[bi-1],c=freqData[bi+1]??bv;
+  const den=a-2*bv+c;
+  const p=den?0.5*(a-c)/den:0;
+  return(bi+Math.max(-0.5,Math.min(0.5,p)))*binHz;
+}
+function updMeters(){
+  let sum=0,pk=0;
+  for(let i=0;i<timeData.length;i++){
+    const v=timeData[i];sum+=v*v;
+    const av=Math.abs(v);if(av>pk)pk=av;
+  }
+  const rms=Math.sqrt(sum/timeData.length);
+  const rdb=rms>1e-6?20*Math.log10(rms):-Infinity;
+  const pdb=pk>1e-6?20*Math.log10(pk):-Infinity;
+  lastMeter.rdb=rdb;lastMeter.pdb=pdb;
+  $("vRms").innerHTML=(isFinite(rdb)?rdb.toFixed(1):"-∞")+" <small>dBFS</small>";
+  $("vPeak").innerHTML=(isFinite(pdb)?pdb.toFixed(1):"-∞")+" <small>dBFS</small>";
+  $("mRms").style.width=Math.max(0,Math.min(100,(rdb+60)/60*100))+"%";
+  $("mPeak").style.width=Math.max(0,Math.min(100,(pdb+60)/60*100))+"%";
+  const f=peakFreq();
+  if(f){
+    $("vFreq").innerHTML=(f<1000?f.toFixed(1):(f/1000).toFixed(3)+"k")+" <small>Hz</small>";
+    const nt=noteName(f);
+    $("vNote").textContent=nt?nt.name+" "+(nt.cents>=0?"+":"")+nt.cents+"¢":"---";
+    lastMeter.f=f;lastMeter.note=nt;
+  }else{
+    $("vFreq").innerHTML="--- <small>Hz</small>";$("vNote").textContent="---";
+    lastMeter.f=null;lastMeter.note=null;
+  }
+}
+
+/* ================= Even G1/G2 HUD (Web Bluetooth) =================
+ * Even Realities公式デモアプリ(EvenDemoApp)で公開されているBLEプロトコルに
+ * 基づく実装。両テンプル(L/R)が別々のBLEペリフェラル(Nordic UART Service)
+ * として見え、0x4Eコマンドでテキストを表示する。G2はG1の後継のため同系
+ * プロトコルを想定 — 動かない場合はこの部分の調整が必要。 */
+const NUS_SVC="6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+const NUS_TX ="6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+const NUS_RX ="6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+const lastMeter={rdb:-Infinity,pdb:-Infinity,f:null,note:null};
+const glasses={L:null,R:null};
+let hudOn=false,hudSeq=0,hudTimer=null,hbTimer=null,bleBusy=false;
+
+function hudUI(){
+  const l=!!glasses.L,r=!!glasses.R;
+  $("bGlass").textContent="👓 "+(l||r?(l?"L":"−")+"·"+(r?"R":"−"):"CONNECT");
+  $("bGlass").classList.toggle("on",l||r);
+  const en=l||r;
+  $("bHud").disabled=!en;$("bHud").style.opacity=en?1:.5;
+  $("bHud").textContent=hudOn?"HUD ON":"HUD OFF";
+  $("bHud").classList.toggle("on",hudOn);
+}
+async function glassConnect(){
+  if(!navigator.bluetooth){
+    msg("Web Bluetooth非対応ブラウザです (Android/PCのChrome、iOSはBluefy等で開いてください)");return;
+  }
+  try{
+    const dev=await navigator.bluetooth.requestDevice({
+      filters:[{namePrefix:"Even"}],optionalServices:[NUS_SVC]});
+    const name=dev.name||"";
+    const side=/_L_|_L\b|G\d_L/i.test(name)?"L":/_R_|_R\b|G\d_R/i.test(name)?"R":(glasses.L?"R":"L");
+    const server=await dev.gatt.connect();
+    const svc=await server.getPrimaryService(NUS_SVC);
+    const tx=await svc.getCharacteristic(NUS_TX);
+    try{const rx=await svc.getCharacteristic(NUS_RX);await rx.startNotifications()}catch(e){}
+    glasses[side]={device:dev,tx};
+    dev.addEventListener("gattserverdisconnected",()=>{glasses[side]=null;hudUI()});
+    msg("");hudUI();
+    if(!hbTimer)hbTimer=setInterval(hudHeartbeat,8000);
+    if(!glasses.L||!glasses.R)msg("もう一度👓を押して反対側("+(glasses.L?"R":"L")+")も接続すると両眼表示になります");
+  }catch(e){
+    if(e.name!=="NotFoundError")msg("グラス接続失敗: "+e.message);
+  }
+}
+async function bleSendBoth(bytes){
+  if(bleBusy)return;bleBusy=true;
+  for(const s of["L","R"]){ // 左→右の順で送る(Evenプロトコルの作法)
+    const g=glasses[s];if(!g)continue;
+    try{await g.tx.writeValue(bytes)}catch(e){}
+  }
+  bleBusy=false;
+}
+function hudHeartbeat(){
+  if(!glasses.L&&!glasses.R)return;
+  const s=hudSeq++&0xff;
+  bleSendBoth(new Uint8Array([0x25,0x06,0x00,s,0x04,s]));
+}
+function hudSendText(str){
+  const body=new TextEncoder().encode(str);
+  // 0x4E: seq, total_pkg, cur_pkg, screen_status(0x71=新規画面+表示),
+  //       char_pos(2B), cur_page, max_page, text...
+  const head=[0x4E,hudSeq++&0xff,1,0,0x71,0,0,1,1];
+  const pkt=new Uint8Array(head.length+body.length);
+  pkt.set(head,0);pkt.set(body,head.length);
+  return bleSendBoth(pkt);
+}
+function hudFrame(){
+  if(!hudOn||(!glasses.L&&!glasses.R))return;
+  const m=lastMeter;
+  const fmt=v=>isFinite(v)?v.toFixed(1):"-inf";
+  const n=Math.max(0,Math.min(20,Math.round((m.rdb+60)/60*20)));
+  const bar="#".repeat(n)+"-".repeat(20-n);
+  const fr=m.f?(m.f<1000?m.f.toFixed(1)+" Hz":(m.f/1000).toFixed(3)+" kHz"):"---";
+  const nt=m.note?m.note.name+" "+(m.note.cents>=0?"+":"")+m.note.cents+"c":"";
+  hudSendText(
+    `RMS ${fmt(m.rdb)} dB   PEAK ${fmt(m.pdb)} dB\n`+
+    `[${bar}]\n`+
+    `${fr}   ${nt}`);
+}
+$("bGlass").addEventListener("click",glassConnect);
+$("bHud").addEventListener("click",()=>{
+  hudOn=!hudOn;hudUI();
+  if(hudOn){hudFrame();hudTimer=setInterval(hudFrame,500)}
+  else{clearInterval(hudTimer);hudTimer=null;
+    bleSendBoth(new Uint8Array([0x18]))} // 0x18: 表示終了→ダッシュボードへ
+});
+
+/* ================= main loop ================= */
+function loop(){
+  requestAnimationFrame(loop);
+  if(paused||!analyser)return;
+  analyser.getFloatFrequencyData(freqData);
+  analyser.getFloatTimeDomainData(timeData);
+  drawSpectrum();
+  drawSpectrogram();
+  drawWave();
+  updMeters();
+}
+fit();
+drawSpectrum();drawWave();
+loop();
+</script>
+</body>
+</html>
