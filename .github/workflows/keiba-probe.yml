@@ -53,12 +53,19 @@ jobs:
           import json, pathlib
           m = json.loads(pathlib.Path("keiba/tests/fixtures/manifest.json").read_text())
           print("kaisai_date:", m["kaisai_date"])
-          print("race_ids:", len(m["race_ids"]), m["race_ids"][:5])
+          print("jra_race_ids:", len(m["jra_race_ids"]), m["jra_race_ids"][:5])
           for p in m["pages"]:
-              print("OK  " if p["ok"] else "FAIL", p["label"], p.get("chars", ""), p.get("error", ""))
+              print(
+                  "OK  " if p["ok"] else "FAIL",
+                  p["label"].ljust(28),
+                  str(p.get("chars", "")).rjust(7),
+                  p.get("title") or p.get("error", ""),
+              )
           PY
 
+      # 採取さえできていればコミットする。集計の失敗でフィクスチャを捨てない。
       - name: Commit fixtures
+        if: always()
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
