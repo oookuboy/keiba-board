@@ -74,5 +74,8 @@ jobs:
             echo "変化なし"
           else
             git commit -m "chore(keiba): probe でHTMLフィクスチャを採取"
+            # 実行中にブランチが進んでいると push が非 fast-forward で落ちる。
+            # 採取結果を捨てないよう、rebase してから押し込む。
+            git pull --rebase origin ${{ github.ref_name }}
             git push origin HEAD:${{ github.ref_name }}
           fi
