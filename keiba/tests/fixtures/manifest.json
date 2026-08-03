@@ -1,171 +1,211 @@
 {
-  "kaisai_date": "20260802",
-  "race_ids": [
-    "202635080201",
-    "202635080202",
-    "202635080203",
-    "202635080204",
-    "202635080205",
-    "202635080206",
-    "202635080207",
-    "202635080208",
-    "202635080209",
-    "202635080210",
-    "202635080211",
-    "202635080212",
-    "202643080201",
-    "202643080202",
-    "202643080203",
-    "202643080204",
-    "202643080205",
-    "202643080206",
-    "202643080207",
-    "202643080208",
-    "202643080209",
-    "202643080210",
-    "202643080211",
-    "202643080212",
-    "202654080201",
-    "202654080202",
-    "202654080203",
-    "202654080204",
-    "202654080205",
-    "202654080206",
-    "202654080207",
-    "202654080208",
-    "202654080209",
-    "202654080210",
-    "202654080211",
-    "202665080201",
-    "202665080202",
-    "202665080203",
-    "202665080204",
-    "202665080205",
-    "202665080206",
-    "202665080207",
-    "202665080208",
-    "202665080209",
-    "202665080210",
-    "202665080211",
-    "202665080212"
+  "requested_date": "20260802",
+  "kaisai_date": "20260726",
+  "jra_race_ids": [
+    "202601010201",
+    "202601010202",
+    "202601010203",
+    "202601010204",
+    "202601010205",
+    "202601010206",
+    "202601010207",
+    "202601010208",
+    "202601010209",
+    "202601010210",
+    "202601010211",
+    "202601010212",
+    "202604020201",
+    "202604020202",
+    "202604020203",
+    "202604020204",
+    "202604020205",
+    "202604020206",
+    "202604020207",
+    "202604020208",
+    "202604020209",
+    "202604020210",
+    "202604020211",
+    "202604020212",
+    "202607020201",
+    "202607020202",
+    "202607020203",
+    "202607020204",
+    "202607020205",
+    "202607020206",
+    "202607020207",
+    "202607020208",
+    "202607020209",
+    "202607020210",
+    "202607020211",
+    "202607020212"
   ],
   "pages": [
     {
-      "label": "robots_netkeiba",
-      "url": "https://www.netkeiba.com/robots.txt",
+      "label": "robots_db_netkeiba",
+      "url": "https://db.netkeiba.com/robots.txt",
       "ok": false,
-      "error": "404 Not Found: https://www.netkeiba.com/robots.txt"
+      "error": "404 Not Found: https://db.netkeiba.com/robots.txt"
+    },
+    {
+      "label": "robots_race_netkeiba",
+      "url": "https://race.netkeiba.com/robots.txt",
+      "ok": false,
+      "error": "404 Not Found: https://race.netkeiba.com/robots.txt"
     },
     {
       "label": "robots_jra",
       "url": "https://www.jra.go.jp/robots.txt",
       "ok": true,
       "chars": 27,
-      "file": "robots_jra__www.jra.go.jp_robots.txt.html",
+      "title": null,
       "doAction": []
     },
     {
-      "label": "db_race_list",
+      "label": "db_race_list_20260802",
       "url": "https://db.netkeiba.com/race/list/20260802/",
       "ok": true,
-      "chars": 42842,
-      "file": "db_race_list__db.netkeiba.com_race_list_20260802_.html"
+      "chars": 42954,
+      "title": "2026年08月02日のレース情報 | 競馬データベース - netkeiba"
     },
     {
-      "label": "race_list_top",
-      "url": "https://race.netkeiba.com/top/race_list.html?kaisai_date=20260802",
+      "label": "db_race_list_20260801",
+      "url": "https://db.netkeiba.com/race/list/20260801/",
       "ok": true,
-      "chars": 43256,
-      "file": "race_list_top__race.netkeiba.com_top_race_list.html_kaisai_date_20260802.html"
+      "chars": 38190,
+      "title": "2026年08月01日のレース情報 | 競馬データベース - netkeiba"
+    },
+    {
+      "label": "db_race_list_20260731",
+      "url": "https://db.netkeiba.com/race/list/20260731/",
+      "ok": true,
+      "chars": 40305,
+      "title": "2026年07月26日のレース情報 | 競馬データベース - netkeiba"
+    },
+    {
+      "label": "db_race_list_20260730",
+      "url": "https://db.netkeiba.com/race/list/20260730/",
+      "ok": true,
+      "chars": 42834,
+      "title": "2026年07月26日のレース情報 | 競馬データベース - netkeiba"
+    },
+    {
+      "label": "db_race_list_20260729",
+      "url": "https://db.netkeiba.com/race/list/20260729/",
+      "ok": true,
+      "chars": 42715,
+      "title": "2026年07月26日のレース情報 | 競馬データベース - netkeiba"
+    },
+    {
+      "label": "db_race_list_20260728",
+      "url": "https://db.netkeiba.com/race/list/20260728/",
+      "ok": true,
+      "chars": 44537,
+      "title": "2026年07月26日のレース情報 | 競馬データベース - netkeiba"
+    },
+    {
+      "label": "db_race_list_20260727",
+      "url": "https://db.netkeiba.com/race/list/20260727/",
+      "ok": true,
+      "chars": 42504,
+      "title": "2026年07月26日のレース情報 | 競馬データベース - netkeiba"
+    },
+    {
+      "label": "db_race_list_20260726",
+      "url": "https://db.netkeiba.com/race/list/20260726/",
+      "ok": true,
+      "chars": 54193,
+      "title": "2026年07月26日のレース情報 | 競馬データベース - netkeiba"
     },
     {
       "label": "db_race_main",
-      "url": "https://db.netkeiba.com/race/202665080212/",
+      "url": "https://db.netkeiba.com/race/202607020212/",
       "ok": true,
-      "chars": 64051,
-      "file": "db_race_main__db.netkeiba.com_race_202665080212_.html"
+      "chars": 89957,
+      "title": "3歳未勝利｜2026年7月26日 | 競馬データベース - netkeiba"
     },
     {
-      "label": "shutuba_main",
-      "url": "https://race.netkeiba.com/race/shutuba.html?race_id=202665080212",
+      "label": "danwa_db_main",
+      "url": "https://db.netkeiba.com/race/danwa/202607020212/",
       "ok": true,
-      "chars": 71798,
-      "file": "shutuba_main__race.netkeiba.com_race_shutuba.html_race_id_202665080212.html"
+      "chars": 40110,
+      "title": null
     },
     {
-      "label": "shutuba_past_main",
-      "url": "https://race.netkeiba.com/race/shutuba_past.html?race_id=202665080212",
+      "label": "cyokyo_db_main",
+      "url": "https://db.netkeiba.com/race/cyokyo/202607020212/",
       "ok": true,
-      "chars": 46961,
-      "file": "shutuba_past_main__race.netkeiba.com_race_shutuba_past.html_race_id_202665080212.html"
+      "chars": 39921,
+      "title": null
     },
     {
-      "label": "result_main",
-      "url": "https://race.netkeiba.com/race/result.html?race_id=202665080212",
+      "label": "news_comment_main",
+      "url": "https://race.netkeiba.com/race/newspaper.html?race_id=202607020212",
       "ok": true,
-      "chars": 36156,
-      "file": "result_main__race.netkeiba.com_race_result.html_race_id_202665080212.html"
-    },
-    {
-      "label": "oikiri_main",
-      "url": "https://race.netkeiba.com/race/oikiri.html?race_id=202665080212",
-      "ok": true,
-      "chars": 35046,
-      "file": "oikiri_main__race.netkeiba.com_race_oikiri.html_race_id_202665080212.html"
-    },
-    {
-      "label": "danwa_main",
-      "url": "https://race.netkeiba.com/race/danwa.html?race_id=202665080212",
-      "ok": false,
-      "error": "404 Not Found: https://race.netkeiba.com/race/danwa.html?race_id=202665080212"
+      "chars": 130422,
+      "title": "３歳未勝利 競馬新聞 | 2026年7月26日 中京12R レース情報(JRA) - netkeiba"
     },
     {
       "label": "db_race_sub",
-      "url": "https://db.netkeiba.com/race/202635080201/",
+      "url": "https://db.netkeiba.com/race/202601010201/",
       "ok": true,
-      "chars": 60766,
-      "file": "db_race_sub__db.netkeiba.com_race_202635080201_.html"
+      "chars": 81451,
+      "title": "2歳未勝利｜2026年7月26日 | 競馬データベース - netkeiba"
     },
     {
-      "label": "shutuba_sub",
-      "url": "https://race.netkeiba.com/race/shutuba.html?race_id=202635080201",
+      "label": "danwa_db_sub",
+      "url": "https://db.netkeiba.com/race/danwa/202601010201/",
       "ok": true,
-      "chars": 71798,
-      "file": "shutuba_sub__race.netkeiba.com_race_shutuba.html_race_id_202635080201.html"
+      "chars": 39925,
+      "title": null
     },
     {
-      "label": "shutuba_past_sub",
-      "url": "https://race.netkeiba.com/race/shutuba_past.html?race_id=202635080201",
+      "label": "cyokyo_db_sub",
+      "url": "https://db.netkeiba.com/race/cyokyo/202601010201/",
       "ok": true,
-      "chars": 46961,
-      "file": "shutuba_past_sub__race.netkeiba.com_race_shutuba_past.html_race_id_202635080201.html"
+      "chars": 39921,
+      "title": null
     },
     {
-      "label": "result_sub",
-      "url": "https://race.netkeiba.com/race/result.html?race_id=202635080201",
+      "label": "news_comment_sub",
+      "url": "https://race.netkeiba.com/race/newspaper.html?race_id=202601010201",
       "ok": true,
-      "chars": 36156,
-      "file": "result_sub__race.netkeiba.com_race_result.html_race_id_202635080201.html"
+      "chars": 125887,
+      "title": "２歳未勝利 競馬新聞 | 2026年7月26日 札幌1R レース情報(JRA) - netkeiba"
     },
     {
-      "label": "oikiri_sub",
-      "url": "https://race.netkeiba.com/race/oikiri.html?race_id=202635080201",
+      "label": "horse_2023100490",
+      "url": "https://db.netkeiba.com/horse/2023100490/",
       "ok": true,
-      "chars": 35046,
-      "file": "oikiri_sub__race.netkeiba.com_race_oikiri.html_race_id_202635080201.html"
+      "chars": 62702,
+      "title": "ピンクパンサー (Pink Panther) | 競走馬データ - netkeiba"
     },
     {
-      "label": "danwa_sub",
-      "url": "https://race.netkeiba.com/race/danwa.html?race_id=202635080201",
-      "ok": false,
-      "error": "404 Not Found: https://race.netkeiba.com/race/danwa.html?race_id=202635080201"
+      "label": "ped_2023100490",
+      "url": "https://db.netkeiba.com/horse/ped/2023100490/",
+      "ok": true,
+      "chars": 66218,
+      "title": "ピンクパンサー (Pink Panther) | 競走馬データ - netkeiba"
     },
     {
-      "label": "jra_keiba_top",
-      "url": "https://www.jra.go.jp/keiba/",
+      "label": "horse_2023100918",
+      "url": "https://db.netkeiba.com/horse/2023100918/",
       "ok": true,
-      "chars": 59559,
-      "file": "jra_keiba_top__www.jra.go.jp_keiba_.html",
+      "chars": 63855,
+      "title": "ウイングサンライズ (Wing Sunrise) | 競走馬データ - netkeiba"
+    },
+    {
+      "label": "ped_2023100918",
+      "url": "https://db.netkeiba.com/horse/ped/2023100918/",
+      "ok": true,
+      "chars": 63318,
+      "title": "ウイングサンライズ (Wing Sunrise) | 競走馬データ - netkeiba"
+    },
+    {
+      "label": "jra_racecard_L1",
+      "url": "https://www.jra.go.jp/JRADB/accessD.html",
+      "ok": true,
+      "chars": 62181,
+      "title": "出馬表 開催選択 JRA",
       "doAction": [
         {
           "action": "/JRADB/accessI.html",
@@ -232,37 +272,69 @@
           "cname": "pw15oli00/6D"
         },
         {
-          "action": "/JRADB/accessS.html",
-          "cname": "pw01sli00/AF"
-        },
-        {
           "action": "/JRADB/accessH.html",
           "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
         },
         {
           "action": "/JRADB/accessT.html",
           "cname": "pw03trl00/29"
         },
         {
-          "action": "/JRADB/accessR.html",
-          "cname": "pw02uliD19999"
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01drl10042026020320260801/09"
         },
         {
-          "action": "/JRADB/accessW.html",
-          "cname": "pr13rli00/8E"
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01drl10072026020320260801/E7"
         },
         {
-          "action": "/JRADB/accessV.html",
-          "cname": "pv156liH1/98"
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01drl10012026010320260801/FA"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde10202608011/E5"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01drl10042026020420260802/F7"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01drl10072026020420260802/D5"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01drl10012026010420260802/E8"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde10202608021/16"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01d5010A0/B8"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw151ou1004202602040720260802Z/0E"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw151ou1001202601041120260802Z/13"
         }
       ]
     },
     {
-      "label": "jra_thisweek",
-      "url": "https://www.jra.go.jp/keiba/thisweek/",
+      "label": "jra_racecard_L2_0",
+      "url": "https://www.jra.go.jp/JRADB/accessO.html",
       "ok": true,
-      "chars": 59713,
-      "file": "jra_thisweek__www.jra.go.jp_keiba_thisweek_.html",
+      "chars": 58945,
+      "title": "オッズ 開催選択 JRA",
       "doAction": [
         {
           "action": "/JRADB/accessI.html",
@@ -315,15 +387,71 @@
         {
           "action": "/JRADB/accessSS.html",
           "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10042026020320260801/83"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10072026020320260801/61"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10012026010320260801/74"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10042026020420260802/71"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10072026020420260802/4F"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10012026010420260802/62"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw151ou1004202602040720260802Z/0E"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw151ou1001202601041120260802Z/13"
         }
       ]
     },
     {
-      "label": "jra_seiseki_index",
-      "url": "https://www.jra.go.jp/datafile/seiseki/",
+      "label": "jra_racecard_L2_1",
+      "url": "https://www.jra.go.jp/JRADB/accessH.html",
       "ok": true,
-      "chars": 60473,
-      "file": "jra_seiseki_index__www.jra.go.jp_datafile_seiseki_.html",
+      "chars": 78618,
+      "title": "払戻金一覧 開催選択 JRA",
       "doAction": [
         {
           "action": "/JRADB/accessI.html",
@@ -376,6 +504,2123 @@
         {
           "action": "/JRADB/accessSS.html",
           "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hli000000/B3"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020320260801/A9"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020320260801/87"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010320260801/9A"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608011/06"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020420260802/97"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020420260802/75"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010420260802/88"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608021/37"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020220260726/94"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020220260726/72"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010220260726/85"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607261/0B"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020120260725/A6"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020120260725/84"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010120260725/97"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607251/DA"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020820260719/55"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020820260719/A0"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026011220260719/38"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607191/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020720260718/67"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020720260718/B2"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026011120260718/4A"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607181/7E"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020620260712/12"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020620260712/5D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026011020260712/F5"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607121/58"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020520260711/24"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020520260711/6F"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026010920260711/75"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607111/27"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020420260705/85"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020420260705/D0"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026010820260705/D6"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607051/FC"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020320260704/97"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020320260704/E2"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026010720260704/E8"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607041/CB"
+        }
+      ]
+    },
+    {
+      "label": "jra_racecard_L2_2",
+      "url": "https://www.jra.go.jp/JRADB/accessR.html",
+      "ok": true,
+      "chars": 62035,
+      "title": "競走馬検索 JRA",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        }
+      ]
+    },
+    {
+      "label": "jra_results_L1",
+      "url": "https://www.jra.go.jp/JRADB/accessS.html",
+      "ok": true,
+      "chars": 80579,
+      "title": "レース結果 開催選択 JRA",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10042026020320260801/C5"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10072026020320260801/A3"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10012026010320260801/B6"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608011/06"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10042026020420260802/B3"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10072026020420260802/91"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10012026010420260802/A4"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608021/37"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10042026020220260726/B0"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10072026020220260726/8E"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10012026010220260726/A1"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10042026020120260725/C2"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10072026020120260725/A0"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10012026010120260725/B3"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10032026020820260719/71"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10102026020820260719/BC"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10022026011220260719/54"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10032026020720260718/83"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10102026020720260718/CE"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10022026011120260718/66"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10032026020620260712/2E"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10102026020620260712/79"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10022026011020260712/11"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10032026020520260711/40"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10102026020520260711/8B"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10022026010920260711/91"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10032026020420260705/A1"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10102026020420260705/EC"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10022026010820260705/F2"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10032026020320260704/B3"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10102026020320260704/FE"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10022026010720260704/04"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10032026020220260628/23"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10102026020220260628/6E"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10022026010620260628/74"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10032026020120260627/35"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10102026020120260627/80"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10022026010520260627/86"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10052026030620260621/57"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01srl10092026030620260621/7F"
+        }
+      ]
+    },
+    {
+      "label": "jra_results_L2_0",
+      "url": "https://www.jra.go.jp/JRADB/accessO.html",
+      "ok": true,
+      "chars": 58945,
+      "title": "オッズ 開催選択 JRA",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10042026020320260801/83"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10072026020320260801/61"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10012026010320260801/74"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10042026020420260802/71"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10072026020420260802/4F"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10012026010420260802/62"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw151ou1004202602040720260802Z/0E"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw151ou1001202601041120260802Z/13"
+        }
+      ]
+    },
+    {
+      "label": "jra_results_L2_1",
+      "url": "https://www.jra.go.jp/JRADB/accessH.html",
+      "ok": true,
+      "chars": 78618,
+      "title": "払戻金一覧 開催選択 JRA",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hli000000/B3"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020320260801/A9"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020320260801/87"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010320260801/9A"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608011/06"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020420260802/97"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020420260802/75"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010420260802/88"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608021/37"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020220260726/94"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020220260726/72"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010220260726/85"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607261/0B"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020120260725/A6"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020120260725/84"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010120260725/97"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607251/DA"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020820260719/55"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020820260719/A0"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026011220260719/38"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607191/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020720260718/67"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020720260718/B2"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026011120260718/4A"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607181/7E"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020620260712/12"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020620260712/5D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026011020260712/F5"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607121/58"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020520260711/24"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020520260711/6F"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026010920260711/75"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607111/27"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020420260705/85"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020420260705/D0"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026010820260705/D6"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607051/FC"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020320260704/97"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020320260704/E2"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026010720260704/E8"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607041/CB"
+        }
+      ]
+    },
+    {
+      "label": "jra_results_L2_2",
+      "url": "https://www.jra.go.jp/JRADB/accessR.html",
+      "ok": true,
+      "chars": 62035,
+      "title": "競走馬検索 JRA",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        }
+      ]
+    },
+    {
+      "label": "jra_training_L1",
+      "url": "https://www.jra.go.jp/JRADB/accessT.html",
+      "ok": true,
+      "chars": 64467,
+      "title": "特別レース登録馬 レース選択 JRA",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000402050620260808/38"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000402050720260808/69"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000402050820260808/9A"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000702050620260808/16"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000702050720260808/47"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000702050820260808/78"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000101051020260808/97"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000101051120260808/C8"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000101051220260808/F9"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000402060620260809/3F"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000402060720260809/70"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000402060820260809/A1"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000702060620260809/1D"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000702060720260809/4E"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000702060820260809/7F"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000101061020260809/9E"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000101061120260809/CF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03tde000101061220260809/00"
+        }
+      ]
+    },
+    {
+      "label": "jra_training_L2_0",
+      "url": "https://www.jra.go.jp/JRADB/accessO.html",
+      "ok": true,
+      "chars": 58945,
+      "title": "オッズ 開催選択 JRA",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10042026020320260801/83"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10072026020320260801/61"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10012026010320260801/74"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10042026020420260802/71"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10072026020420260802/4F"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10012026010420260802/62"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw151ou1004202602040720260802Z/0E"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw151ou1001202601041120260802Z/13"
+        }
+      ]
+    },
+    {
+      "label": "jra_training_L2_1",
+      "url": "https://www.jra.go.jp/JRADB/accessH.html",
+      "ok": true,
+      "chars": 78618,
+      "title": "払戻金一覧 開催選択 JRA",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hli000000/B3"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020320260801/A9"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020320260801/87"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010320260801/9A"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608011/06"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020420260802/97"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020420260802/75"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010420260802/88"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608021/37"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020220260726/94"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020220260726/72"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010220260726/85"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607261/0B"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020120260725/A6"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020120260725/84"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010120260725/97"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607251/DA"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020820260719/55"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020820260719/A0"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026011220260719/38"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607191/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020720260718/67"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020720260718/B2"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026011120260718/4A"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607181/7E"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020620260712/12"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020620260712/5D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026011020260712/F5"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607121/58"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020520260711/24"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020520260711/6F"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026010920260711/75"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607111/27"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020420260705/85"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020420260705/D0"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026010820260705/D6"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607051/FC"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020320260704/97"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020320260704/E2"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026010720260704/E8"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607041/CB"
+        }
+      ]
+    },
+    {
+      "label": "jra_training_L2_2",
+      "url": "https://www.jra.go.jp/JRADB/accessR.html",
+      "ok": true,
+      "chars": 62035,
+      "title": "競走馬検索 JRA",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        }
+      ]
+    },
+    {
+      "label": "jra_info_L1",
+      "url": "https://www.jra.go.jp/JRADB/accessI.html",
+      "ok": true,
+      "chars": 55654,
+      "title": "今週の開催お知らせ JRA",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        }
+      ]
+    },
+    {
+      "label": "jra_info_L2_0",
+      "url": "https://www.jra.go.jp/JRADB/accessO.html",
+      "ok": true,
+      "chars": 58945,
+      "title": "オッズ 開催選択 JRA",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10042026020320260801/83"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10072026020320260801/61"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10012026010320260801/74"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10042026020420260802/71"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10072026020420260802/4F"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15orl10012026010420260802/62"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw151ou1004202602040720260802Z/0E"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw151ou1001202601041120260802Z/13"
+        }
+      ]
+    },
+    {
+      "label": "jra_info_L2_1",
+      "url": "https://www.jra.go.jp/JRADB/accessH.html",
+      "ok": true,
+      "chars": 78618,
+      "title": "払戻金一覧 開催選択 JRA",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hli000000/B3"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020320260801/A9"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020320260801/87"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010320260801/9A"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608011/06"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020420260802/97"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020420260802/75"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010420260802/88"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608021/37"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020220260726/94"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020220260726/72"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010220260726/85"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607261/0B"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10042026020120260725/A6"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10072026020120260725/84"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10012026010120260725/97"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607251/DA"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020820260719/55"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020820260719/A0"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026011220260719/38"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607191/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020720260718/67"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020720260718/B2"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026011120260718/4A"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607181/7E"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020620260712/12"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020620260712/5D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026011020260712/F5"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607121/58"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020520260711/24"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020520260711/6F"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026010920260711/75"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607111/27"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020420260705/85"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020420260705/D0"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026010820260705/D6"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607051/FC"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10032026020320260704/97"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10102026020320260704/E2"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hde10022026010720260704/E8"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202607041/CB"
+        }
+      ]
+    },
+    {
+      "label": "jra_info_L2_2",
+      "url": "https://www.jra.go.jp/JRADB/accessR.html",
+      "ok": true,
+      "chars": 62035,
+      "title": "競走馬検索 JRA",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
         }
       ]
     }
