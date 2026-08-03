@@ -1,0 +1,27 @@
+name: keiba-test
+
+# パーサは netkeiba の HTML 構造に依存している。向こうが変われば静かに壊れて
+# おかしなデータを溜め込むので、フィクスチャに対するテストを常に回しておく。
+
+on:
+  push:
+    paths:
+      - "keiba/**"
+      - "pyproject.toml"
+      - ".github/workflows/keiba-test.yml"
+  pull_request:
+    paths:
+      - "keiba/**"
+      - "pyproject.toml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: python -m pytest keiba/tests -q
