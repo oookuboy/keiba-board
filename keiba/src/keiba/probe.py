@@ -6,8 +6,16 @@ Claude Code のセッションからは netkeiba / jra.go.jp に到達できな�
 
     python -m keiba.probe --date 20260802 --out keiba/tests/fixtures
 
-各ページの取得可否・サイズ・文字コードを manifest.json に残すので、
-どのURLが生きているかは manifest だけ見れば分かる。
+第1回の探索で分かったこと（このモジュールの設計はこれに基づく）:
+
+- race.netkeiba.com（出馬表・馬柱・結果・調教・談話）は JavaScript レンダリングの
+  空シェルで、requests では表のヘッダしか取れない。**収集源として使えない。**
+- db.netkeiba.com はサーバーレンダリングで実データが入っている。過去成績・馬・血統はここ。
+- www.jra.go.jp もサーバーレンダリング。robots.txt は `Disallow:` が空＝全面許可。
+  ただし遷移が doAction('/JRADB/accessX.html','pw01...') の POST 方式なので、
+  入口の cname から順に辿らないと目的のページに届かない。
+- 中央のレースを拾うには race_id の 5-6 桁目（場コード）で 01〜10 に絞る必要がある。
+  絞らないと地方（盛岡35・船橋43・高知54・帯広65）ばかり拾ってしまう。
 """
 
 from __future__ import annotations
@@ -19,20 +27,34 @@ import re
 from datetime import date, timedelta
 from pathlib import Path
 
+from keiba.models import VENUES
 from keiba.sources.http import Fetcher, FetchError
 
 log = logging.getLogger(__name__)
 
-# db.netkeiba.com のレース一覧に並ぶ /race/<18桁> へのリンク
 RACE_ID_RE = re.compile(r"/race/(\d{12})")
 HORSE_ID_RE = re.compile(r"/horse/(\d{10})")
-# JRA公式の遷移は doAction('/JRADB/accessX.html','pw01sde...') 形式。
-# トークンの実際の形が分からないと POST を組めないので、生のまま採取する。
 JRA_DOACTION_RE = re.compile(r"doAction\(\s*'([^']+)'\s*,\s*'([^']+)'\s*\)")
+
+JRA_BASE = "https://www.jra.go.jp"
+
+# JRA公式の入口。cname はトップページの doAction から採取した実物。
+JRA_SEEDS = [
+    ("racecard", "/JRADB/accessD.html", "pw01dli00/F3"),   # 出馬表
+    ("results", "/JRADB/accessS.html", "pw01sli00/AF"),    # レース結果
+    ("training", "/JRADB/accessT.html", "pw03trl00/29"),   # 調教
+    ("info", "/JRADB/accessI.html", "pw01ide01/4F"),       # 開催情報
+]
+
+# 調教師コメントの在処が不明。候補を総当たりして生きているURLを特定する。
+COMMENT_CANDIDATES = [
+    ("danwa_db", "https://db.netkeiba.com/race/danwa/{race_id}/"),
+    ("cyokyo_db", "https://db.netkeiba.com/race/cyokyo/{race_id}/"),
+    ("news_comment", "https://race.netkeiba.com/race/newspaper.html?race_id={race_id}"),
+]
 
 
 def last_sunday(today: date) -> date:
-    """直近の日曜（今日が日曜なら1週間前）。結果が確定済みの開催日を選ぶため。"""
     offset = (today.weekday() + 1) % 7 or 7
     return today - timedelta(days=offset)
 
@@ -40,7 +62,7 @@ def last_sunday(today: date) -> date:
 def _safe_name(url: str) -> str:
     name = re.sub(r"^https?://", "", url)
     name = re.sub(r"[^A-Za-z0-9._-]+", "_", name)
-    return name[:120]
+    return name[:110]
 
 
 class Probe:
@@ -54,104 +76,149 @@ class Probe:
         try:
             html = self.fetcher.fetch(url, **kwargs)
         except FetchError as exc:
-            log.warning("MISS %s (%s): %s", label, url, exc)
+            log.warning("MISS %s: %s", label, exc)
             self.manifest.append(
                 {"label": label, "url": url, "ok": False, "error": str(exc)}
             )
             return None
 
-        path = self.out_dir / f"{label}__{_safe_name(url)}.html"
-        path.write_text(html, encoding="utf-8")
-        entry = {
+        (self.out_dir / f"{label}__{_safe_name(url)}.html").write_text(
+            html, encoding="utf-8"
+        )
+        entry: dict = {
             "label": label,
             "url": url,
             "ok": True,
             "chars": len(html),
-            "file": path.name,
+            "title": self._title(html),
         }
         if "jra.go.jp" in url:
-            # トークンの形と、どのリンクがどのページに対応するかを記録
             entry["doAction"] = [
-                {"action": a, "cname": c}
-                for a, c in JRA_DOACTION_RE.findall(html)[:40]
-            ]
+                {"action": a, "cname": c} for a, c in JRA_DOACTION_RE.findall(html)
+            ][:60]
         self.manifest.append(entry)
-        log.info("OK   %s (%s chars) %s", label, len(html), url)
+        log.info("OK   %-28s %6d chars  %s", label, len(html), entry["title"] or "")
         return html
+
+    @staticmethod
+    def _title(html: str) -> str | None:
+        m = re.search(r"<title>(.*?)</title>", html, re.S)
+        return re.sub(r"\s+", " ", m.group(1)).strip() if m else None
+
+    # -------------------------------------------------------------- netkeiba
+
+    def find_jra_race_ids(self, start: date, lookback: int = 21) -> tuple[str, list[str]]:
+        """中央のレースがある開催日まで日付を遡る。
+
+        地方は毎日開催しているので、日付をそのまま信じると盛岡や船橋を拾ってしまう。
+        場コード 01〜10 に該当する race_id が出るまで戻る。
+        """
+        for offset in range(lookback + 1):
+            day = start - timedelta(days=offset)
+            stamp = day.strftime("%Y%m%d")
+            html = self.grab(
+                f"https://db.netkeiba.com/race/list/{stamp}/", f"db_race_list_{stamp}"
+            )
+            if not html:
+                continue
+            ids = sorted(set(RACE_ID_RE.findall(html)))
+            jra = [i for i in ids if i[4:6] in VENUES]
+            log.info(
+                "%s: 全%d件 / 中央%d件 %s",
+                stamp,
+                len(ids),
+                len(jra),
+                sorted({VENUES[i[4:6]] for i in jra}),
+            )
+            if jra:
+                return stamp, jra
+        return start.strftime("%Y%m%d"), []
+
+    # ------------------------------------------------------------------ JRA
+
+    def walk_jra(self) -> None:
+        """JRA公式の POST 遷移を2階層辿って、実データページの形を採取する。
+
+        入口の cname は固定だが、その先（開催日・レース単位）の cname は
+        毎回変わるので、辿って採取するしかない。
+        """
+        for label, action, cname in JRA_SEEDS:
+            html = self.grab(
+                f"{JRA_BASE}{action}",
+                f"jra_{label}_L1",
+                method="POST",
+                data={"cname": cname},
+            )
+            if not html:
+                continue
+
+            # 1階層目で拾った遷移先のうち、メニュー系ではないものを数件辿る
+            nexts = [
+                (a, c)
+                for a, c in JRA_DOACTION_RE.findall(html)
+                if c not in {s[2] for s in JRA_SEEDS}
+            ]
+            seen: set[str] = set()
+            depth2 = 0
+            for action2, cname2 in nexts:
+                if cname2 in seen:
+                    continue
+                seen.add(cname2)
+                self.grab(
+                    f"{JRA_BASE}{action2}",
+                    f"jra_{label}_L2_{depth2}",
+                    method="POST",
+                    data={"cname": cname2},
+                )
+                depth2 += 1
+                if depth2 >= 3:
+                    break
+
+    # ----------------------------------------------------------------- main
 
     def run(self, kaisai_date: str) -> None:
         self.out_dir.mkdir(parents=True, exist_ok=True)
+        # 到達不能と分かったページの残骸が居座らないよう、毎回作り直す
+        for stale in self.out_dir.glob("*.html"):
+            stale.unlink()
 
-        # 0. 規約の確認材料。何が許可されているかは自分の目で見る。
-        self.grab("https://www.netkeiba.com/robots.txt", "robots_netkeiba")
-        self.grab("https://www.jra.go.jp/robots.txt", "robots_jra")
+        # 何が許可されているかは自分の目で確認する
+        self.grab("https://db.netkeiba.com/robots.txt", "robots_db_netkeiba")
+        self.grab("https://race.netkeiba.com/robots.txt", "robots_race_netkeiba")
+        self.grab(f"{JRA_BASE}/robots.txt", "robots_jra")
 
-        # 1. netkeiba: 開催日のレース一覧 → race_id を採取
-        race_ids: list[str] = []
-        listing = self.grab(
-            f"https://db.netkeiba.com/race/list/{kaisai_date}/", "db_race_list"
-        )
-        if listing:
-            race_ids = sorted(set(RACE_ID_RE.findall(listing)))
-        self.grab(
-            f"https://race.netkeiba.com/top/race_list.html?kaisai_date={kaisai_date}",
-            "race_list_top",
-        )
-
+        start = date(int(kaisai_date[:4]), int(kaisai_date[4:6]), int(kaisai_date[6:8]))
+        stamp, race_ids = self.find_jra_race_ids(start)
         if not race_ids:
-            log.error("race_id を1つも抽出できなかった。日付かURL構造を疑うこと。")
+            log.error("中央のレースを1件も見つけられなかった。lookback を延ばすこと。")
         else:
-            log.info("抽出した race_id: %s件 %s", len(race_ids), race_ids[:5])
+            log.info("中央 %d件 @ %s", len(race_ids), stamp)
 
-        # 2. 代表レース2件（メインと下級条件）で全ページ種を採取。
-        #    1件だけだと「重賞にしか無い要素」を見落とす。
+        # メイン（最終R寄り）と下級条件（1R）の2本立て。
+        # 1件だけだと重賞にしか無い要素を見落とす。
         targets = [race_ids[-1], race_ids[0]] if len(race_ids) > 1 else race_ids
         horse_ids: list[str] = []
 
         for idx, race_id in enumerate(targets):
             tag = "main" if idx == 0 else "sub"
-            self.grab(f"https://db.netkeiba.com/race/{race_id}/", f"db_race_{tag}")
-            self.grab(
-                f"https://race.netkeiba.com/race/shutuba.html?race_id={race_id}",
-                f"shutuba_{tag}",
-            )
-            past = self.grab(
-                f"https://race.netkeiba.com/race/shutuba_past.html?race_id={race_id}",
-                f"shutuba_past_{tag}",
-            )
-            self.grab(
-                f"https://race.netkeiba.com/race/result.html?race_id={race_id}",
-                f"result_{tag}",
-            )
-            self.grab(
-                f"https://race.netkeiba.com/race/oikiri.html?race_id={race_id}",
-                f"oikiri_{tag}",
-            )
-            # 調教師コメント。専用ページが生きているかここで確認する。
-            self.grab(
-                f"https://race.netkeiba.com/race/danwa.html?race_id={race_id}",
-                f"danwa_{tag}",
-            )
-            if past:
-                horse_ids += HORSE_ID_RE.findall(past)
+            html = self.grab(f"https://db.netkeiba.com/race/{race_id}/", f"db_race_{tag}")
+            if html:
+                horse_ids += HORSE_ID_RE.findall(html)
+            for name, tmpl in COMMENT_CANDIDATES:
+                self.grab(tmpl.format(race_id=race_id), f"{name}_{tag}")
 
-        # 3. 馬個別ページ（血統・全成績）
         for horse_id in sorted(set(horse_ids))[:2]:
             self.grab(f"https://db.netkeiba.com/horse/{horse_id}/", f"horse_{horse_id}")
-            self.grab(
-                f"https://db.netkeiba.com/horse/ped/{horse_id}/", f"ped_{horse_id}"
-            )
+            self.grab(f"https://db.netkeiba.com/horse/ped/{horse_id}/", f"ped_{horse_id}")
 
-        # 4. JRA公式。POSTトークン方式なので、まず入口の doAction を採取する。
-        self.grab("https://www.jra.go.jp/keiba/", "jra_keiba_top")
-        self.grab("https://www.jra.go.jp/keiba/thisweek/", "jra_thisweek")
-        self.grab("https://www.jra.go.jp/datafile/seiseki/", "jra_seiseki_index")
+        self.walk_jra()
 
         (self.out_dir / "manifest.json").write_text(
             json.dumps(
                 {
-                    "kaisai_date": kaisai_date,
-                    "race_ids": race_ids,
+                    "requested_date": kaisai_date,
+                    "kaisai_date": stamp,
+                    "jra_race_ids": race_ids,
                     "pages": self.manifest,
                 },
                 ensure_ascii=False,
@@ -159,7 +226,6 @@ class Probe:
             ),
             encoding="utf-8",
         )
-
         ok = sum(1 for e in self.manifest if e["ok"])
         log.info("完了: %s/%s ページ取得", ok, len(self.manifest))
 
@@ -169,13 +235,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--date",
         default=last_sunday(date.today()).strftime("%Y%m%d"),
-        help="開催日 YYYYMMDD（既定: 直近の日曜）",
+        help="探索の起点 YYYYMMDD（既定: 直近の日曜。ここから中央開催日まで遡る）",
     )
     parser.add_argument("--out", type=Path, default=Path("keiba/tests/fixtures"))
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    # フィクスチャは常に新鮮なものを取る
     Probe(args.out, Fetcher(use_cache=False)).run(args.date)
     return 0
 
