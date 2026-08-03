@@ -9,3 +9,8 @@ __pycache__/
 # JSONL から毎回再構築するのでコミットしない
 keiba/*.db
 keiba/*.db-journal
+
+# ブラウザ検証用に一時導入するもの
+node_modules/
+package-lock.json
+*.png
