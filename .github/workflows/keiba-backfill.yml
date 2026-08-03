@@ -25,7 +25,7 @@ on:
   # workflow_dispatch はワークフローがデフォルトブランチに無いと API から叩けない。
   # 開発中はこのファイルへの push で起動する。push には inputs が無いため
   # 各所の `inputs.x || 既定値` が効き、races フェーズが走る。血統フェーズを
-  # 回したいときは下の 2 箇所の既定値を 'pedigree' に変えて push する。
+  # 回したいときは下の既定値を切り替えて push する（現在: pedigree）。
   push:
     branches:
       - "claude/keiba-auto-prediction-**"
@@ -38,7 +38,7 @@ permissions:
 jobs:
   # ---------------------------------------------------------------- レース
   races:
-    if: (inputs.phase || 'races') == 'races'
+    if: (inputs.phase || 'pedigree') == 'races'
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -67,7 +67,7 @@ jobs:
 
   # ---------------------------------------------------------------- 血統
   pedigree:
-    if: (inputs.phase || 'races') == 'pedigree'
+    if: (inputs.phase || 'pedigree') == 'pedigree'
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -161,7 +161,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "変化なし"
           else
-            git commit -m "chore(keiba): バックフィル（${{ inputs.phase || 'races' }}）の結果を取り込む"
+            git commit -m "chore(keiba): バックフィル（${{ inputs.phase || 'pedigree' }}）の結果を取り込む"
             git pull --rebase origin ${{ github.ref_name }}
             git push origin HEAD:${{ github.ref_name }}
           fi
