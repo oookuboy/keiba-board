@@ -1,0 +1,62 @@
+name: keiba-probe
+
+# パーサを書くための実HTMLフィクスチャを採取する。
+# 開発時に手で1回叩くだけのワークフローで、定常運用には関与しない。
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "開催日 YYYYMMDD（空なら直近の日曜）"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: pip install -e .
+
+      - name: Fetch fixtures
+        run: |
+          if [ -n "${{ inputs.date }}" ]; then
+            python -m keiba.probe --date "${{ inputs.date }}"
+          else
+            python -m keiba.probe
+          fi
+
+      - name: Summarise
+        run: |
+          python - <<'PY'
+          import json, pathlib
+          m = json.loads(pathlib.Path("keiba/tests/fixtures/manifest.json").read_text())
+          print("kaisai_date:", m["kaisai_date"])
+          print("race_ids:", len(m["race_ids"]), m["race_ids"][:5])
+          for p in m["pages"]:
+              print("OK  " if p["ok"] else "FAIL", p["label"], p.get("chars", ""), p.get("error", ""))
+          PY
+
+      - name: Commit fixtures
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A keiba/tests/fixtures
+          if git diff --cached --quiet; then
+            echo "変化なし"
+          else
+            git commit -m "chore(keiba): probe でHTMLフィクスチャを採取"
+            git push origin HEAD:${{ github.ref_name }}
+          fi

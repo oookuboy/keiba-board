@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# スクレイプのディスクキャッシュ。中身は raw/*.jsonl.gz として別途コミットされる
+.cache/
+
+# JSONL から毎回再構築するのでコミットしない
+keiba/*.db
+keiba/*.db-journal
