@@ -1,0 +1,111 @@
+name: keiba-weekend
+
+# 開催日の定常運用。cron は UTC で、JST = UTC+9。
+#
+# GitHub Actions の cron は数分〜数十分遅れて発火する。発走直前の情報
+# （馬体重は発走約50分前確定）を当て込む運用は成立しないため、
+# 前日夜に予想を確定させ、当日朝に馬場状態と取消だけを反映して作り直す。
+
+on:
+  schedule:
+    # 金 21:00 JST = 金 12:00 UTC — 出馬表が出そろったころに収集
+    - cron: "0 12 * * 5"
+    # 土日 05:00 JST = 金土 20:00 UTC — 前日夜の予想確定
+    - cron: "0 20 * * 5,6"
+    # 土日 07:00 JST = 土日 22:00 UTC(前日) — 当日朝の再生成
+    - cron: "0 22 * * 5,6"
+    # 土日 22:00 JST = 土日 13:00 UTC — 結果照合と回顧
+    - cron: "0 13 * * 6,0"
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "collect / predict / review"
+        required: true
+        type: choice
+        options: [collect, predict, review]
+        default: predict
+      date:
+        description: "対象日 YYYY-MM-DD（空なら今日）"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  # 予想と回顧が同時に走ると raw/ と data/ の取り合いになる
+  group: keiba-weekend
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+
+      # SQLite は raw から毎回作り直す使い捨てなので、キャッシュに載せて
+      # 3年分の再構築を毎回やらずに済ませる
+      - uses: actions/cache@v4
+        with:
+          path: keiba/keiba.db
+          key: keiba-db-${{ hashFiles('keiba/raw/**/*.jsonl.gz') }}
+          restore-keys: keiba-db-
+
+      - name: どのジョブを走らせるか決める
+        id: plan
+        run: |
+          if [ -n "${{ inputs.job }}" ]; then
+            JOB="${{ inputs.job }}"
+          else
+            case "${{ github.event.schedule }}" in
+              "0 12 * * 5")     JOB=collect ;;
+              "0 20 * * 5,6")   JOB=predict ;;
+              "0 22 * * 5,6")   JOB=predict ;;
+              "0 13 * * 6,0")   JOB=review  ;;
+              *)                JOB=predict ;;
+            esac
+          fi
+          DATE="${{ inputs.date }}"
+          [ -n "$DATE" ] || DATE=$(TZ=Asia/Tokyo date +%F)
+          echo "job=$JOB"   >> "$GITHUB_OUTPUT"
+          echo "date=$DATE" >> "$GITHUB_OUTPUT"
+          echo "→ $JOB / $DATE"
+
+      - name: Collect
+        if: steps.plan.outputs.job == 'collect'
+        run: |
+          python -m keiba.cli collect --date "${{ steps.plan.outputs.date }}" --days-ahead 3
+          python -m keiba.cli build
+
+      - name: Predict
+        if: steps.plan.outputs.job == 'predict'
+        run: |
+          # 当日の確定情報（馬場状態・取消）を取り直してから予想し直す
+          python -m keiba.cli collect --date "${{ steps.plan.outputs.date }}" --days-ahead 1 || true
+          python -m keiba.cli build
+          python -m keiba.cli predict --date "${{ steps.plan.outputs.date }}"
+
+      - name: Review
+        if: steps.plan.outputs.job == 'review'
+        run: |
+          python -m keiba.cli collect --date "${{ steps.plan.outputs.date }}" --days-ahead 0 --results
+          python -m keiba.cli build
+          python -m keiba.cli review --date "${{ steps.plan.outputs.date }}"
+
+      - name: Commit
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A keiba/raw keiba/data keiba/config keiba/LESSONS.md
+          if git diff --cached --quiet; then
+            echo "変化なし"
+          else
+            git commit -m "chore(keiba): ${{ steps.plan.outputs.job }} ${{ steps.plan.outputs.date }}"
+            git pull --rebase origin ${{ github.ref_name }}
+            git push origin HEAD:${{ github.ref_name }}
+          fi

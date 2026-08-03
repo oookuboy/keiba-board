@@ -18,7 +18,7 @@ from pathlib import Path
 
 import yaml
 
-from keiba import backfill, backtest, predict, review
+from keiba import backfill, backtest, collect, predict, review
 from keiba.sources.http import Fetcher
 from keiba.store import Store, rebuild
 
@@ -99,6 +99,16 @@ def _load_config(args: argparse.Namespace) -> tuple[dict, dict]:
         )
         sire_table = {}
     return weights, sire_table
+
+
+def cmd_collect(args: argparse.Namespace) -> int:
+    """開催日まわりのレースを取り込む。"""
+    fetcher = Fetcher(cache_dir=args.cache)
+    kept, failed = collect.collect_range(
+        fetcher, args.day, args.days_ahead, args.raw_dir, results_only=args.results
+    )
+    log.info("取り込み %d レース（失敗 %d）cache=%s", kept, failed, fetcher.stats)
+    return 0
 
 
 def cmd_predict(args: argparse.Namespace) -> int:
@@ -182,6 +192,14 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("build", help="raw から SQLite と種牡馬適性を作る")
     p.add_argument("--min-sire-runs", type=int, default=30)
     p.set_defaults(func=cmd_build)
+
+    p = sub.add_parser("collect", help="開催日まわりのレースを取り込む")
+    p.add_argument("--date", dest="day", type=_date, required=True)
+    p.add_argument("--days-ahead", type=int, default=0, help="何日先まで取るか")
+    p.add_argument(
+        "--results", action="store_true", help="結果の入ったレースだけ残す（回顧用）"
+    )
+    p.set_defaults(func=cmd_collect)
 
     p = sub.add_parser("predict", help="指定日の全レースを予想する")
     p.add_argument("--date", dest="day", type=_date, required=True)
