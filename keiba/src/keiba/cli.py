@@ -165,7 +165,13 @@ def cmd_stats(args: argparse.Namespace) -> int:
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """引数パーサを組み立てる。
+
+    実行から切り離してあるのは、ワークフローに書かれたコマンドが解釈できるかを
+    テストから確かめるため。--help を足して確認する方法だと argparse が
+    そこで正常終了してしまい、引数の誤りに到達しない。
+    """
     parser = argparse.ArgumentParser(prog="keiba", description=__doc__)
     parser.add_argument("--raw-dir", type=Path, default=RAW_DIR)
     parser.add_argument("--db", type=Path, default=DB_PATH)
@@ -217,7 +223,11 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("stats", help="投入済みデータの件数を表示する")
     p.set_defaults(func=cmd_stats)
 
-    args = parser.parse_args(argv)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
