@@ -46,11 +46,16 @@ JRA_SEEDS = [
     ("info", "/JRADB/accessI.html", "pw01ide01/4F"),       # 開催情報
 ]
 
-# 調教師コメントの在処が不明。候補を総当たりして生きているURLを特定する。
-COMMENT_CANDIDATES = [
-    ("danwa_db", "https://db.netkeiba.com/race/danwa/{race_id}/"),
-    ("cyokyo_db", "https://db.netkeiba.com/race/cyokyo/{race_id}/"),
+# 競馬新聞ページは race.netkeiba.com で唯一サーバーレンダリングされる。
+# 調教タイムが入っているが、無料枠では先頭3頭までしか見えない。
+RACE_LEVEL_PAGES = [
     ("news_comment", "https://race.netkeiba.com/race/newspaper.html?race_id={race_id}"),
+]
+
+# db_race の結果テーブルが指していた実URL。厩舎コメントと調教はここにある。
+HORSE_LEVEL_PAGES = [
+    ("kyusya_comment", "https://db.netkeiba.com/horse/kyusya_comment.html?id={horse_id}"),
+    ("horse_training", "https://db.netkeiba.com/?pid=horse_training&id={horse_id}&rid={race_id}"),
 ]
 
 
@@ -202,16 +207,49 @@ class Probe:
         for idx, race_id in enumerate(targets):
             tag = "main" if idx == 0 else "sub"
             html = self.grab(f"https://db.netkeiba.com/race/{race_id}/", f"db_race_{tag}")
-            if html:
-                horse_ids += HORSE_ID_RE.findall(html)
-            for name, tmpl in COMMENT_CANDIDATES:
+            ids = HORSE_ID_RE.findall(html) if html else []
+            horse_ids += ids
+            for name, tmpl in RACE_LEVEL_PAGES:
                 self.grab(tmpl.format(race_id=race_id), f"{name}_{tag}")
+            for horse_id in sorted(set(ids))[:1]:
+                for name, tmpl in HORSE_LEVEL_PAGES:
+                    self.grab(
+                        tmpl.format(horse_id=horse_id, race_id=race_id),
+                        f"{name}_{tag}",
+                    )
 
         for horse_id in sorted(set(horse_ids))[:2]:
             self.grab(f"https://db.netkeiba.com/horse/{horse_id}/", f"horse_{horse_id}")
             self.grab(f"https://db.netkeiba.com/horse/ped/{horse_id}/", f"ped_{horse_id}")
 
+        self.probe_future(start)
         self.walk_jra()
+
+    def probe_future(self, today: date) -> None:
+        """これから行われるレースが db.netkeiba に出るかを確かめる。
+
+        予想には未来の出馬表が要るが、db.netkeiba は過去成績のデータベースなので
+        発走前にどこまで見えるかが分かっていない。JRA公式の出馬表は木曜公開なので、
+        週明けに走らせたこのプローブでは空振りしうる。空振りも記録として残す。
+        """
+        for offset in range(1, 8):
+            day = today + timedelta(days=offset)
+            if day.weekday() not in (5, 6):  # 土日のみ
+                continue
+            stamp = day.strftime("%Y%m%d")
+            html = self.grab(
+                f"https://db.netkeiba.com/race/list/{stamp}/", f"future_list_{stamp}"
+            )
+            if not html:
+                continue
+            jra = [i for i in set(RACE_ID_RE.findall(html)) if i[4:6] in VENUES]
+            log.info("未来 %s: 中央 %d件", stamp, len(jra))
+            if jra:
+                self.grab(
+                    f"https://db.netkeiba.com/race/{sorted(jra)[0]}/",
+                    f"future_race_{stamp}",
+                )
+                return
 
         (self.out_dir / "manifest.json").write_text(
             json.dumps(
