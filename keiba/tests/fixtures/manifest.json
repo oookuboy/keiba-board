@@ -1,0 +1,383 @@
+{
+  "kaisai_date": "20260802",
+  "race_ids": [
+    "202635080201",
+    "202635080202",
+    "202635080203",
+    "202635080204",
+    "202635080205",
+    "202635080206",
+    "202635080207",
+    "202635080208",
+    "202635080209",
+    "202635080210",
+    "202635080211",
+    "202635080212",
+    "202643080201",
+    "202643080202",
+    "202643080203",
+    "202643080204",
+    "202643080205",
+    "202643080206",
+    "202643080207",
+    "202643080208",
+    "202643080209",
+    "202643080210",
+    "202643080211",
+    "202643080212",
+    "202654080201",
+    "202654080202",
+    "202654080203",
+    "202654080204",
+    "202654080205",
+    "202654080206",
+    "202654080207",
+    "202654080208",
+    "202654080209",
+    "202654080210",
+    "202654080211",
+    "202665080201",
+    "202665080202",
+    "202665080203",
+    "202665080204",
+    "202665080205",
+    "202665080206",
+    "202665080207",
+    "202665080208",
+    "202665080209",
+    "202665080210",
+    "202665080211",
+    "202665080212"
+  ],
+  "pages": [
+    {
+      "label": "robots_netkeiba",
+      "url": "https://www.netkeiba.com/robots.txt",
+      "ok": false,
+      "error": "404 Not Found: https://www.netkeiba.com/robots.txt"
+    },
+    {
+      "label": "robots_jra",
+      "url": "https://www.jra.go.jp/robots.txt",
+      "ok": true,
+      "chars": 27,
+      "file": "robots_jra__www.jra.go.jp_robots.txt.html",
+      "doAction": []
+    },
+    {
+      "label": "db_race_list",
+      "url": "https://db.netkeiba.com/race/list/20260802/",
+      "ok": true,
+      "chars": 42842,
+      "file": "db_race_list__db.netkeiba.com_race_list_20260802_.html"
+    },
+    {
+      "label": "race_list_top",
+      "url": "https://race.netkeiba.com/top/race_list.html?kaisai_date=20260802",
+      "ok": true,
+      "chars": 43256,
+      "file": "race_list_top__race.netkeiba.com_top_race_list.html_kaisai_date_20260802.html"
+    },
+    {
+      "label": "db_race_main",
+      "url": "https://db.netkeiba.com/race/202665080212/",
+      "ok": true,
+      "chars": 64051,
+      "file": "db_race_main__db.netkeiba.com_race_202665080212_.html"
+    },
+    {
+      "label": "shutuba_main",
+      "url": "https://race.netkeiba.com/race/shutuba.html?race_id=202665080212",
+      "ok": true,
+      "chars": 71798,
+      "file": "shutuba_main__race.netkeiba.com_race_shutuba.html_race_id_202665080212.html"
+    },
+    {
+      "label": "shutuba_past_main",
+      "url": "https://race.netkeiba.com/race/shutuba_past.html?race_id=202665080212",
+      "ok": true,
+      "chars": 46961,
+      "file": "shutuba_past_main__race.netkeiba.com_race_shutuba_past.html_race_id_202665080212.html"
+    },
+    {
+      "label": "result_main",
+      "url": "https://race.netkeiba.com/race/result.html?race_id=202665080212",
+      "ok": true,
+      "chars": 36156,
+      "file": "result_main__race.netkeiba.com_race_result.html_race_id_202665080212.html"
+    },
+    {
+      "label": "oikiri_main",
+      "url": "https://race.netkeiba.com/race/oikiri.html?race_id=202665080212",
+      "ok": true,
+      "chars": 35046,
+      "file": "oikiri_main__race.netkeiba.com_race_oikiri.html_race_id_202665080212.html"
+    },
+    {
+      "label": "danwa_main",
+      "url": "https://race.netkeiba.com/race/danwa.html?race_id=202665080212",
+      "ok": false,
+      "error": "404 Not Found: https://race.netkeiba.com/race/danwa.html?race_id=202665080212"
+    },
+    {
+      "label": "db_race_sub",
+      "url": "https://db.netkeiba.com/race/202635080201/",
+      "ok": true,
+      "chars": 60766,
+      "file": "db_race_sub__db.netkeiba.com_race_202635080201_.html"
+    },
+    {
+      "label": "shutuba_sub",
+      "url": "https://race.netkeiba.com/race/shutuba.html?race_id=202635080201",
+      "ok": true,
+      "chars": 71798,
+      "file": "shutuba_sub__race.netkeiba.com_race_shutuba.html_race_id_202635080201.html"
+    },
+    {
+      "label": "shutuba_past_sub",
+      "url": "https://race.netkeiba.com/race/shutuba_past.html?race_id=202635080201",
+      "ok": true,
+      "chars": 46961,
+      "file": "shutuba_past_sub__race.netkeiba.com_race_shutuba_past.html_race_id_202635080201.html"
+    },
+    {
+      "label": "result_sub",
+      "url": "https://race.netkeiba.com/race/result.html?race_id=202635080201",
+      "ok": true,
+      "chars": 36156,
+      "file": "result_sub__race.netkeiba.com_race_result.html_race_id_202635080201.html"
+    },
+    {
+      "label": "oikiri_sub",
+      "url": "https://race.netkeiba.com/race/oikiri.html?race_id=202635080201",
+      "ok": true,
+      "chars": 35046,
+      "file": "oikiri_sub__race.netkeiba.com_race_oikiri.html_race_id_202635080201.html"
+    },
+    {
+      "label": "danwa_sub",
+      "url": "https://race.netkeiba.com/race/danwa.html?race_id=202635080201",
+      "ok": false,
+      "error": "404 Not Found: https://race.netkeiba.com/race/danwa.html?race_id=202635080201"
+    },
+    {
+      "label": "jra_keiba_top",
+      "url": "https://www.jra.go.jp/keiba/",
+      "ok": true,
+      "chars": 59559,
+      "file": "jra_keiba_top__www.jra.go.jp_keiba_.html",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        },
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        }
+      ]
+    },
+    {
+      "label": "jra_thisweek",
+      "url": "https://www.jra.go.jp/keiba/thisweek/",
+      "ok": true,
+      "chars": 59713,
+      "file": "jra_thisweek__www.jra.go.jp_keiba_thisweek_.html",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        }
+      ]
+    },
+    {
+      "label": "jra_seiseki_index",
+      "url": "https://www.jra.go.jp/datafile/seiseki/",
+      "ok": true,
+      "chars": 60473,
+      "file": "jra_seiseki_index__www.jra.go.jp_datafile_seiseki_.html",
+      "doAction": [
+        {
+          "action": "/JRADB/accessI.html",
+          "cname": "pw01ide01/4F"
+        },
+        {
+          "action": "/JRADB/accessD.html",
+          "cname": "pw01dli00/F3"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw15oli00/6D"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01sli00/AF"
+        },
+        {
+          "action": "/JRADB/accessH.html",
+          "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/accessT.html",
+          "cname": "pw03trl00/29"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessW.html",
+          "cname": "pr13rli00/8E"
+        },
+        {
+          "action": "/JRADB/accessV.html",
+          "cname": "pv156liH1/98"
+        },
+        {
+          "action": "/JRADB/accessX.html",
+          "cname": "pr12rnk00/01"
+        },
+        {
+          "action": "/JRADB/accessR.html",
+          "cname": "pw02uliD19999"
+        },
+        {
+          "action": "/JRADB/accessS.html",
+          "cname": "pw01skl00999999/B3"
+        },
+        {
+          "action": "/JRADB/accessSS.html",
+          "cname": "pk01skl009999/A6"
+        }
+      ]
+    }
+  ]
+}
