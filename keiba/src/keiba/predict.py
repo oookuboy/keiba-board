@@ -194,7 +194,7 @@ def predict_day(store: Store, weights: dict, sire_table: dict, day: date) -> dic
             "budget_actions": budget_actions,
             "by_confidence": {
                 g: sum(1 for r in races if r["confidence"] == g)
-                for g in ("◎", "○", "△", "×")
+                for g in ("◎", "○", "△", "×", "?")
             },
         },
         "races": races,

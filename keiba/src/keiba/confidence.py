@@ -21,11 +21,15 @@ from keiba.engine import ScoredHorse
 log = logging.getLogger(__name__)
 
 SKIP = "×"
+# オッズがまだ無くて妙味を判定できない状態。× とは意味が違う。
+# × は「堅いから買わない」という判断だが、こちらは判断がまだできていない。
+# 前日夜の予想は必ずここに落ちる（単勝オッズは当日にならないと出ない）。
+PENDING = "?"
 
 
 @dataclass
 class Confidence:
-    grade: str              # ◎ ○ △ ×
+    grade: str              # ◎ ○ △ × ?
     popularity_sum: int     # 能力上位3頭の人気順位の和。大きいほど穴
     separation: float       # スコア1位と4位の差。能力序列の明確さ
     expected_odds: float | None
@@ -33,7 +37,12 @@ class Confidence:
 
     @property
     def should_bet(self) -> bool:
-        return self.grade != SKIP
+        return self.grade not in (SKIP, PENDING)
+
+    @property
+    def is_pending(self) -> bool:
+        """能力評価は出ているが、オッズ待ちで自信度を決められない。"""
+        return self.grade == PENDING
 
 
 def estimate_trio_odds(top3: list[ScoredHorse]) -> float | None:
@@ -61,9 +70,14 @@ def grade(horses: list[ScoredHorse], weights: dict) -> Confidence:
     top3 = ranked[:3]
 
     pops = [h.market_popularity for h in top3 if h.market_popularity]
-    # 人気が取れていないと穴かどうかを判定できない。買わない側に倒す。
+    # 人気が無いと妙味を判定できない。ただしこれは「堅いから見送る」のとは
+    # 別物なので × にはしない。能力評価と印はそのまま使えるので、
+    # オッズが出てから再評価する前提で PENDING を返す。
     if len(pops) < 3:
-        return Confidence(SKIP, 0, 0.0, None, "人気が取得できず妙味を判定できない")
+        return Confidence(
+            PENDING, 0, 0.0, None,
+            "オッズ未確定のため妙味を判定できない（当日の再評価で確定する）",
+        )
 
     pop_sum = sum(pops)
     separation = round(ranked[0].score - ranked[3].score, 2) if len(ranked) > 3 else 0.0
