@@ -265,6 +265,11 @@ function renderSummary(){
   }else{
     html+=" ／ 結果待ち";
   }
+  // 1日の上限で減額・見送りをしたなら、その事実を隠さず出す
+  if(s.budget_actions&&s.budget_actions.length){
+    html+=`<br><span style="color:var(--amber)">予算調整: ${
+      s.budget_actions.join(" / ")}</span>`;
+  }
   document.getElementById("daysum").innerHTML=html;
 }
 
@@ -317,7 +322,8 @@ function raceCard(r){
         : `<br><span class="miss">不的中</span>`;
     }
   }else{
-    sp.innerHTML="見送り";
+    // 自信度で切ったのか予算で切ったのかは意味が違うので区別して出す
+    sp.innerHTML=r.budget_skipped?"予算で<br>見送り":"見送り";
   }
   head.appendChild(sp);
 
