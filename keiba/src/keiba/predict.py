@@ -93,6 +93,69 @@ def predict_race(race_id: str, store: Store, weights: dict, sire_table: dict) ->
     }
 
 
+# 予算を削る順序。◎ は最後まで守る。穴で勝負するレースを削ったら
+# 「固い予想はいらない」という方針そのものが崩れるため。
+TRIM_ORDER = ("△", "○", "◎")
+
+
+def apply_daily_cap(races: list[dict], cfg: dict) -> list[str]:
+    """1日の総額を上限に収める。
+
+    開催日は36レースあり、1レース10点前後を素直に積むと簡単に数万円になる。
+    削り方には順序があり、まず自信度の低いレースを最小単位へ落とし、それでも
+    収まらなければ低いほうから買い目ごと落とす。◎ は最後まで守る。
+
+    戻り値は何をしたかの記録（ボードとログに出す）。
+    """
+    cap = cfg.get("daily_cap")
+    unit = cfg["unit"]
+    if not cap:
+        return []
+
+    def total() -> int:
+        return sum(r["spend"] for r in races)
+
+    actions: list[str] = []
+    if total() <= cap:
+        return actions
+
+    # 第1段: 自信度の低い順に、全点を最小単位へ落とす
+    for grade in TRIM_ORDER:
+        for race in races:
+            if race["confidence"] != grade or not race["bets"]:
+                continue
+            if all(b["amount"] <= unit for b in race["bets"]):
+                continue
+            for bet in race["bets"]:
+                bet["amount"] = unit
+            race["spend"] = sum(b["amount"] for b in race["bets"])
+        if total() <= cap:
+            actions.append(f"{grade} までを最小単位に減額して上限に収めた")
+            return actions
+    actions.append("全レースを最小単位まで減額した")
+
+    # 第2段: それでも超えるなら、低い自信度のレースから買い目ごと落とす
+    for grade in TRIM_ORDER[:-1]:  # ◎ は落とさない
+        dropped = 0
+        for race in sorted(
+            (r for r in races if r["confidence"] == grade and r["bets"]),
+            key=lambda r: r["popularity_sum"],  # 妙味の薄いレースから捨てる
+        ):
+            if total() <= cap:
+                break
+            race["bets"] = []
+            race["spend"] = 0
+            race["budget_skipped"] = True
+            dropped += 1
+        if dropped:
+            actions.append(f"{grade} を {dropped}R 見送り（予算上限）")
+        if total() <= cap:
+            return actions
+
+    actions.append(f"◎ だけで上限を超えている（{total():,}円 > {cap:,}円）")
+    return actions
+
+
 def predict_day(store: Store, weights: dict, sire_table: dict, day: date) -> dict:
     """その日の中央全レースを予想する。"""
     race_ids = [
@@ -114,6 +177,10 @@ def predict_day(store: Store, weights: dict, sire_table: dict, day: date) -> dic
         if payload:
             races.append(payload)
 
+    budget_actions = apply_daily_cap(races, weights["betting"])
+    for action in budget_actions:
+        log.info("予算調整: %s", action)
+
     bet_races = [r for r in races if r["bets"]]
     return {
         "date": day.isoformat(),
@@ -124,6 +191,7 @@ def predict_day(store: Store, weights: dict, sire_table: dict, day: date) -> dic
             "bet": len(bet_races),
             "skipped": len(races) - len(bet_races),
             "spend": sum(r["spend"] for r in races),
+            "budget_actions": budget_actions,
             "by_confidence": {
                 g: sum(1 for r in races if r["confidence"] == g)
                 for g in ("◎", "○", "△", "×")
