@@ -13,6 +13,7 @@ from __future__ import annotations
 import gzip
 import json
 import logging
+import re
 import sqlite3
 from collections.abc import Iterable, Iterator
 from datetime import date
@@ -66,6 +67,13 @@ CREATE TABLE IF NOT EXISTS entries (
 CREATE INDEX IF NOT EXISTS idx_entries_horse  ON entries(horse_id);
 CREATE INDEX IF NOT EXISTS idx_entries_jockey ON entries(jockey_id);
 CREATE INDEX IF NOT EXISTS idx_entries_sire   ON entries(sire);
+
+-- 血統は馬単位。出走ごとに持つと raw が肥大するので分けて持ち、
+-- rebuild のときに entries へ流し込む（既存クエリが entries.sire を見るため）。
+CREATE TABLE IF NOT EXISTS horses (
+    horse_id TEXT PRIMARY KEY,
+    sire TEXT, dam TEXT, damsire TEXT, sire_line TEXT
+);
 
 CREATE TABLE IF NOT EXISTS results (
     race_id TEXT NOT NULL, umaban INTEGER NOT NULL,
@@ -185,6 +193,43 @@ class Store:
             count += 1
         self.conn.commit()
         return count
+
+    def upsert_horses(self, horses: Iterable[dict]) -> int:
+        n = self._upsert("horses", horses)
+        self.conn.commit()
+        return n
+
+    def apply_pedigree(self) -> int:
+        """horses の血統を entries に流し込む。
+
+        sire_aptitude をはじめ集計クエリは entries.sire を見るので、
+        rebuild のたびにここで揃えておく。
+        """
+        cur = self.conn.execute(
+            """
+            UPDATE entries SET
+                sire    = (SELECT h.sire    FROM horses h WHERE h.horse_id = entries.horse_id),
+                dam     = (SELECT h.dam     FROM horses h WHERE h.horse_id = entries.horse_id),
+                damsire = (SELECT h.damsire FROM horses h WHERE h.horse_id = entries.horse_id)
+            WHERE EXISTS (SELECT 1 FROM horses h WHERE h.horse_id = entries.horse_id)
+            """
+        )
+        self.conn.commit()
+        return cur.rowcount
+
+    def horse_ids_without_pedigree(self) -> list[str]:
+        """血統をまだ引いていない馬。バックフィル第2段の対象になる。"""
+        return [
+            r[0]
+            for r in self.conn.execute(
+                """
+                SELECT DISTINCT e.horse_id FROM entries e
+                LEFT JOIN horses h ON h.horse_id = e.horse_id
+                WHERE e.horse_id <> '' AND h.horse_id IS NULL
+                ORDER BY e.horse_id
+                """
+            )
+        ]
 
     # --------------------------------------------------------------- 読み出し
 
@@ -377,10 +422,17 @@ def read_jsonl(path: Path) -> Iterator[RaceCard]:
                 yield RaceCard.from_dict(json.loads(line))
 
 
+#  raw/YYYY/YYYY-MM-DD.jsonl.gz だけがレースファイル。
+#  raw/pedigree.jsonl.gz のような馬単位のファイルを巻き込まないための番人。
+RACE_FILE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\.jsonl\.gz$")
+
+
 def rebuild(store: Store, raw_dir: Path) -> int:
-    """raw/*.jsonl.gz を全部読んで SQLite を作り直す。"""
+    """raw の開催日ファイルを全部読んで SQLite を作り直す。"""
     total = 0
     for path in sorted(raw_dir.rglob("*.jsonl.gz")):
+        if not RACE_FILE_RE.match(path.name):
+            continue
         n = store.save_cards(read_jsonl(path))
         total += n
         log.info("%s: %d レース", path.name, n)

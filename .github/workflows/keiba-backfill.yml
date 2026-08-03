@@ -1,0 +1,167 @@
+name: keiba-backfill
+
+# 過去データの一括収集。手で起動する。
+#
+# 並列ジョブが同じブランチへ push すると非 fast-forward で潰し合うため、
+# 各ジョブは artifact に出すだけにして、最後の1ジョブだけがコミットする。
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: "races（レース収集）か pedigree（血統収集）"
+        required: true
+        type: choice
+        options: [races, pedigree]
+        default: races
+      years:
+        description: "races 用。収集する年のJSON配列"
+        required: false
+        default: '["2023","2024","2025","2026"]'
+      chunks:
+        description: "pedigree 用。並列数（1チャンク7000頭）"
+        required: false
+        default: "4"
+  # workflow_dispatch はワークフローがデフォルトブランチに無いと API から叩けない。
+  # 開発中はこのファイルへの push で起動する。push には inputs が無いため
+  # 各所の `inputs.x || 既定値` が効き、races フェーズが走る。血統フェーズを
+  # 回したいときは下の 2 箇所の既定値を 'pedigree' に変えて push する。
+  push:
+    branches:
+      - "claude/keiba-auto-prediction-**"
+    paths:
+      - ".github/workflows/keiba-backfill.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  # ---------------------------------------------------------------- レース
+  races:
+    if: (inputs.phase || 'races') == 'races'
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        year: ${{ fromJSON(inputs.years || '["2023","2024","2025","2026"]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+
+      - name: Collect ${{ matrix.year }}
+        run: |
+          python -m keiba.cli backfill-races \
+            --from ${{ matrix.year }}-01-01 \
+            --to   ${{ matrix.year }}-12-31
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: raw-${{ matrix.year }}
+          path: keiba/raw/${{ matrix.year }}/
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------- 血統
+  pedigree:
+    if: (inputs.phase || 'races') == 'pedigree'
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        chunk: [0, 1, 2, 3]
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+
+      # 対象リストは horse_id の昇順で安定なので、offset/limit で重複なく割れる
+      - name: Collect chunk ${{ matrix.chunk }}
+        run: |
+          python -m keiba.cli backfill-pedigree \
+            --offset $(( ${{ matrix.chunk }} * 7000 )) \
+            --limit 7000 \
+            --pedigree keiba/raw/pedigree-${{ matrix.chunk }}.jsonl.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pedigree-${{ matrix.chunk }}
+          path: keiba/raw/pedigree-${{ matrix.chunk }}.jsonl.gz
+          if-no-files-found: warn
+
+  # ------------------------------------------------------- 集約とコミット
+  commit:
+    needs: [races, pedigree]
+    # どちらか一方の phase しか動かないので、片方が skipped でも進める
+    if: always() && !cancelled()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/artifacts
+
+      - name: Merge artifacts into raw/
+        run: |
+          python - <<'PY'
+          import gzip, json, pathlib, shutil
+          art = pathlib.Path("/tmp/artifacts")
+          raw = pathlib.Path("keiba/raw")
+
+          # レース: raw-YYYY/*.jsonl.gz をそのまま raw/YYYY/ へ
+          for d in sorted(art.glob("raw-*")):
+              year = d.name.split("-", 1)[1]
+              dest = raw / year
+              dest.mkdir(parents=True, exist_ok=True)
+              for f in sorted(d.glob("*.jsonl.gz")):
+                  shutil.copy2(f, dest / f.name)
+                  print("race", dest / f.name)
+
+          # 血統: 分割ファイルを1本に畳む
+          merged = {}
+          target = raw / "pedigree.jsonl.gz"
+          if target.exists():
+              with gzip.open(target, "rt", encoding="utf-8") as fh:
+                  for line in fh:
+                      if line.strip():
+                          r = json.loads(line); merged[r["horse_id"]] = r
+          for f in sorted(art.glob("pedigree-*/*.jsonl.gz")):
+              with gzip.open(f, "rt", encoding="utf-8") as fh:
+                  for line in fh:
+                      if line.strip():
+                          r = json.loads(line); merged[r["horse_id"]] = r
+              print("ped", f)
+          if merged:
+              with gzip.open(target, "wt", encoding="utf-8") as fh:
+                  for hid in sorted(merged):
+                      fh.write(json.dumps(merged[hid], ensure_ascii=False, sort_keys=True) + "\n")
+              print("血統", len(merged), "頭")
+          PY
+
+      - name: Build database and sire aptitude
+        run: python -m keiba.cli build
+
+      - name: Commit
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A keiba/raw keiba/config
+          if git diff --cached --quiet; then
+            echo "変化なし"
+          else
+            git commit -m "chore(keiba): バックフィル（${{ inputs.phase || 'races' }}）の結果を取り込む"
+            git pull --rebase origin ${{ github.ref_name }}
+            git push origin HEAD:${{ github.ref_name }}
+          fi
