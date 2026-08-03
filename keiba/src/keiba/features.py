@@ -213,6 +213,7 @@ def condition_changes(
     store: Store,
     cfg: dict,
     ped_cfg: dict,
+    as_of: date | None = None,
 ) -> tuple[float, list[str]]:
     """SKILL.md の条件一変7パターンを検出して加点する。"""
     score = 0.0
@@ -259,7 +260,7 @@ def condition_changes(
 
     # 6. 騎手強化
     if entry.jockey_id and previous.jockey and entry.jockey != previous.jockey:
-        now_n, now_win, _ = store.jockey_record(entry.jockey_id)
+        now_n, now_win, _ = store.jockey_record(entry.jockey_id, before=as_of)
         if now_n >= 50 and now_win >= cfg["jockey_winrate_gap"]:
             score += cfg["jockey_upgrade"]
             notes.append(f"{previous.jockey}→{entry.jockey}へ乗り替わり（勝率{now_win:.0%}）")
@@ -332,13 +333,23 @@ def form_score(
 
 # --------------------------------------------------------------- 騎手
 
-def jockey_score(entry: Entry, race: Race, store: Store, cfg: dict) -> tuple[float, str | None]:
-    """騎手の当該場成績と、馬とのコンビ成績を合わせる。"""
+def jockey_score(
+    entry: Entry, race: Race, store: Store, cfg: dict, as_of: date | None = None
+) -> tuple[float, str | None]:
+    """騎手の当該場成績と、馬とのコンビ成績を合わせる。
+
+    as_of を渡すとその日より前の騎乗だけを見る。バックテストで予想日以降の
+    成績を混ぜないため。
+    """
     if not entry.jockey_id:
         return 0.5, None
 
-    _, _, venue_place = store.jockey_record(entry.jockey_id, venue=race.venue)
-    combo_n, combo_place = store.horse_jockey_record(entry.horse_id, entry.jockey_id)
+    _, _, venue_place = store.jockey_record(
+        entry.jockey_id, venue=race.venue, before=as_of
+    )
+    combo_n, combo_place = store.horse_jockey_record(
+        entry.horse_id, entry.jockey_id, before=as_of
+    )
 
     venue_part = min(venue_place / 0.40, 1.0)
     if combo_n >= cfg["min_combo_runs"]:
@@ -413,7 +424,7 @@ def build_features(
 
         f.condition_change, notes = condition_changes(
             entry, race, past, sire_table, store,
-            weights["condition_change"], weights["pedigree"],
+            weights["condition_change"], weights["pedigree"], as_of,
         )
         for n in notes:
             f.note(n)
@@ -422,7 +433,7 @@ def build_features(
         for n in notes:
             f.note(n)
 
-        f.jockey, note = jockey_score(entry, race, store, weights["jockey"])
+        f.jockey, note = jockey_score(entry, race, store, weights["jockey"], as_of)
         if note:
             f.note(note)
 

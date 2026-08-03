@@ -308,12 +308,17 @@ class Store:
 
     # ------------------------------------------------------------ 集計クエリ
 
-    def sire_aptitude(self, min_runs: int = 30) -> dict[str, dict[str, dict]]:
+    def sire_aptitude(
+        self, min_runs: int = 30, before: date | None = None
+    ) -> dict[str, dict[str, dict]]:
         """父ごとの 芝/ダ × 距離帯 の複勝率。
 
         SKILL.md の教訓1（ダート→芝替わりを血統から拾う）を計算可能にする土台。
         Palace Pier を名指しでハードコードする代わりに、同じ性質の父をデータから
         全て拾えるようにする。
+
+        before を渡すとその日より前の走りだけで集計する。バックテストで
+        「予想時点では知りえない結果」を使ってしまう先読みを防ぐため。
         """
         sql = """
         SELECT e.sire, r.surface, r.distance,
@@ -324,10 +329,15 @@ class Store:
         JOIN races r    ON r.race_id = e.race_id
         JOIN results res ON res.race_id = e.race_id AND res.umaban = e.umaban
         WHERE e.sire IS NOT NULL AND e.sire <> '' AND res.finish_pos IS NOT NULL
-        GROUP BY e.sire, r.surface, r.distance
         """
+        args: list = []
+        if before:
+            sql += " AND r.race_date < ?"
+            args.append(before.isoformat())
+        sql += " GROUP BY e.sire, r.surface, r.distance"
+
         acc: dict[str, dict[str, dict[str, int]]] = {}
-        for row in self.conn.execute(sql):
+        for row in self.conn.execute(sql, args):
             key = f"{row['surface']}:{band_of(row['distance'])}"
             bucket = acc.setdefault(row["sire"], {}).setdefault(
                 key, {"runs": 0, "placed": 0, "won": 0}
@@ -353,9 +363,16 @@ class Store:
         return table
 
     def jockey_record(
-        self, jockey_id: str, venue: str | None = None, since: date | None = None
+        self,
+        jockey_id: str,
+        venue: str | None = None,
+        since: date | None = None,
+        before: date | None = None,
     ) -> tuple[int, float, float]:
-        """(騎乗数, 勝率, 複勝率)。サンプルが薄いときは呼び出し側で重みを落とす。"""
+        """(騎乗数, 勝率, 複勝率)。サンプルが薄いときは呼び出し側で重みを落とす。
+
+        before はバックテストの先読み防止。予想日以降の騎乗成績を混ぜない。
+        """
         sql = """
         SELECT COUNT(*) n,
                SUM(CASE WHEN res.finish_pos = 1 THEN 1 ELSE 0 END) w,
@@ -372,23 +389,31 @@ class Store:
         if since:
             sql += " AND r.race_date >= ?"
             args.append(since.isoformat())
+        if before:
+            sql += " AND r.race_date < ?"
+            args.append(before.isoformat())
         row = self.conn.execute(sql, args).fetchone()
         n = row["n"] or 0
         if not n:
             return 0, 0.0, 0.0
         return n, (row["w"] or 0) / n, (row["p"] or 0) / n
 
-    def horse_jockey_record(self, horse_id: str, jockey_id: str) -> tuple[int, float]:
+    def horse_jockey_record(
+        self, horse_id: str, jockey_id: str, before: date | None = None
+    ) -> tuple[int, float]:
         """馬と騎手のコンビ成績 (騎乗数, 複勝率)。"""
-        row = self.conn.execute(
-            """
+        sql = """
             SELECT COUNT(*) n, SUM(CASE WHEN res.finish_pos <= 3 THEN 1 ELSE 0 END) p
             FROM entries e
+            JOIN races r     ON r.race_id = e.race_id
             JOIN results res ON res.race_id = e.race_id AND res.umaban = e.umaban
             WHERE e.horse_id = ? AND e.jockey_id = ? AND res.finish_pos IS NOT NULL
-            """,
-            (horse_id, jockey_id),
-        ).fetchone()
+        """
+        args: list = [horse_id, jockey_id]
+        if before:
+            sql += " AND r.race_date < ?"
+            args.append(before.isoformat())
+        row = self.conn.execute(sql, args).fetchone()
         n = row["n"] or 0
         return (n, (row["p"] or 0) / n) if n else (0, 0.0)
 

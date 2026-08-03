@@ -35,14 +35,21 @@ pedigree:
     max_bonus: 1.0
 
 # --- 条件一変（SKILL.md の7パターン表） --------------------------------------
+#
+# 7パターンのうち「調教師コメント『変化あり』」は取得源が無い。netkeiba の
+# 厩舎コメントは有料プラン限定（本文が伏せ字になることを実測で確認）で、
+# JRA公式も per-horse のコメントは公開していない。
+# よって trainer_comment は 0.0 に落とし、その配分を残る6パターンへ回した。
+# 判定コード（features.condition_changes）は残してあるので、データ源が
+# 見つかったら重みを戻すだけで効く。
 condition_change:
-  surface_switch: 1.0        # ダート→芝替わり（欧州型血統）
-  distance_stretch: 0.7      # 距離延長（スタミナ型）
-  distance_shorten: 0.7      # 距離短縮（スピード型）
-  course_switch: 0.6         # コース替わり（得意コース）
-  second_off_layoff: 0.8     # 休養明け2走目（叩き良化型）
-  jockey_upgrade: 0.7        # 騎手強化
-  trainer_comment: 0.9       # 調教師コメント「変化あり」
+  surface_switch: 1.2        # ダート→芝替わり（欧州型血統）。最も効く一変
+  distance_stretch: 0.85     # 距離延長（スタミナ型）
+  distance_shorten: 0.85     # 距離短縮（スピード型）
+  course_switch: 0.75        # コース替わり（得意コース）
+  second_off_layoff: 1.0     # 休養明け2走目（叩き良化型）
+  jockey_upgrade: 0.85       # 騎手強化
+  trainer_comment: 0.0       # 取得源なし。データ源が見つかったら 0.9 に戻す
 
   # 休養明けの判定境界（日）
   layoff_days: 90

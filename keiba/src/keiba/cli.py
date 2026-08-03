@@ -16,7 +16,9 @@ import logging
 from datetime import date
 from pathlib import Path
 
-from keiba import backfill
+import yaml
+
+from keiba import backfill, backtest
 from keiba.sources.http import Fetcher
 from keiba.store import Store, rebuild
 
@@ -26,6 +28,8 @@ RAW_DIR = Path("keiba/raw")
 CONFIG_DIR = Path("keiba/config")
 DB_PATH = Path("keiba/keiba.db")
 PEDIGREE_PATH = RAW_DIR / "pedigree.jsonl.gz"
+WEIGHTS_PATH = CONFIG_DIR / "weights.yml"
+SIRE_PATH = CONFIG_DIR / "sire_aptitude.json"
 
 
 def _date(value: str) -> date:
@@ -80,6 +84,15 @@ def cmd_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_backtest(args: argparse.Namespace) -> int:
+    """過去データに対してエンジンを回し、的中率と回収率を出す。"""
+    weights = yaml.safe_load((args.config_dir / "weights.yml").read_text())
+    with Store(args.db) as store:
+        result = backtest.run(store, weights, args.start, args.end)
+    print(result.report())
+    return 0
+
+
 def cmd_stats(args: argparse.Namespace) -> int:
     with Store(args.db) as store:
         print(json.dumps(store.counts(), ensure_ascii=False, indent=2))
@@ -111,6 +124,11 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("build", help="raw から SQLite と種牡馬適性を作る")
     p.add_argument("--min-sire-runs", type=int, default=30)
     p.set_defaults(func=cmd_build)
+
+    p = sub.add_parser("backtest", help="過去データで的中率・回収率を出す")
+    p.add_argument("--from", dest="start", type=_date, required=True)
+    p.add_argument("--to", dest="end", type=_date, required=True)
+    p.set_defaults(func=cmd_backtest)
 
     p = sub.add_parser("stats", help="投入済みデータの件数を表示する")
     p.set_defaults(func=cmd_stats)
