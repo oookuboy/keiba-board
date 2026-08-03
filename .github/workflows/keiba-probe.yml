@@ -10,6 +10,15 @@ on:
         description: "開催日 YYYYMMDD（空なら直近の日曜）"
         required: false
         default: ""
+  # workflow_dispatch はワークフローがデフォルトブランチに無いと API から叩けない。
+  # 開発中は作業ブランチへの push で走らせる。main へ入れたら push トリガは外してよい。
+  push:
+    branches:
+      - "claude/keiba-auto-prediction-**"
+    paths:
+      - ".github/workflows/keiba-probe.yml"
+      - "keiba/src/keiba/probe.py"
+      - "keiba/src/keiba/sources/http.py"
 
 permissions:
   contents: write
