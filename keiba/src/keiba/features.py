@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 
 from keiba.models import Entry, PastRun, Race
 from keiba.store import Store, band_of
@@ -213,6 +213,7 @@ def condition_changes(
     store: Store,
     cfg: dict,
     ped_cfg: dict,
+    jockey_cfg: dict,
     as_of: date | None = None,
 ) -> tuple[float, list[str]]:
     """SKILL.md の条件一変7パターンを検出して加点する。"""
@@ -260,7 +261,12 @@ def condition_changes(
 
     # 6. 騎手強化
     if entry.jockey_id and previous.jockey and entry.jockey != previous.jockey:
-        now_n, now_win, _ = store.jockey_record(entry.jockey_id, before=as_of)
+        since = (
+            as_of - timedelta(days=jockey_cfg["lookback_days"]) if as_of else None
+        )
+        now_n, now_win, _ = store.jockey_record(
+            entry.jockey_id, since=since, before=as_of
+        )
         if now_n >= 50 and now_win >= cfg["jockey_winrate_gap"]:
             score += cfg["jockey_upgrade"]
             notes.append(f"{previous.jockey}→{entry.jockey}へ乗り替わり（勝率{now_win:.0%}）")
@@ -344,8 +350,10 @@ def jockey_score(
     if not entry.jockey_id:
         return 0.5, None
 
+    # 騎手の調子は年単位で動く。全期間の通算ではなく直近だけを見る。
+    since = (as_of - timedelta(days=cfg["lookback_days"])) if as_of else None
     _, _, venue_place = store.jockey_record(
-        entry.jockey_id, venue=race.venue, before=as_of
+        entry.jockey_id, venue=race.venue, since=since, before=as_of
     )
     combo_n, combo_place = store.horse_jockey_record(
         entry.horse_id, entry.jockey_id, before=as_of
@@ -424,7 +432,7 @@ def build_features(
 
         f.condition_change, notes = condition_changes(
             entry, race, past, sire_table, store,
-            weights["condition_change"], weights["pedigree"], as_of,
+            weights["condition_change"], weights["pedigree"], weights["jockey"], as_of,
         )
         for n in notes:
             f.note(n)
