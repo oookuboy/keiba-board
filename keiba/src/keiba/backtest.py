@@ -164,6 +164,7 @@ def run(
     start: date,
     end: date,
     sire_table: dict | None = None,
+    ml_scores: dict[str, dict[int, float]] | None = None,
 ) -> BacktestResult:
     """期間内の全レースを予想し、実結果と突き合わせる。"""
     if sire_table is None:
@@ -203,7 +204,12 @@ def run(
                 card.race, entries, store, sire_table, weights,
                 as_of=card.race.race_date,
             )
-            horses = engine.run(features, {e.umaban: e for e in entries}, weights)
+            horses = engine.run(
+                features,
+                {e.umaban: e for e in entries},
+                weights,
+                ml_scores.get(race_id) if ml_scores else None,
+            )
             grade = confidence.grade(horses, weights)
             tickets = betting.build(horses, grade, weights)
         except (AssertionError, KeyError, ValueError) as exc:

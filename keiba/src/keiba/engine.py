@@ -54,9 +54,19 @@ def score_horse(f: HorseFeatures, weights: dict) -> float:
 
 
 def apply_floors(horses: list[ScoredHorse], weights: dict) -> None:
-    """切ってはいけない馬にスコアの床を与える。
+    """切ってはいけない馬にスコアの床を与える（ルールベース採点のときだけ）。
 
-    順位を操作するのではなく、下限を引き上げるだけ。上位馬の序列には触らない。
+    ルールベースのスコアは中央値が 50 前後になるよう組んであるので、床 50〜55 は
+    「下位から中位へ引き上げる」程度の効果しか持たない。
+
+    一方、学習モデルのスコアは3着以内確率をそのまま 0〜100 に写したもので、
+    中央値は 20 前後（全体の3着内率 21.6%）。同じ床を当てると確逃げ馬が
+    ほぼ全レースで1位に躍り出てしまい、較正された確率が壊れる。そのため
+    ML スコアのときは床を当てない（run() 側で制御）。
+
+    教訓8・11 の本来の趣旨は「買い目から外さない」ことであり、それは
+    betting.build が3着欄への組み込みとして明示的に保証している。順位を
+    いじらなくても教訓は守られる。
     """
     front_floor = weights["pace"]["lone_front_runner_floor"]
     proven_floor = weights["form"]["proven_ability_floor"]
@@ -102,17 +112,32 @@ def assign_marks(horses: list[ScoredHorse], weights: dict) -> None:
         h.mark = "○" if i == 0 else "▲"
 
 
-def run(features: list[HorseFeatures], entries_by_umaban: dict, weights: dict) -> list[ScoredHorse]:
-    """特徴量から採点済みの全頭リストを作る。スコアの降順で返す。"""
+def run(
+    features: list[HorseFeatures],
+    entries_by_umaban: dict,
+    weights: dict,
+    ml_scores: dict[int, float] | None = None,
+) -> list[ScoredHorse]:
+    """特徴量から採点済みの全頭リストを作る。スコアの降順で返す。
+
+    ml_scores（馬番 → 3着以内確率）を渡すと、能力スコアをそちらに差し替える。
+    手置きの重みでは能力順位が市場の半分しか当たらなかったため、順位付けは
+    学習モデルに任せ、SKILL.md の教訓は「床」と買い目の組み方として残す。
+    確率 0〜1 を 0〜100 のスコアに写すので、床の値はそのまま使える。
+    """
     horses = []
     for f in features:
         entry = entries_by_umaban.get(f.umaban)
+        if ml_scores is not None and f.umaban in ml_scores:
+            score = round(ml_scores[f.umaban] * 100, 2)
+        else:
+            score = score_horse(f, weights)
         horses.append(
             ScoredHorse(
                 umaban=f.umaban,
                 horse_id=f.horse_id,
                 horse_name=f.horse_name,
-                score=score_horse(f, weights),
+                score=score,
                 style=f.style,
                 reasons=list(f.reasons),
                 is_lone_front_runner=f.is_lone_front_runner,
@@ -122,7 +147,10 @@ def run(features: list[HorseFeatures], entries_by_umaban: dict, weights: dict) -
             )
         )
 
-    apply_floors(horses, weights)
+    # 床はルールベースのスケール（中央値50前後）を前提にしている。
+    # 学習モデルの確率スケール（中央値20前後）に当てると順位が壊れる。
+    if ml_scores is None:
+        apply_floors(horses, weights)
     horses.sort(key=lambda h: -h.score)
     assign_marks(horses, weights)
     return horses

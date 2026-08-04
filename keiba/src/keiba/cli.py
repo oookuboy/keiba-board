@@ -150,11 +150,55 @@ def cmd_review(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_train(args: argparse.Namespace) -> int:
+    """能力モデルを学習する。
+
+    手置きの重みでは能力順位が市場の半分しか当たらなかったため、順位付けは
+    学習に任せる。SKILL.md の観点は dataset.py の特徴量として残っている。
+    """
+    from keiba import dataset, ml
+
+    with Store(args.db) as store:
+        df = dataset.prepare(store)
+        result = ml.train(df, valid_from=args.valid_from)
+        print(result.report())
+
+        valid = df[df["race_date"] >= str(args.valid_from)]
+        scores = ml.predict(result.booster, valid)
+        print()
+        print(ml.format_ranking(ml.evaluate_ranking(valid, scores)))
+        ml.save(result, args.config_dir / "model.txt", args.config_dir / "model.json")
+    return 0
+
+
+def _ml_scores(store, config_dir, start, end) -> dict | None:
+    """期間内の全レースぶんの ML スコアを作る。モデルが無ければ None。"""
+    from keiba import dataset, ml
+
+    booster = ml.load(config_dir / "model.txt")
+    if booster is None:
+        return None
+    df = dataset.prepare(store)
+    window = df[(df["race_date"] >= str(start)) & (df["race_date"] <= str(end))].copy()
+    if window.empty:
+        return None
+    window["p"] = ml.predict(booster, window)
+    return {
+        rid: dict(zip(g["umaban"], g["p"]))
+        for rid, g in window.groupby("race_id", observed=True)
+    }
+
+
 def cmd_backtest(args: argparse.Namespace) -> int:
     """過去データに対してエンジンを回し、的中率と回収率を出す。"""
     weights = yaml.safe_load((args.config_dir / "weights.yml").read_text())
     with Store(args.db) as store:
-        result = backtest.run(store, weights, args.start, args.end)
+        scores = None if args.no_model else _ml_scores(
+            store, args.config_dir, args.start, args.end
+        )
+        if scores:
+            log.info("学習モデルのスコアで採点する（%d レース）", len(scores))
+        result = backtest.run(store, weights, args.start, args.end, ml_scores=scores)
     print(result.report())
     return 0
 
@@ -215,7 +259,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--date", dest="day", type=_date, required=True)
     p.set_defaults(func=cmd_review)
 
+    p = sub.add_parser("train", help="能力モデルを学習する")
+    p.add_argument(
+        "--valid-from", type=_date, required=True,
+        help="この日以降を検証に回す（時系列で切る。ランダム分割はしない）",
+    )
+    p.set_defaults(func=cmd_train)
+
     p = sub.add_parser("backtest", help="過去データで的中率・回収率を出す")
+    p.add_argument(
+        "--no-model", action="store_true", help="学習モデルを使わずルールベースで測る"
+    )
     p.add_argument("--from", dest="start", type=_date, required=True)
     p.add_argument("--to", dest="end", type=_date, required=True)
     p.set_defaults(func=cmd_backtest)

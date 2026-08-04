@@ -12,6 +12,9 @@ dependencies = [
     "beautifulsoup4>=4.12",
     "lxml>=5.0",
     "PyYAML>=6.0",
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "lightgbm>=4.0",
 ]
 
 [project.optional-dependencies]
