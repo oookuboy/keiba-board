@@ -149,7 +149,16 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A keiba/raw keiba/data keiba/config keiba/LESSONS.md
+          # keiba/data と LESSONS.md は predict / review が初めて成功するまで
+          # 存在しない。存在しないパスを git add に渡すと exit 128 で落ち、
+          # 直前の本当のエラーを覆い隠してしまう（実際そうなった）。
+          # シェルは bash -e なので、[ ] && cmd の形は条件が偽のときの終了ステータスで
+          # ジョブごと落ちうる。if で明示する。
+          for path in keiba/raw keiba/data keiba/config keiba/LESSONS.md; do
+            if [ -e "$path" ]; then
+              git add -A "$path"
+            fi
+          done
           if git diff --cached --quiet; then
             echo "変化なし"
           else
