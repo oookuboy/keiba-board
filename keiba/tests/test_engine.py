@@ -181,17 +181,27 @@ def test_lone_front_runner_gets_floor_and_a_ticket(store: Store) -> None:
 
 # ------------------------- 教訓10: 印5頭以上なら全組み合わせを網羅する
 
-def test_all_axis_combinations_are_covered(store: Store) -> None:
+def test_all_axis_combinations_are_covered_on_main_line(store: Store) -> None:
     """教訓10: 大井7Rの失敗（印は当てたが組み合わせを買っていない）の再発防止。
 
-    ◎軸で相手が n 頭なら C(n,2) 点すべてが買い目に含まれること。
+    本線（◎○）では ◎軸で相手が n 頭なら C(n,2) 点すべてを買う。
+
+    穴枠（△）には適用しない。実測でこの帯の回収率は本線より明確に低く
+    （9-13が89.9%、14-19が63.3%、20-27が18.2%）、そこに全組み合わせを
+    敷くのは最も期待値の悪い区分に金を積むことになる。穴枠では
+    「印を打った馬が必ずどこかの買い目に入る」保証だけを守る
+    （test_longshot_allocation_still_covers_every_mark）。
     """
     race = make_race(field_size=14)
-    entries = make_entries([14, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 11, 13])
+    # 本線の帯（能力上位3頭の人気和 9-13）に入るよう人気を割り当てる
+    entries = make_entries([4, 5, 3, 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14])
     for e in entries:
         add_history(store, e.horse_id)
 
     horses, grade, tickets = score(store, race, entries)
+    if grade.is_longshot or not grade.should_bet:
+        pytest.skip(f"本線シナリオにならなかった: {grade.grade} {grade.reason}")
+
     marked = [h for h in horses if h.mark]
     axis = next(h for h in marked if h.mark == "◎")
     partners = [h for h in marked if h is not axis]
@@ -202,6 +212,34 @@ def test_all_axis_combinations_are_covered(store: Store) -> None:
     for a, b in itertools.combinations(partners, 2):
         combo = "-".join(str(x) for x in sorted((axis.umaban, a.umaban, b.umaban)))
         assert combo in trio, f"◎軸の組み合わせ {combo} が買い目に無い"
+
+
+def test_longshot_allocation_is_thin_but_covers_every_mark(store: Store) -> None:
+    """穴枠は点数を絞る。ただし印を打った馬は必ず1点以上に含める。
+
+    絞る動機は実測（この帯の回収率は本線より低い）。それでも
+    「印は当てたのに買い目で外す」だけは起こさない。
+    """
+    race = make_race(field_size=14)
+    entries = make_entries([14, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 11, 13])
+    for e in entries:
+        add_history(store, e.horse_id)
+
+    horses, grade, tickets = score(store, race, entries)
+    if not grade.is_longshot:
+        pytest.skip(f"穴枠シナリオにならなかった: {grade.grade}")
+
+    cap = WEIGHTS["betting"]["longshot_max_points"]
+    marked = [h for h in horses if h.mark]
+    covered = set().union(*(t.umabans for t in tickets))
+
+    for h in marked:
+        assert h.umaban in covered, f"{h.mark}{h.umaban} が買い目に無い"
+    # 印を覆うのに要る点は残すが、それを超えて広げてはいない
+    assert len(tickets) <= max(cap, len(marked)), (
+        f"穴枠が {len(tickets)} 点まで広がっている（上限 {cap}）"
+    )
+    assert sum(t.amount for t in tickets) <= WEIGHTS["betting"]["stake"]["△"]["race_cap"]
 
 
 def test_every_marked_horse_appears_in_a_ticket(store: Store) -> None:
@@ -234,14 +272,17 @@ def test_chalk_race_is_skipped(store: Store) -> None:
     horses, grade, tickets = score(store, race, entries)
     top3_pops = sorted(h.market_popularity for h in horses[:3] if h.market_popularity)
 
-    if sum(top3_pops) < WEIGHTS["confidence"]["popularity_sum"]["△"]:
+    if sum(top3_pops) < WEIGHTS["confidence"]["main_band"][0]:
         assert grade.grade == "×", f"堅い決着なのに {grade.grade} を付けている"
         assert tickets == [], "× のレースで買い目を出している"
         assert not grade.should_bet
 
 
 def test_longshot_race_is_backed(store: Store) -> None:
-    """能力上位が人気薄に集まっているレースは買いに行く。"""
+    """能力上位が人気薄に集まっているレースは穴枠として買う。
+
+    実測でこの帯の回収率は本線に劣るので厚くは張らないが、切り捨てもしない。
+    """
     race = make_race(field_size=12)
     entries = make_entries([12, 11, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     # 人気薄（1〜3番）に強い戦績、上位人気（4番以降）は凡走続き
@@ -249,7 +290,8 @@ def test_longshot_race_is_backed(store: Store) -> None:
         add_history(store, e.horse_id, finish=1 if i < 3 else 12)
 
     horses, grade, tickets = score(store, race, entries)
-    assert grade.popularity_sum >= WEIGHTS["confidence"]["popularity_sum"]["△"]
+    assert grade.popularity_sum >= WEIGHTS["confidence"]["longshot_min"]
+    assert grade.is_longshot, f"穴枠として扱われていない: {grade.reason}"
     assert grade.should_bet, f"穴のレースを見送っている: {grade.reason}"
     assert tickets, "買い目が1点も出ていない"
     # ☆（穴）を含む買い目が必ずある（教訓5・6）

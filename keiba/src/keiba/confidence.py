@@ -1,14 +1,23 @@
 """自信度 ◎○△× の判定。
 
-「固い予想はいらない、狙いは穴・大穴」という要求を機械的に実装する層。
+ここが、オッズを使ってよい場所のひとつ（もう一方は betting.py）。能力評価は
+features/engine が人気を一切見ずに済ませており、この段階でスコアはもう確定して
+いる。人気は「その並びが世間とどれだけズレているか」を測るためだけに使う。
 
-ここが、オッズを使ってよい唯一の場所のひとつ（もう一方は betting.py）。
-能力評価は features/engine が人気を一切見ずに済ませており、この段階では
-スコアはもう確定している。人気は「その並びが世間とどれだけズレているか」を
-測るためだけに使う。
+閾値は手置きではなく実測に基づく。2026年の1,782レースを、能力上位3頭の
+人気順位の和で層別して回収率を測ったところ、次のようになった。
 
-  能力上位3頭の人気順位の和が大きい  → 世間とズレている → 穴 → 買う
-  人気和が小さい                     → 上位人気で堅く収まる → × → 見送る
+    〜8（堅い）  76.9% ／ 9-13  89.9% ／ 14-19  63.3%
+    20-27  18.2% ／ 28+（大穴）  0.0%
+
+穴に寄るほど回収率が単調に下がり、100%を超える区分は存在しない（3連複の
+控除率は27.5%なので、でたらめに買っても約72.5%）。したがって:
+
+  ◎ ○   本線。最も回収率の高い 9-13 の帯。厚く買う
+  △     穴枠。14以上。当たれば大きいが期待値は本線に劣ると測定済みなので、
+        別予算・最小単位で薄く買う
+  ×     見送り。8以下（堅すぎる）か、想定配当が薄いレース
+  ?     オッズ未確定。判断できていない状態であり、× とは意味が違う
 """
 
 from __future__ import annotations
@@ -21,6 +30,7 @@ from keiba.engine import ScoredHorse
 log = logging.getLogger(__name__)
 
 SKIP = "×"
+LONGSHOT = "△"
 # オッズがまだ無くて妙味を判定できない状態。× とは意味が違う。
 # × は「堅いから買わない」という判断だが、こちらは判断がまだできていない。
 # 前日夜の予想は必ずここに落ちる（単勝オッズは当日にならないと出ない）。
@@ -43,6 +53,11 @@ class Confidence:
     def is_pending(self) -> bool:
         """能力評価は出ているが、オッズ待ちで自信度を決められない。"""
         return self.grade == PENDING
+
+    @property
+    def is_longshot(self) -> bool:
+        """穴枠。本線とは別予算で薄く買う。"""
+        return self.grade == LONGSHOT
 
 
 def estimate_trio_odds(top3: list[ScoredHorse]) -> float | None:
@@ -82,34 +97,38 @@ def grade(horses: list[ScoredHorse], weights: dict) -> Confidence:
     pop_sum = sum(pops)
     separation = round(ranked[0].score - ranked[3].score, 2) if len(ranked) > 3 else 0.0
     expected = estimate_trio_odds(top3)
+    low, high = cfg["main_band"]
 
-    thresholds = cfg["popularity_sum"]
-    if pop_sum >= thresholds["◎"]:
-        result = "◎"
-    elif pop_sum >= thresholds["○"]:
-        result = "○"
-    elif pop_sum >= thresholds["△"]:
-        result = "△"
-    else:
+    # --- 堅すぎる。実測でも本線の帯に劣る ---------------------------------
+    if pop_sum < low:
         return Confidence(
             SKIP, pop_sum, separation, expected,
             f"能力上位3頭の人気和{pop_sum}。上位人気で堅く収まる形のため見送る",
         )
 
-    reason = f"能力上位3頭の人気和{pop_sum}"
+    # --- 穴枠。当たれば大きいが期待値は本線に劣ると測定済み ---------------
+    if pop_sum >= cfg["longshot_min"]:
+        return Confidence(
+            LONGSHOT, pop_sum, separation, expected,
+            f"能力上位3頭の人気和{pop_sum}。穴枠として別予算で薄く買う"
+            f"（この帯の実測回収率は本線より低い）",
+        )
 
-    # ◎ には能力の分離も要る。上位が横並びなら穴でも勝負にならない
-    if result == "◎" and separation < cfg["min_score_separation"]:
-        result = "○"
-        reason += f"（ただし1位と4位のスコア差{separation}が小さく○へ降格）"
+    # --- 本線。実測で最も回収率の高い帯 -----------------------------------
+    reason = f"能力上位3頭の人気和{pop_sum}（本線の帯 {low}-{high}）"
 
-    # 想定配当が薄いなら、人気和が大きくても買う意味がない
     if expected is not None and expected < cfg["min_expected_odds"]:
         return Confidence(
             SKIP, pop_sum, separation, expected,
             f"{reason}だが想定3連複配当{expected}倍は妙味不足のため見送る",
         )
-
     if expected is not None:
         reason += f"・想定3連複{expected}倍"
-    return Confidence(result, pop_sum, separation, expected, reason)
+
+    # ◎ には能力の分離も要る。上位が横並びなら軸を立てられない
+    if separation < cfg["min_score_separation"]:
+        return Confidence(
+            "○", pop_sum, separation, expected,
+            f"{reason}（1位と4位のスコア差{separation}が小さく○）",
+        )
+    return Confidence("◎", pop_sum, separation, expected, reason)

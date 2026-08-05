@@ -93,9 +93,39 @@ def predict_race(race_id: str, store: Store, weights: dict, sire_table: dict) ->
     }
 
 
-# 予算を削る順序。◎ は最後まで守る。穴で勝負するレースを削ったら
-# 「固い予想はいらない」という方針そのものが崩れるため。
+# 予算を削る順序。◎ は最後まで守る。実測で最も回収率の高い帯なので、
+# ここを削ったら期待値の一番良いところから捨てることになる。
 TRIM_ORDER = ("△", "○", "◎")
+LONGSHOT_GRADE = "△"
+
+
+def apply_longshot_cap(races: list[dict], cfg: dict) -> list[str]:
+    """穴枠（△）の1日上限を、本線とは別の財布として適用する。
+
+    穴の帯は実測で回収率が本線より明確に低い（9-13が89.9%に対し14-19が63.3%、
+    20-27が18.2%）。当たれば大きいので残すが、本線の予算を食わないよう
+    財布を分ける。ここが混ざると、期待値の良い本線が穴に押し出される。
+    """
+    cap = cfg.get("longshot_daily_cap")
+    if not cap:
+        return []
+
+    longshots = [r for r in races if r["confidence"] == LONGSHOT_GRADE and r["bets"]]
+    spent = sum(r["spend"] for r in longshots)
+    if spent <= cap:
+        return []
+
+    # 妙味の薄い（人気和の小さい）穴レースから落とす
+    dropped = 0
+    for race in sorted(longshots, key=lambda r: r["popularity_sum"]):
+        if spent <= cap:
+            break
+        spent -= race["spend"]
+        race["bets"] = []
+        race["spend"] = 0
+        race["budget_skipped"] = True
+        dropped += 1
+    return [f"穴枠を {dropped}R 見送り（穴枠上限 {cap:,}円）"] if dropped else []
 
 
 def apply_daily_cap(races: list[dict], cfg: dict) -> list[str]:
@@ -177,7 +207,9 @@ def predict_day(store: Store, weights: dict, sire_table: dict, day: date) -> dic
         if payload:
             races.append(payload)
 
-    budget_actions = apply_daily_cap(races, weights["betting"])
+    # 穴枠を先に財布ごと締めてから、全体の上限を当てる
+    budget_actions = apply_longshot_cap(races, weights["betting"])
+    budget_actions += apply_daily_cap(races, weights["betting"])
     for action in budget_actions:
         log.info("予算調整: %s", action)
 
@@ -191,6 +223,12 @@ def predict_day(store: Store, weights: dict, sire_table: dict, day: date) -> dic
             "bet": len(bet_races),
             "skipped": len(races) - len(bet_races),
             "spend": sum(r["spend"] for r in races),
+            "spend_main": sum(
+                r["spend"] for r in races if r["confidence"] != LONGSHOT_GRADE
+            ),
+            "spend_longshot": sum(
+                r["spend"] for r in races if r["confidence"] == LONGSHOT_GRADE
+            ),
             "budget_actions": budget_actions,
             "by_confidence": {
                 g: sum(1 for r in races if r["confidence"] == g)

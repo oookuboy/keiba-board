@@ -49,25 +49,41 @@ def test_chalk_race_is_skip_not_pending() -> None:
     assert not c.should_bet
 
 
-def test_longshot_race_is_backed() -> None:
-    c = grade(horses([12, 10, 11, 1, 2, 3, 4, 5]), WEIGHTS)
+def test_main_band_is_backed_as_anchor() -> None:
+    """本線の帯（人気和 9-13）で能力が分離していれば ◎。"""
+    c = grade(horses([5, 4, 3, 1, 2, 6, 7, 8]), WEIGHTS)
+    assert c.popularity_sum == 12
     assert c.grade == "◎"
     assert c.should_bet
+    assert not c.is_longshot
+
+
+def test_longshot_band_is_separate_bucket() -> None:
+    """穴の帯（人気和14以上）は △＝穴枠。買うが本線とは別扱い。
+
+    実測でこの帯の回収率は本線より明確に低い（9-13が89.9%、14-19が63.3%、
+    20-27が18.2%）。切り捨てはしないが、厚く買う対象にはしない。
+    """
+    c = grade(horses([12, 10, 11, 1, 2, 3, 4, 5]), WEIGHTS)
     assert c.popularity_sum == 33
+    assert c.grade == "△"
+    assert c.should_bet
+    assert c.is_longshot
+    assert "穴枠" in c.reason
 
 
 def test_flat_scores_demote_from_anchor() -> None:
-    """人気和が大きくても能力が横並びなら ◎ にしない。"""
+    """本線の帯でも能力が横並びなら ◎ にしない。軸を立てられないため。"""
     flat = [70.0] * 8
-    c = grade(horses([12, 10, 11, 1, 2, 3, 4, 5], flat), WEIGHTS)
+    c = grade(horses([5, 4, 3, 1, 2, 6, 7, 8], flat), WEIGHTS)
     assert c.grade == "○"
     assert "スコア差" in c.reason
 
 
 def test_thin_expected_payout_is_skipped() -> None:
-    """人気和が条件を満たしても、想定配当が薄いなら買わない。"""
+    """本線の帯でも想定配当が薄いなら買わない。"""
     cfg = {**WEIGHTS, "confidence": {**WEIGHTS["confidence"], "min_expected_odds": 1e9}}
-    c = grade(horses([12, 10, 11, 1, 2, 3, 4, 5]), cfg)
+    c = grade(horses([5, 4, 3, 1, 2, 6, 7, 8]), cfg)
     assert c.grade == SKIP
     assert "妙味不足" in c.reason
 

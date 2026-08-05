@@ -58,6 +58,8 @@ def build(
     cfg = weights["betting"]
     stake = cfg["stake"][confidence.grade]
     unit = stake["per_point"]
+    # 穴枠は実測回収率が本線より明確に低い。組み合わせを広げず少点数に絞る
+    max_points = cfg["longshot_max_points"] if confidence.is_longshot else None
 
     marked = [h for h in horses if h.mark]
     axis = next((h for h in marked if h.mark == "◎"), None)
@@ -125,9 +127,45 @@ def build(
                 "◎1着固定の3連単",
             )
 
+    if max_points is not None and len(tickets) > max_points:
+        # 穴枠を絞るときは ◎ と ☆ を含む点を優先して残す。
+        # 印を打った馬が全部落ちないよう、covered を見ながら削る。
+        tickets = _trim_longshot(tickets, marked, axis, longshot, max_points)
+
     tickets = _fit_budget(tickets, stake["race_cap"], cfg["unit"])
     _assert_all_marks_covered(marked, tickets)
     return tickets
+
+
+def _trim_longshot(
+    tickets: list[Ticket],
+    marked: list[ScoredHorse],
+    axis: ScoredHorse,
+    longshot: ScoredHorse | None,
+    max_points: int,
+) -> list[Ticket]:
+    """穴枠の点数を絞る。
+
+    ただし「印を打ったのに買い目に無い馬」を作らない（教訓10 で最も高くついた
+    失敗）。全印を覆うのに必要な点は max_points を超えても残す。
+    """
+    def priority(t: Ticket) -> tuple[int, int]:
+        # ☆ を含む点を先に残し、次に本線、最後に流し
+        has_longshot = longshot is not None and longshot.umaban in t.umabans
+        return (0 if has_longshot else 1, 0 if "本線" in t.rationale else 1)
+
+    ordered = sorted(tickets, key=priority)
+    kept: list[Ticket] = []
+    covered: set[int] = set()
+    needed = {h.umaban for h in marked}
+
+    for ticket in ordered:
+        if len(kept) < max_points or not needed <= covered:
+            kept.append(ticket)
+            covered |= ticket.umabans
+        if len(kept) >= max_points and needed <= covered:
+            break
+    return kept
 
 
 def _fit_budget(tickets: list[Ticket], cap: int, unit: int) -> list[Ticket]:
