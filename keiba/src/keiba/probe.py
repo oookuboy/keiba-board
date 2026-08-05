@@ -224,6 +224,30 @@ class Probe:
 
         self.probe_future(start)
         self.walk_jra()
+        self.write_manifest(kaisai_date, stamp, race_ids)
+
+    def write_manifest(self, requested: str, stamp: str, race_ids: list[str]) -> None:
+        """採取結果の目録。ワークフローの Summarise がこれを読む。
+
+        run() の最後で必ず書く。以前これが probe_future の末尾に紛れており、
+        未来レースが見つかると早期 return で書かれず、見つからないと
+        スコープ外の変数を参照して NameError になっていた。
+        """
+        (self.out_dir / "manifest.json").write_text(
+            json.dumps(
+                {
+                    "requested_date": requested,
+                    "kaisai_date": stamp,
+                    "jra_race_ids": race_ids,
+                    "pages": self.manifest,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        ok = sum(1 for e in self.manifest if e["ok"])
+        log.info("完了: %s/%s ページ取得", ok, len(self.manifest))
 
     def probe_future(self, today: date) -> None:
         """これから行われるレースが db.netkeiba に出るかを確かめる。
@@ -250,22 +274,6 @@ class Probe:
                     f"future_race_{stamp}",
                 )
                 return
-
-        (self.out_dir / "manifest.json").write_text(
-            json.dumps(
-                {
-                    "requested_date": kaisai_date,
-                    "kaisai_date": stamp,
-                    "jra_race_ids": race_ids,
-                    "pages": self.manifest,
-                },
-                ensure_ascii=False,
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
-        ok = sum(1 for e in self.manifest if e["ok"])
-        log.info("完了: %s/%s ページ取得", ok, len(self.manifest))
 
 
 def main(argv: list[str] | None = None) -> int:
