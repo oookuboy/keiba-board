@@ -6,9 +6,12 @@ __pycache__/
 # スクレイプのディスクキャッシュ。中身は raw/*.jsonl.gz として別途コミットされる
 .cache/
 
-# JSONL から毎回再構築するのでコミットしない
+# JSONL から毎回再構築するのでコミットしない。
+# store.py が WAL モードを使うので -shm / -wal のサイドカーも出る。
 keiba/*.db
 keiba/*.db-journal
+keiba/*.db-shm
+keiba/*.db-wal
 
 # ブラウザ検証用に一時導入するもの
 node_modules/
