@@ -4,7 +4,7 @@ Claude Code のセッションからは netkeiba / jra.go.jp に到達できな�
 ため、パーサを書く前に実物のHTMLを GitHub Actions 経由で持ち帰る必要がある。
 このモジュールはそのためだけに存在し、定常運用では使わない。
 
-    python -m keiba.probe --date 20260802 --out keiba/tests/fixtures
+    python -m keiba.probe --date 20260802 --out keiba/tests/fixtures/probe
 
 第1回の探索で分かったこと（このモジュールの設計はこれに基づく）:
 
@@ -283,7 +283,11 @@ def main(argv: list[str] | None = None) -> int:
         default=last_sunday(date.today()).strftime("%Y%m%d"),
         help="探索の起点 YYYYMMDD（既定: 直近の日曜。ここから中央開催日まで遡る）",
     )
-    parser.add_argument("--out", type=Path, default=Path("keiba/tests/fixtures"))
+    # 採取先はテストが読む pinned/ とは別にする。probe は毎回 *.html を消して
+    # 採り直すので、同じ場所に置くと採取レースが変わるたびにテストが壊れる。
+    parser.add_argument(
+        "--out", type=Path, default=Path("keiba/tests/fixtures/probe")
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")

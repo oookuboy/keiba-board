@@ -3,6 +3,12 @@
 フィクスチャは keiba-probe ワークフローが本物のサイトから採取したもの。
 netkeiba の HTML が変わればここが落ちる。それが目的で、静かに壊れて
 おかしなデータを溜め込むより落ちたほうがよい。
+
+ただし読むのは fixtures/pinned/ だけにしてある。probe は実行のたびに
+「直近の開催日」を採り直すので、出力先を直接見にいくと採取するレースが
+変わった瞬間に期待値が全部ずれる（実際に一度そうなった）。probe の生の
+出力は fixtures/probe/ に落ち、テストはそちらを参照しない。
+パーサを新しい実データで検証したくなったら、pinned/ に手で入れ替える。
 """
 
 from __future__ import annotations
@@ -22,13 +28,13 @@ from keiba.sources.netkeiba import (
     time_to_sec,
 )
 
-FIXTURES = pathlib.Path(__file__).parent / "fixtures"
+FIXTURES = pathlib.Path(__file__).parent / "fixtures" / "pinned"
 
 
 def fixture(pattern: str) -> str:
     matches = glob.glob(str(FIXTURES / pattern))
     if not matches:
-        pytest.skip(f"フィクスチャが無い: {pattern}（keiba-probe を実行すること）")
+        pytest.skip(f"フィクスチャが無い: {pattern}（fixtures/pinned/ を確認すること）")
     return pathlib.Path(matches[0]).read_text(encoding="utf-8")
 
 

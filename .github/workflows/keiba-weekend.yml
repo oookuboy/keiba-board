@@ -8,6 +8,9 @@ name: keiba-weekend
 
 on:
   schedule:
+    # 木 20:00 JST = 木 11:00 UTC — JRA が出馬表を公開する日。取れるだけ取って
+    # 暫定予想（能力評価と印のみ・買い目なし）を出す。当日の本予想で上書きする
+    - cron: "0 11 * * 4"
     # 金 21:00 JST = 金 12:00 UTC — 出馬表が出そろったころに収集
     - cron: "0 12 * * 5"
     # 土日 05:00 JST = 金土 20:00 UTC — 前日夜の予想確定
@@ -19,10 +22,10 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "collect / predict / review"
+        description: "preview / collect / predict / review"
         required: true
         type: choice
-        options: [collect, predict, review]
+        options: [preview, collect, predict, review]
         default: predict
       date:
         description: "対象日 YYYY-MM-DD（空なら今日）"
@@ -63,6 +66,7 @@ jobs:
             JOB="${{ inputs.job }}"
           else
             case "${{ github.event.schedule }}" in
+              "0 11 * * 4")     JOB=preview ;;
               "0 12 * * 5")     JOB=collect ;;
               "0 20 * * 5,6")   JOB=predict ;;
               "0 22 * * 5,6")   JOB=predict ;;
@@ -72,9 +76,50 @@ jobs:
           fi
           DATE="${{ inputs.date }}"
           [ -n "$DATE" ] || DATE=$(TZ=Asia/Tokyo date +%F)
+          # preview は木曜に走るので「今日」ではなく次の土日を見る
+          SAT=$(TZ=Asia/Tokyo date -d "next saturday" +%F)
+          SUN=$(TZ=Asia/Tokyo date -d "next sunday" +%F)
+          echo "sat=$SAT"  >> "$GITHUB_OUTPUT"
+          echo "sun=$SUN"  >> "$GITHUB_OUTPUT"
           echo "job=$JOB"   >> "$GITHUB_OUTPUT"
           echo "date=$DATE" >> "$GITHUB_OUTPUT"
           echo "→ $JOB / $DATE"
+
+      # 木曜。出馬表が公開される日なので、取れるだけ取って暫定予想を出す。
+      # 発走前の出馬表が db.netkeiba に出るかは未確定（8/5 時点では開催場の名前は
+      # 出るが race_id が0件だった）。取れなかったことが分かるよう、収集が空なら
+      # 明示的に落とす。静かに空のボードを出すほうが害が大きい。
+      - name: Preview（木曜の下見）
+        if: steps.plan.outputs.job == 'preview'
+        run: |
+          set -o pipefail
+          SAT="${{ steps.plan.outputs.sat }}"
+          SUN="${{ steps.plan.outputs.sun }}"
+          echo "対象: $SAT / $SUN"
+          python -m keiba.cli collect --date "$SAT" --days-ahead 1
+          python -m keiba.cli build
+
+          FOUND=0
+          for D in "$SAT" "$SUN"; do
+            N=$(python - "$D" <<'PY'
+          import sys, sqlite3
+          c = sqlite3.connect("keiba/keiba.db")
+          print(c.execute(
+              "SELECT COUNT(*) FROM races WHERE race_date = ?", (sys.argv[1],)
+          ).fetchone()[0])
+          PY
+          )
+            echo "$D: $N レース"
+            [ "$N" -gt 0 ] || continue
+            FOUND=$((FOUND + 1))
+            python -m keiba.cli predict --date "$D" --provisional
+          done
+
+          if [ "$FOUND" -eq 0 ]; then
+            echo "::error::発走前の出馬表を1レースも収集できなかった。"\
+          "db.netkeiba に race_id が生えていない可能性が高い（sources/jra.py が必要）"
+            exit 1
+          fi
 
       - name: Collect
         if: steps.plan.outputs.job == 'collect'
@@ -97,7 +142,10 @@ jobs:
           python -m keiba.cli build
           python -m keiba.cli review --date "${{ steps.plan.outputs.date }}"
 
+      # 収集は済んだのに予想で落ちた、という形でも生データは残す。
+      # 取り直しには1.5秒ウェイトぶんの時間がかかるので捨てたくない。
       - name: Commit
+        if: always()
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

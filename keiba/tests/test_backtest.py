@@ -17,13 +17,15 @@ from keiba.backtest import BacktestResult, RaceOutcome, _actual_top3, _settle
 from keiba.models import Payout, Race, RaceCard, Result
 from keiba.sources.netkeiba import parse_race_page
 
-FIXTURES = pathlib.Path(__file__).parent / "fixtures"
+# probe の採取先ではなく pinned/ を読む。probe は毎回別の開催日を採り直すので、
+# 出力先を直接見にいくと採取レースが変わった瞬間に期待値がずれる。
+FIXTURES = pathlib.Path(__file__).parent / "fixtures" / "pinned"
 
 
 def fixture(pattern: str) -> str:
     matches = glob.glob(str(FIXTURES / pattern))
     if not matches:
-        pytest.skip(f"フィクスチャが無い: {pattern}")
+        pytest.skip(f"フィクスチャが無い: {pattern}（fixtures/pinned/ を確認すること）")
     return pathlib.Path(matches[0]).read_text(encoding="utf-8")
 
 

@@ -115,15 +115,28 @@ def cmd_predict(args: argparse.Namespace) -> int:
     """指定日の全レースを予想し、ボード用 JSON を書き出す。"""
     weights, sire_table = _load_config(args)
     with Store(args.db) as store:
-        payload = predict.predict_day(store, weights, sire_table, args.day)
+        payload = predict.predict_day(
+            store, weights, sire_table, args.day, provisional=args.provisional
+        )
         predict.save_predictions(store, payload)
     out = predict.write_day(payload, args.data_dir)
     s = payload["summary"]
+    if not s["races"]:
+        # 収集が空だと予想も空になる。静かに0件で終わると「動いたのに中身が無い」
+        # ことに気づけないので、ここで明示的に警告する。
+        log.warning(
+            "%s のレースが1件も無い。収集できていない可能性が高い"
+            "（発走前の出馬表が取れているか確認すること）",
+            args.day,
+        )
+        return 0
     log.info(
         "%s: %d R（買い %d / 見送り %d）投資 %d円 → %s",
         args.day, s["races"], s["bet"], s["skipped"], s["spend"], out,
     )
     log.info("自信度内訳: %s", s["by_confidence"])
+    if args.provisional:
+        log.info("暫定予想。買い目は組んでいない。当日の本予想で上書きされる")
     return 0
 
 
@@ -253,6 +266,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("predict", help="指定日の全レースを予想する")
     p.add_argument("--date", dest="day", type=_date, required=True)
+    p.add_argument(
+        "--provisional",
+        action="store_true",
+        help="暫定予想。オッズ確定前（木曜など）に能力評価だけを出す。"
+        " 買い目は組まず、当日の本予想で上書きする前提",
+    )
     p.set_defaults(func=cmd_predict)
 
     p = sub.add_parser("review", help="指定日の予想に実結果を突き合わせる")

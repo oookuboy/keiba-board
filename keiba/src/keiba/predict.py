@@ -186,8 +186,21 @@ def apply_daily_cap(races: list[dict], cfg: dict) -> list[str]:
     return actions
 
 
-def predict_day(store: Store, weights: dict, sire_table: dict, day: date) -> dict:
-    """その日の中央全レースを予想する。"""
+def predict_day(
+    store: Store,
+    weights: dict,
+    sire_table: dict,
+    day: date,
+    *,
+    provisional: bool = False,
+) -> dict:
+    """その日の中央全レースを予想する。
+
+    provisional=True は木曜など発走前の暫定運用。能力評価と印はそのまま出すが、
+    買い目は組まない。オッズが確定していない段階の妙味判定はあてにならず、
+    たまたま一部レースだけオッズが出ていると「一部だけ買い目が付く」という
+    中途半端な出方をするため、金額に関わる部分は当日の本予想に一本化する。
+    """
     race_ids = [
         r[0]
         for r in store.conn.execute(
@@ -207,17 +220,25 @@ def predict_day(store: Store, weights: dict, sire_table: dict, day: date) -> dic
         if payload:
             races.append(payload)
 
-    # 穴枠を先に財布ごと締めてから、全体の上限を当てる
-    budget_actions = apply_longshot_cap(races, weights["betting"])
-    budget_actions += apply_daily_cap(races, weights["betting"])
-    for action in budget_actions:
-        log.info("予算調整: %s", action)
+    if provisional:
+        # 暫定段階では金額に関わる判断をしない。印と能力評価だけを残す。
+        for race in races:
+            race["bets"] = []
+            race["spend"] = 0
+        budget_actions = []
+    else:
+        # 穴枠を先に財布ごと締めてから、全体の上限を当てる
+        budget_actions = apply_longshot_cap(races, weights["betting"])
+        budget_actions += apply_daily_cap(races, weights["betting"])
+        for action in budget_actions:
+            log.info("予算調整: %s", action)
 
     bet_races = [r for r in races if r["bets"]]
     return {
         "date": day.isoformat(),
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "engine_version": weights["engine_version"],
+        "provisional": provisional,
         "summary": {
             "races": len(races),
             "bet": len(bet_races),
@@ -290,6 +311,8 @@ def rebuild_index(data_dir: Path) -> Path:
                 "spend": data["summary"]["spend"],
                 "returned": data["summary"].get("returned"),
                 "hits": data["summary"].get("hits"),
+                # 暫定（木曜の下見）か本予想かをボードで区別できるようにする
+                "provisional": data.get("provisional", False),
             }
         )
 

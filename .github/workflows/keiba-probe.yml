@@ -51,7 +51,7 @@ jobs:
         run: |
           python - <<'PY'
           import json, pathlib
-          m = json.loads(pathlib.Path("keiba/tests/fixtures/manifest.json").read_text())
+          m = json.loads(pathlib.Path("keiba/tests/fixtures/probe/manifest.json").read_text())
           print("kaisai_date:", m["kaisai_date"])
           print("jra_race_ids:", len(m["jra_race_ids"]), m["jra_race_ids"][:5])
           for p in m["pages"]:
