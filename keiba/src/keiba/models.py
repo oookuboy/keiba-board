@@ -93,7 +93,10 @@ class Race(_Row):
 @dataclass
 class Entry(_Row):
     race_id: str
-    umaban: int
+    # 木曜に公開される JRA公式の出馬表は枠順確定前で、馬番が空で返る。
+    # 「まだ決まっていない」を 0 などで潰すと買い目が偽の馬番で組まれるため、
+    # None のまま持つ。予想側は jra.post_positions_confirmed で弾く。
+    umaban: int | None
     horse_name: str
     horse_id: str
     waku: int | None = None
