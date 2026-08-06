@@ -88,7 +88,9 @@ _DISTANCE_RE = re.compile(r"([\d,]+)\s*メートル")
 # 新潟1000mは「（芝・直）」で、「直線」とは書かない。外回りは「（芝・左 外）」。
 _SURFACE_RE = re.compile(r"[（(]\s*(芝|ダート|障害)\s*[・･]?\s*(左|右|直線|直)?\s*(外|内)?")
 _POST_TIME_RE = re.compile(r"(\d{1,2})時(\d{1,2})分")
-_AGE_RE = re.compile(r"(牡|牝|セン|セ)\s*(\d+)")
+# JRA公式は騸馬を**ひらがなの「せん」**で書く（「セン」でも「騸」でもない）。
+# ここを漏らすと性齢が丸ごと None になる。実際 957頭中42頭が該当した。
+_AGE_RE = re.compile(r"(牡|牝|せん|セン|騸|セ)\s*(\d+)")
 _PRIZE_RE = re.compile(r"1着\s*([\d,]+)")
 
 
@@ -205,7 +207,7 @@ def _parse_entry_row(row: Tag, race_id: str) -> Entry | None:
 
     sex = age = None
     if m := _AGE_RE.search(_text(row.select_one("td.age"))):
-        sex = "セ" if m.group(1).startswith("セ") else m.group(1)
+        sex = {"せん": "セ", "セン": "セ", "騸": "セ"}.get(m.group(1), m.group(1))
         age = int(m.group(2))
 
     weight_carried = None

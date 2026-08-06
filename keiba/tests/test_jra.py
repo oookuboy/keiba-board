@@ -76,6 +76,28 @@ def test_entries_carry_ids_that_join_with_history(cards) -> None:
     assert entry.trainer == "杉浦 宏昭"
 
 
+def test_gelding_is_parsed(cards) -> None:
+    """JRA公式は騸馬を「せん」（ひらがな）と書く。
+
+    「セン」だけを見ていたため性齢が丸ごと None になり、実データ957頭のうち
+    42頭が該当した。性齢は能力モデルの特徴量なので、黙って欠けると効く。
+    """
+    by_name = {e.horse_name: e for c in cards for e in c.entries}
+    gelding = by_name["ジーティーホクサイ"]
+    assert (gelding.sex, gelding.age) == ("セ", 3)
+
+
+def test_every_entry_has_sex_and_age(cards) -> None:
+    """性齢が取れない馬を出さない。表記ゆれはここで気づけるようにする。"""
+    missing = [
+        e.horse_name
+        for c in cards
+        for e in c.entries
+        if e.sex is None or e.age is None
+    ]
+    assert not missing, f"性齢を取れない馬がいる: {missing[:5]}"
+
+
 def test_apprentice_mark_is_stripped_from_jockey_name(cards) -> None:
     """「△ 石神 深道」の減量記号を騎手名に混ぜない。
 
