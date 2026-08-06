@@ -141,6 +141,58 @@ class Probe:
 
     # ------------------------------------------------------------------ JRA
 
+    def walk_jra_racecard(self) -> None:
+        """出馬表だけを狙って「開催選択 → レース選択 → 出馬表」を辿る。
+
+        総当たりの BFS だと共通ナビ（オッズ・払戻金・競走馬検索…）を先に拾って
+        しまい、本文の開催リンクに到達しない。実際そうなった。
+
+        開催リンクの cname は pw01drl + 場コード + 年 + 回 + 日 + 日付 + 末尾2桁
+        という形をしていて、末尾はこちらで計算できない。よって構築せず、
+        ページから拾って辿る。
+        """
+        html = self.grab(
+            f"{JRA_BASE}/JRADB/accessD.html",
+            "card_L1_kaisai",
+            method="POST",
+            data={"cname": "pw01dli00/F3"},
+        )
+        if not html:
+            log.error("出馬表の開催選択ページを取得できない")
+            return
+
+        kaisai = [
+            (a, c) for a, c in JRA_DOACTION_RE.findall(html)
+            if c.startswith("pw01drl")
+        ]
+        log.info("開催リンク %d件: %s", len(kaisai), [c for _, c in kaisai])
+        if not kaisai:
+            log.error("開催リンク（pw01drl）が見つからない。まだ公開されていない可能性")
+            return
+
+        # 1開催ぶん辿ればレース選択と出馬表の形は分かる
+        action2, cname2 = kaisai[0]
+        race_list = self.grab(
+            f"{JRA_BASE}{action2}", "card_L2_racelist",
+            method="POST", data={"cname": cname2},
+        )
+        if not race_list:
+            return
+
+        # レース選択ページ側のリンク。共通ナビを除くため、L1 に出ていた
+        # cname は落とす（ナビは全ページ共通なので L1 に必ず出ている）
+        nav = {c for _, c in JRA_DOACTION_RE.findall(html)}
+        races = [
+            (a, c) for a, c in JRA_DOACTION_RE.findall(race_list)
+            if c not in nav and not c.startswith("pw01drl")
+        ]
+        log.info("レースリンク %d件: %s", len(races), [c for _, c in races][:14])
+        for idx, (action3, cname3) in enumerate(races[:2]):
+            self.grab(
+                f"{JRA_BASE}{action3}", f"card_L3_race{idx}",
+                method="POST", data={"cname": cname3},
+            )
+
     def walk_jra(self, max_depth: int = 3, branches: int = 3) -> None:
         """JRA公式の POST 遷移を辿って、実データページの形を採取する。
 
@@ -232,6 +284,7 @@ class Probe:
             self.grab(f"https://db.netkeiba.com/horse/ped/{horse_id}/", f"ped_{horse_id}")
 
         self.probe_future(start)
+        self.walk_jra_racecard()
         self.walk_jra()
         self.write_manifest(kaisai_date, stamp, race_ids)
 
