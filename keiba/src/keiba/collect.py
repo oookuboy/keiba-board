@@ -23,8 +23,10 @@ import logging
 from datetime import date, timedelta
 from pathlib import Path
 
+from collections import defaultdict
+
 from keiba.models import RaceCard
-from keiba.sources import netkeiba
+from keiba.sources import jra, netkeiba
 from keiba.sources.http import Fetcher, FetchError
 from keiba.store import read_jsonl, write_jsonl
 
@@ -94,6 +96,46 @@ def collect_day(
             day, len(existing), kept, failed, out_path.name,
         )
     return kept, failed
+
+
+def collect_upcoming(fetcher: Fetcher, out_dir: Path) -> dict[date, int]:
+    """JRA公式から、公開中の全開催ぶんの出馬表を取って日付ごとに書く。
+
+    db.netkeiba は結果データベースなので、発走前のレースは race_id ごと
+    存在しない（2026-08-06 実測）。よって発走前はこちらが唯一の経路。
+
+    既存ファイルとは race_id 単位でマージする。当日に取り直すと馬体重や
+    オッズが埋まるので、上書きされるのは正しい。
+
+    戻り値は日付ごとのレース数。空なら「まだ公開されていない」。
+    """
+    cards = jra.collect_racecards(fetcher)
+    if not cards:
+        return {}
+
+    by_day: dict[date, list[RaceCard]] = defaultdict(list)
+    for card in cards:
+        by_day[card.race.race_date].append(card)
+
+    counts: dict[date, int] = {}
+    for day, day_cards in sorted(by_day.items()):
+        out_path = out_dir / str(day.year) / f"{day.isoformat()}.jsonl.gz"
+        merged: dict[str, RaceCard] = {}
+        if out_path.exists():
+            merged = {c.race.race_id: c for c in read_jsonl(out_path)}
+        for card in day_cards:
+            merged[card.race.race_id] = card
+        write_jsonl(merged.values(), out_path)
+
+        confirmed = sum(1 for c in day_cards if jra.post_positions_confirmed(c))
+        counts[day] = len(day_cards)
+        log.info(
+            "%s: %d レース（枠順確定 %d）→ %s",
+            day, len(day_cards), confirmed, out_path.name,
+        )
+        if confirmed == 0:
+            log.info("  枠順は金曜確定。馬番が入るまで買い目は組めない")
+    return counts
 
 
 def collect_range(

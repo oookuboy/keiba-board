@@ -32,6 +32,12 @@ def predict_race(race_id: str, store: Store, weights: dict, sire_table: dict) ->
     if len(entries) < 6:
         return None
 
+    # 木曜の出馬表は枠順確定前で馬番が空。買い目は馬番で組むので、
+    # ここを通すと偽の並びで券を作ることになる。取得失敗とは区別して落とす。
+    if any(e.umaban is None for e in entries):
+        log.info("%s: 枠順未確定のため予想しない（金曜確定）", race.race_id)
+        return None
+
     features = build_features(
         race, entries, store, sire_table, weights, as_of=race.race_date
     )

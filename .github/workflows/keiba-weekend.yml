@@ -96,7 +96,8 @@ jobs:
           SAT="${{ steps.plan.outputs.sat }}"
           SUN="${{ steps.plan.outputs.sun }}"
           echo "対象: $SAT / $SUN"
-          python -m keiba.cli collect --date "$SAT" --days-ahead 1
+          # 発走前は JRA公式が唯一の経路。db.netkeiba には race_id が無い
+          python -m keiba.cli collect --upcoming
           python -m keiba.cli build
 
           FOUND=0
@@ -121,17 +122,18 @@ jobs:
             exit 1
           fi
 
+      # 金曜。枠順が確定するので、ここで初めて馬番の入った出馬表が取れる
       - name: Collect
         if: steps.plan.outputs.job == 'collect'
         run: |
-          python -m keiba.cli collect --date "${{ steps.plan.outputs.date }}" --days-ahead 3
+          python -m keiba.cli collect --upcoming
           python -m keiba.cli build
 
       - name: Predict
         if: steps.plan.outputs.job == 'predict'
         run: |
-          # 当日の確定情報（馬場状態・取消）を取り直してから予想し直す
-          python -m keiba.cli collect --date "${{ steps.plan.outputs.date }}" --days-ahead 1 || true
+          # 当日の確定情報（馬体重・オッズ・取消）を取り直してから予想し直す
+          python -m keiba.cli collect --upcoming || true
           python -m keiba.cli build
           python -m keiba.cli predict --date "${{ steps.plan.outputs.date }}"
 

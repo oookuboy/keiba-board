@@ -102,8 +102,35 @@ def _load_config(args: argparse.Namespace) -> tuple[dict, dict]:
 
 
 def cmd_collect(args: argparse.Namespace) -> int:
-    """開催日まわりのレースを取り込む。"""
+    """開催日まわりのレースを取り込む。
+
+    発走前と発走後で経路が違う。db.netkeiba は結果データベースなので、
+    まだ行われていないレースは race_id ごと存在しない（2026-08-06 実測）。
+    出馬表は JRA公式、結果は db.netkeiba という分担になる。
+    """
     fetcher = Fetcher(cache_dir=args.cache)
+
+    if args.upcoming:
+        counts = collect.collect_upcoming(fetcher, args.raw_dir)
+        if not counts:
+            log.warning(
+                "JRA公式に開催が公開されていない（出馬表は木曜公開）cache=%s",
+                fetcher.stats,
+            )
+            return 0
+        total = sum(counts.values())
+        log.info(
+            "出馬表 %d レース（%s）cache=%s",
+            total,
+            " / ".join(f"{d}:{n}" for d, n in sorted(counts.items())),
+            fetcher.stats,
+        )
+        return 0
+
+    if args.day is None:
+        log.error("--date か --upcoming のどちらかを指定すること")
+        return 2
+
     kept, failed = collect.collect_range(
         fetcher, args.day, args.days_ahead, args.raw_dir, results_only=args.results
     )
@@ -257,10 +284,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_build)
 
     p = sub.add_parser("collect", help="開催日まわりのレースを取り込む")
-    p.add_argument("--date", dest="day", type=_date, required=True)
+    # --upcoming は JRA公式が公開している開催を全部取るので日付を取らない
+    p.add_argument("--date", dest="day", type=_date, default=None)
     p.add_argument("--days-ahead", type=int, default=0, help="何日先まで取るか")
     p.add_argument(
         "--results", action="store_true", help="結果の入ったレースだけ残す（回顧用）"
+    )
+    p.add_argument(
+        "--upcoming",
+        action="store_true",
+        help="JRA公式から発走前の出馬表を取る（--date は無視する）。"
+        " db.netkeiba には発走前の race_id が存在しないため",
     )
     p.set_defaults(func=cmd_collect)
 
