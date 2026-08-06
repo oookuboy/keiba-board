@@ -2,8 +2,7 @@
 <html lang="ja">
   <head>
     <meta charset="Shift_JIS">
-    <title>出馬表 開催選択　JRA</title>
-
+    <title>競走馬登録・抹消一覧　JRA</title>
     
     <link rel="stylesheet" href="/common_r/css/base_property.css" />
 <link rel="stylesheet" href="/common_d/css/reset.css" />
@@ -14,8 +13,6 @@
 <link rel="stylesheet" href="/JRADB/common_d/css/component_d.css?version=202412" />
 <link rel="stylesheet" href="/JRADB/common_d/js/jquery.rcrumbs.css" />
 <link rel="stylesheet" href="/JRADB/common_d/css/kaisai_info.css?version=2021" />
-    <link rel="stylesheet" href="/JRADB/keiba/_css/kaisai_select_common.css?version=202012" />
-    <link rel="stylesheet" href="/JRADB/keiba/_css/syutsuba_kaisai_select.css?version=202012" />
     <script src="/JRADB/js/common2.js"></script>
 <script src="/JRADB/common_d/js/jquery-3.5.1.min.js"></script>
 <script src="/JRADB/common_d/js/jquery.easing.min.js"></script>
@@ -32,8 +29,10 @@
 <script src="/JRADB/common_d/js/component_d.js?version=2024"></script>
 <script src="/JRADB/common_d/js/kaisai_info.js?version=202104"></script>
 <script type="module" charset="UTF-8" src="//web-cache.stream.ne.jp/web/jra/onetag2020/js/eqLivePopup.js"></script>
+    <link rel="stylesheet" href="/JRADB/datafile/css/datafile_common.css?version=202012" />
+    <link rel="stylesheet" href="/JRADB/datafile/css/entry.css?version=202012" />
   </head>
-  <body data-keiba-related-menu="syutsuba">
+  <body>
     <div id="wrapper">
 
       <!-- Google Tag Manager (noscript) -->
@@ -814,13 +813,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <ul>
 <li><a href="/">ホーム</a><span class="divider">&gt;</span></li>
 <li><a href="/keiba/">競馬メニュー</a><span class="divider">&gt;</span></li>
-<li class="current"><strong>出馬表 開催選択</strong></li>
+<li class="current"><strong>競走馬登録・抹消一覧</strong></li>
 </ul>
 </div>
 </div><div class="header_line no-mb">
 <div class="content">
 <h1>
-<span class="inner"><span class="icon"><img src="/JRADB/keiba/_img/icon_syutsuba.png" alt="" /></span><span class="txt">出馬表 開催選択</span></span></h1>
+<span class="inner"><span class="icon"><img src="/JRADB/datafile/_img/icon_entry.png" alt="" /></span><span class="txt">競走馬登録・抹消一覧</span></span></h1>
 </div>
 </div><div id="keiba_related_menu">
 <div class="content">
@@ -842,143 +841,73 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div><!-- /[#keiba_related_menu] -->
 
         <div id="contentsBody">
-          <div id="skip-target">ここから本文です</div>
-          <div id="main">
-             
-            <div class="contents_header">
-              <h2>今週の出馬表</h2>
-            </div>
-            <p class="mt15">ご覧になりたい開催のボタンをクリックしてください。</p>
-                <div class="panel no-padding no-border mt15">
-  <h3 class="sub_header">8月8日（土曜）</h3>
-  <div class="content">
-    <div class="link_list multi div3 center">
-      <div>
-          <a href="#" onclick="return doAction('/JRADB/accessD.html', 'pw01drl00042026020520260808/65');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2回新潟5日</a></div>
-      <div>
-          <a href="#" onclick="return doAction('/JRADB/accessD.html', 'pw01drl00072026020520260808/43');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2回中京5日</a></div>
-      <div>
-          <a href="#" onclick="return doAction('/JRADB/accessD.html', 'pw01drl00012026010520260808/56');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>1回札幌5日</a></div>
-      </div>
-    <div class="link_list center win5">
-        <div><a href="#" onclick="return doAction('/JRADB/access5.html', 'pw17hde01202608081/5D');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i><img src="/JRADB/img/win5/win5_4C_2.gif" alt="ウインファイヴ" /></a></div>
-      </div>
-    </div>
+
+          <div class="nav_back_area"><a href="/keiba/index.html" class="btn-def btn-sm"><i class="fa fa-chevron-circle-up" aria-hidden="true"></i>戻る</a></div>
+
+          <div class="main" id="entry_top">
+            <div class="caution mt15">
+<ul class="dot_list">
+<li><dl><dt>競走馬登録：</dt><dd>毎週木曜日に登録を受け付け、翌週月曜日の11時頃に掲載いたします。</dd></dl></li>
+<li><dl><dt>登録抹消：</dt><dd>通常、月曜日の11時頃および木曜日の18時頃に掲載いたします。</dd></dl></li>
+</ul>
 </div>
-<div class="panel no-padding no-border mt20">
-  <h3 class="sub_header">8月9日（日曜）</h3>
-  <div class="content">
-    <div class="link_list multi div3 center">
-      <div>
-          <a href="#" onclick="return doAction('/JRADB/accessD.html', 'pw01drl00042026020620260809/53');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2回新潟6日</a></div>
-      <div>
-          <a href="#" onclick="return doAction('/JRADB/accessD.html', 'pw01drl00072026020620260809/31');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2回中京6日</a></div>
-      <div>
-          <a href="#" onclick="return doAction('/JRADB/accessD.html', 'pw01drl00012026010620260809/44');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>1回札幌6日</a></div>
-      </div>
-    <div class="link_list center win5">
-        <div><a href="#" onclick="return doAction('/JRADB/access5.html', 'pw17hde01202608091/8E');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i><img src="/JRADB/img/win5/win5_4C_2.gif" alt="ウインファイヴ" /></a></div>
-      </div>
-    </div>
-</div>
-</div>
-          
-          <div id="all_horse" class="mt50">
+
+            <div class="mt30">
               <div class="contents_header">
-                <h2>今週の出走馬一覧<span>（50音順）</span></h2>
+                <h2>競走馬登録</h2>
               </div>
-              <ul class="link_list mt15">
-                <li><a href="#" onclick="return doAction('/JRADB/accessD.html', 'pw01d5010A0/B8');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>8月8日（土曜）・8月9日（日曜）</a></li>
-              </ul>
-            </div>
-          <div id="grade_race" class="mt50">
+
+              <ul class="link_list multi div2 mt15">
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv15udj1020260730/21');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月30日登録（109頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv15udj1020260723/C5');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月23日登録（99頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv15udj1020260716/69');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月16日登録（99頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv15udj1020260709/0D');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月9日登録（122頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv15udj1020260702/B6');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月2日登録（125頭）</a></li>
+                    </ul>
+                </div>
+
+            <div class="mt40" id="trainer">
               <div class="contents_header">
-                <h2>今週の重賞レース</h2>
+                <h2>抹消一覧</h2>
               </div>
-            <p class="mt15">ご覧になりたいレースのボタンをクリックしてください。</p>
-            <div class="panel no-padding no-border mt15">
-  <h3 class="sub_header">8月8日（土曜）</h3>
-  <div class="content">
 
-    <ul class="grade_race_unit">
-      <li>
-          <div class="inner">
-            <div class="cell main">
-            <a href="/JRADB/accessD.html?CNAME=pw01dde0101202601051120260808/17">
-              <span class="inner"><span class="icon"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i></span>
-                <span class="txt"><span class="race_num"><span>札幌11R</span></span>エルムステークス<span class="grade_icon lg"><img src="/JRADB/img/grade/icon_grade_g3.png" alt="G&#8546;" /></span></span></span></a>
-            </div>
-            </div>
-        </li>
-      </ul>
+              <ul class="link_list multi div2 mt15">
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260806/8B');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年8月6日抹消（43頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260805/5A');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年8月5日抹消（72頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260804/29');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年8月4日抹消（4頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260802/C7');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年8月2日抹消（1頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260801/96');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年8月1日抹消（15頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260731/95');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月31日抹消（28頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260730/64');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月30日抹消（37頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260729/2E');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月29日抹消（58頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260728/FD');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月28日抹消（10頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260726/9B');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月26日抹消（3頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260725/6A');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月25日抹消（12頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260724/39');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月24日抹消（39頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260723/08');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月23日抹消（48頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260722/D7');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月22日抹消（53頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260721/A6');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月21日抹消（6頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260719/3F');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月19日抹消（4頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260718/0E');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月18日抹消（20頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260717/DD');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月17日抹消（33頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260716/AC');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月16日抹消（34頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260715/7B');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月15日抹消（42頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260714/4A');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月14日抹消（2頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260712/E8');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月12日抹消（3頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260711/B7');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月11日抹消（11頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260710/86');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月10日抹消（28頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260709/50');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月9日抹消（42頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260708/1F');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月8日抹消（58頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260707/EE');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月7日抹消（1頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260705/8C');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月5日抹消（3頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260704/5B');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月4日抹消（12頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260703/2A');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月3日抹消（18頭）</a></li>
+                    <li><a href="#" onclick="return doAction('/JRADB/accessV.html', 'pv16mdj1020260702/F9');"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i>2026年7月2日抹消（30頭）</a></li>
+                    </ul>
+                </div>
 
-  </div>
-</div>
-<div class="panel no-padding no-border mt20">
-  <h3 class="sub_header">8月9日（日曜）</h3>
-  <div class="content">
+          </div>
 
-    <ul class="grade_race_unit">
-      <li>
-          <div class="inner">
-            <div class="cell main">
-            <a href="/JRADB/accessD.html?CNAME=pw01dde0104202602060720260809/42">
-              <span class="inner"><span class="icon"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i></span>
-                <span class="txt"><span class="race_num"><span>新潟7R</span></span>レパードステークス<span class="grade_icon lg"><img src="/JRADB/img/grade/icon_grade_g3.png" alt="G&#8546;" /></span></span></span></a>
-            </div>
-            </div>
-        </li>
-      <li>
-          <div class="inner">
-            <div class="cell main">
-            <a href="/JRADB/accessD.html?CNAME=pw01dde0107202602060720260809/20">
-              <span class="inner"><span class="icon"><i class="fa fa-chevron-circle-right" aria-hidden="true"></i></span>
-                <span class="txt"><span class="race_num"><span>中京7R</span></span>CBC賞<span class="grade_icon lg"><img src="/JRADB/img/grade/icon_grade_g3.png" alt="G&#8546;" /></span></span></span></a>
-            </div>
-            </div>
-        </li>
-      </ul>
-
-  </div>
-</div>
-</div>
-            <div class="mt50" id="schedule_list">
-    <div class="block_header"><div class="content"><h2>出馬表掲載スケジュール</h2></div></div>
-    <ul class="schedule mt15">
-      <li>
-        <span class="cap">木曜日 16時00分頃</span>
-        <span class="txt">土曜日および日曜日開催の「馬番号を付さない」出馬表</span>
-      </li>
-
-      <li>
-        <span class="cap">金曜日 10時00分頃</span>
-        <span class="txt">土曜日開催の「馬番号を付した」出馬表</span>
-      </li>
-
-      <li>
-        <span class="cap">土曜日 10時00分頃</span>
-        <span class="txt">日曜日開催の「馬番号を付した」出馬表</span>
-      </li>
-
-    </ul>
-
-    <div class="caution narrow caution-sm mt20">
-      <ul class="dot_list">
-        <li>
-          <span class="dot">・</span>
-          <span class="txt">月曜日開催（代替・続行競馬を除く）は日曜日の10時頃に「馬番号を付した」出馬表を掲載します。</span>
-        </li>
-        <li>
-          <span class="dot">・</span>
-          <span class="txt">開催日程により、スケジュールが異なる場合があります。</span>
-        </li>
-        <li>
-          <span class="dot">・</span>
-          <span class="txt">GIレースや一部の重賞レース、前日発売を行うレースなどは、発表時刻などが異なります。詳しくは<a href="/faq/pop02/2_2.html" target="_blank" title="新規ウインドウで開きます">FAQページの「出馬表の発表日時の詳細」</a>でご確認ください。</span>
-        </li>
-      </ul>
-    </div>
-  </div>
           <div id="page_top_btn_bottom"><a href="#" class="btn-def btn-xs"><i class="fa fa-chevron-circle-up" aria-hidden="true"></i>ページトップへ戻る</a></div>
 <div id="page_top_btn"><a href="#"><img src="/JRADB/common_d/pagetop/img/btn_pagetop.png" width="44" height="44" alt="ページトップへ戻る" /></a></div>
         </div>
