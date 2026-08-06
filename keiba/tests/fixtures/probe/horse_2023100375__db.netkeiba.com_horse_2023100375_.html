@@ -120,7 +120,6 @@ if(window.performance && typeof window.performance.mark == 'function')
 
 
 <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
-
 <!-- BID STRAPスクリプトの読み込み -->
 <script async src="https://fam.adingo.jp/bid-strap/netkeiba/pb.js"></script>
 <script>
@@ -143,71 +142,50 @@ googletag.pubads().refresh(slots);
 };
 </script>
 <!-- 広告枠の定義と、BID STRAPの呼び出し -->
-
 <script>
 window.googletag = window.googletag || {cmd: []};
 googletag.cmd.push(function() {
-    
-    function randomInt(min, max) {
-        return Math.floor( Math.random() * (max + 1 - min) ) + min;
-    }
-
-    googletag.defineSlot("/21246805/pc_netkeiba_db_sidebar-rectangle-01_free", [[300,250]], "div-gpt-ad-23332025876-0").addService(googletag.pubads());
-    googletag.defineSlot("/21246805/pc_netkeiba_db_sidebar-skyscraper-01_free", [[300,600]], "div-gpt-ad-23338466608-0").addService(googletag.pubads());
-    googletag.defineSlot("/21246805/pc_netkeiba_db_header-leaderboard_free", [[728,90]], "div-gpt-ad-23331502457-0").addService(googletag.pubads());
-    googletag.defineSlot("/21246805/pc_netkeiba_db_middle-leaderboard-01_free", [[728,90]], "div-gpt-ad-23331086839-0").addService(googletag.pubads());
-    googletag.defineSlot("/21246805/pc_netkeiba_db_middle-leaderboard-02_free", [[728,90]], "div-gpt-ad-23331091846-0").addService(googletag.pubads());
-
-    //オーバーレイ広告
-    googletag.defineSlot("/21246805/pc_netkeiba_all_overlay-banner_free", [[728,90],[970,90]], "div-gpt-ad-23331502454-0").addService(googletag.pubads());
-    googletag.pubads().setTargeting("fluct_ad_group", String(randomInt(1, 10)));
-    googletag.pubads().collapseEmptyDivs();
-	googletag.pubads().enableSingleRequest();
-	googletag.pubads().disableInitialLoad();
-	googletag.enableServices();
-	bsttag.launchAuction();
-    
-
-    
+function randomInt(min, max) {
+return Math.floor( Math.random() * (max + 1 - min) ) + min;
+}
+googletag.defineSlot("/21246805/pc_netkeiba_db_sidebar-rectangle-01_free", [[300,250]], "div-gpt-ad-23332025876-0").addService(googletag.pubads());
+googletag.defineSlot("/21246805/pc_netkeiba_db_sidebar-skyscraper-01_free", [[300,600]], "div-gpt-ad-23338466608-0").addService(googletag.pubads());
+googletag.defineSlot("/21246805/pc_netkeiba_db_header-leaderboard_free", [[728,90]], "div-gpt-ad-23331502457-0").addService(googletag.pubads());
+googletag.defineSlot("/21246805/pc_netkeiba_db_middle-leaderboard-01_free", [[728,90]], "div-gpt-ad-23331086839-0").addService(googletag.pubads());
+googletag.defineSlot("/21246805/pc_netkeiba_db_middle-leaderboard-02_free", [[728,90]], "div-gpt-ad-23331091846-0").addService(googletag.pubads());
+//オーバーレイ広告
+googletag.defineSlot("/21246805/pc_netkeiba_all_overlay-banner_free", [[728,90],[970,90]], "div-gpt-ad-23331502454-0").addService(googletag.pubads());
+googletag.pubads().setTargeting("fluct_ad_group", String(randomInt(1, 10)));
+googletag.pubads().collapseEmptyDivs();
+googletag.pubads().enableSingleRequest();
+googletag.pubads().disableInitialLoad();
+googletag.enableServices();
+bsttag.launchAuction();
 
 });
 </script>
-
-
 <style>
 .gam_ad {
-    padding: 15px 0px 20px;
-    display: block;
-    text-align: center;
+padding: 15px 0px 20px;
+display: block;
+text-align: center;
 }
 .gam_ad_side01 {
-    margin-bottom: 20px;
-    display: block;
-    text-align: center;
+margin-bottom: 20px;
+display: block;
+text-align: center;
 }
 .gam_ad_side02 {
-    margin-top: 30px;
-    margin-bottom: 20px;
-    display: block;
-    text-align: center;
+margin-top: 30px;
+margin-bottom: 20px;
+display: block;
+text-align: center;
 }
 .gam_ad_raceside01 {
-    display: block;
-    text-align: center;
+display: block;
+text-align: center;
 }
 </style>
-
-
-
-
-
-
-
-
-
-
-
-
 <!-- Google Tag Manager -->
 <script>
 window.dataLayer = window.dataLayer || [];
@@ -409,19 +387,21 @@ $('.login_show').remove();
 }
 </script>
 
+
 <div class="genre_menu fc">
-<ul>
-<li ><a href="https://db.netkeiba.com/" title="競馬データTOP">競馬データTOP</a></li>
-<li class='active'><a href="https://db.netkeiba.com/horse/top.html" title="競走馬">競走馬</a></li>
-<li ><a href="https://db.netkeiba.com/jockey/top.html" title="騎手">騎手</a></li>
-<li ><a href="https://db.netkeiba.com/trainer/top.html" title="調教師">調教師</a></li>
-<li ><a href="https://db.netkeiba.com/owner/top.html" title="馬主">馬主</a></li>
-<li ><a href="https://db.netkeiba.com/breeder/top.html" title="生産者">生産者</a></li>
-<li ><a href="https://db.netkeiba.com/?pid=race_top" title="レース">レース</a></li>
-<li ><a href="https://db.netkeiba.com/classic/" title="クラシック">クラシック</a></li>
-<li ><a href="https://db.sp.netkeiba.com/winner_search/home" title="勝ち馬サーチ">勝ち馬サーチ</a></li>
-</ul>
+    <ul>
+        <li ><a href="https://db.netkeiba.com/" title="競馬データTOP">競馬データTOP</a></li>
+        <li class='active'><a href="https://db.netkeiba.com/horse/top.html" title="競走馬">競走馬</a></li>
+        <li ><a href="https://db.netkeiba.com/jockey/top.html" title="騎手">騎手</a></li>
+        <li ><a href="https://db.netkeiba.com/trainer/top.html" title="調教師">調教師</a></li>
+        <li ><a href="https://db.netkeiba.com/owner/top.html" title="馬主">馬主</a></li>
+        <li ><a href="https://db.netkeiba.com/breeder/top.html" title="生産者">生産者</a></li>
+        <li ><a href="https://db.netkeiba.com/?pid=race_top" title="レース">レース</a></li>
+	<li ><a href="https://db.netkeiba.com/classic/" title="クラシック">クラシック</a></li>
+	<li ><a href="https://db.sp.netkeiba.com/winner_search/home" title="勝ち馬サーチ">勝ち馬サーチ</a></li>
+    </ul>
 </div><!-- /.genre_menu -->
+
 <div id="contents" class="fc">
 
 <div id="div-gpt-ad-23331502457-0" class="gam_ad" style='min-width: 728px; min-height: 90px;'>
@@ -687,7 +667,7 @@ document.getElementById( "HorseMainPhoto" ).setAttribute( "src", "https://db.net
 }
 </script>
 <div class="db_photo_box fc">
-<img src="https://db.netkeiba.com/show_photo.php?horse_id=2023100375&no=2168&tn=yes&tmp=no" alt="" width="230" height="164" class="db_photo_main" id="HorseMainPhoto" style="object-fit: contain; background-color: #f5f5f5"/>
+<img src="https://db.netkeiba.com/show_photo.php?horse_id=2023100375&no=23967&tn=yes&tmp=no" alt="" width="230" height="164" class="db_photo_main" id="HorseMainPhoto" style="object-fit: contain; background-color: #f5f5f5"/>
 
 <div class="Slid_List Photo_Slid">
 <ul id="Horse_Photo_Slide">
@@ -985,12 +965,10 @@ $('#HorseInfo').html(html);
 </div><!-- /#db_main_box -->
 
 <div id="div-gpt-ad-23331086839-0" class="gam_ad" style='min-width: 728px; min-height: 90px;'>
-  <script>
-    googletag.cmd.push(function() { googletag.display('div-gpt-ad-23331086839-0'); });
-  </script>
+<script>
+googletag.cmd.push(function() { googletag.display('div-gpt-ad-23331086839-0'); });
+</script>
 </div>
-
-
 <span id="horse_award_box">
 <img src="https://cdnv2.netkeiba.com/img.db/common/img/gif_loader.gif" />
 </span>
