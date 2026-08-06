@@ -72,6 +72,9 @@ MENU_CNAMES = {cname for _, cname in SEEDS.values()} | {
 
 # 開催リンク: pw01drl + 00 + 場コード(2) + 年(4) + 回(2) + 日(2) + 日付(8)
 KAISAI_RE = re.compile(r"pw01drl00(\d{2})(\d{4})(\d{2})(\d{2})(\d{8})")
+# レース選択ページにある「全てのレースを表示」。ここが出走馬一覧への入口で、
+# 開催リンクを叩いた先（レース選択）には出走表が1つも無い。
+ALL_RACES_RE = re.compile(r"pw01des01\d+/\w+")
 HORSE_ID_RE = re.compile(r"CNAME=pw01dud00(\d{10})")
 JOCKEY_ID_RE = re.compile(r"pw04kmk00(\d+)")
 TRAINER_ID_RE = re.compile(r"pw05cmk00(\d+)")
@@ -359,7 +362,28 @@ def collect_racecards(fetcher: Fetcher) -> list[RaceCard]:
 
     cards: list[RaceCard] = []
     for meeting in kaisai:
-        page = open_page(fetcher, meeting["action"], meeting["cname"])
+        # 開催リンクの飛び先は「レース選択」で、出走表は1つも無い。
+        # そこから「全てのレースを表示」を辿って初めて出走馬一覧に着く。
+        race_list = open_page(fetcher, meeting["action"], meeting["cname"])
+        if race_list is None:
+            continue
+
+        all_races = next(
+            (
+                (action, cname)
+                for action, cname in DOACTION_RE.findall(race_list)
+                if ALL_RACES_RE.fullmatch(cname)
+            ),
+            None,
+        )
+        if all_races is None:
+            log.warning(
+                "%s %s: 「全てのレースを表示」が見つからない",
+                meeting["race_date"], meeting["venue"],
+            )
+            continue
+
+        page = open_page(fetcher, *all_races)
         if page is None:
             continue
         try:

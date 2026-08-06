@@ -111,6 +111,23 @@ def test_kaisai_links_cover_every_venue_and_day() -> None:
     assert all(x["cname"].startswith("pw01drl") for x in links)
 
 
+def test_race_list_page_is_one_hop_short_of_the_racecard() -> None:
+    """開催リンクの飛び先（レース選択）には出走表が無いこと。
+
+    ここを出馬表だと思って直接パースしていたため、実機で0レースになった。
+    出走馬一覧へは「全てのレースを表示」（pw01des01…）をもう1回辿る。
+    """
+    from keiba.sources.jra import ALL_RACES_RE, DOACTION_RE
+
+    html = fixture("jra_racelist.html")
+    # レース選択ページ自体からは1レースも取れない
+    assert parse_racecard_page(html) == []
+
+    hops = [c for _, c in DOACTION_RE.findall(html) if ALL_RACES_RE.fullmatch(c)]
+    assert hops, "「全てのレースを表示」への遷移が見つからない"
+    assert hops[0].startswith("pw01des01")
+
+
 def test_rejects_a_page_that_is_not_a_racecard() -> None:
     """別のページを食わせたら黙って空を返さず落ちること。"""
     with pytest.raises(ValueError):
