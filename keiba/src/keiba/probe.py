@@ -141,12 +141,17 @@ class Probe:
 
     # ------------------------------------------------------------------ JRA
 
-    def walk_jra(self) -> None:
-        """JRA公式の POST 遷移を2階層辿って、実データページの形を採取する。
+    def walk_jra(self, max_depth: int = 3, branches: int = 3) -> None:
+        """JRA公式の POST 遷移を辿って、実データページの形を採取する。
 
         入口の cname は固定だが、その先（開催日・レース単位）の cname は
         毎回変わるので、辿って採取するしかない。
+
+        出馬表は「入口 → 開催日選択 → レース選択 → 出馬表」で3階層ある。
+        2階層で止めるとレース選択画面までしか届かず、肝心の馬柱に到達しない。
         """
+        seed_cnames = {s[2] for s in JRA_SEEDS}
+
         for label, action, cname in JRA_SEEDS:
             html = self.grab(
                 f"{JRA_BASE}{action}",
@@ -157,27 +162,31 @@ class Probe:
             if not html:
                 continue
 
-            # 1階層目で拾った遷移先のうち、メニュー系ではないものを数件辿る
-            nexts = [
-                (a, c)
-                for a, c in JRA_DOACTION_RE.findall(html)
-                if c not in {s[2] for s in JRA_SEEDS}
-            ]
-            seen: set[str] = set()
-            depth2 = 0
-            for action2, cname2 in nexts:
-                if cname2 in seen:
-                    continue
-                seen.add(cname2)
-                self.grab(
-                    f"{JRA_BASE}{action2}",
-                    f"jra_{label}_L2_{depth2}",
-                    method="POST",
-                    data={"cname": cname2},
-                )
-                depth2 += 1
-                if depth2 >= 3:
+            seen: set[str] = set(seed_cnames)
+            frontier = [(action, cname, html)]
+
+            for depth in range(2, max_depth + 1):
+                next_frontier: list[tuple[str, str, str]] = []
+                for _, _, parent_html in frontier:
+                    picked = 0
+                    for action2, cname2 in JRA_DOACTION_RE.findall(parent_html):
+                        if cname2 in seen:
+                            continue
+                        seen.add(cname2)
+                        child = self.grab(
+                            f"{JRA_BASE}{action2}",
+                            f"jra_{label}_L{depth}_{len(next_frontier)}",
+                            method="POST",
+                            data={"cname": cname2},
+                        )
+                        picked += 1
+                        if child:
+                            next_frontier.append((action2, cname2, child))
+                        if picked >= branches:
+                            break
+                if not next_frontier:
                     break
+                frontier = next_frontier
 
     # ----------------------------------------------------------------- main
 
