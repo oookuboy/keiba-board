@@ -12,6 +12,7 @@
 <meta http-equiv="content-style-type" content="text/css" />
 <meta name="description" content="netkeibaが誇る国内最大級の競馬データベースです。50万頭以上の競走馬、騎手・調教師・馬主・生産者の全データがご覧いただけます。" />
 <meta name="keywords" content="競馬情報,競走馬,騎手,レース,調教師,馬主,検索,データベース,JRA,netkeiba,ネット競馬" />
+
 <!-- ogp用 -->
 <meta property="og:site_name" content="netkeiba" />
 <meta property="og:type" content="article" />
@@ -21,6 +22,7 @@
 <!-- Twitter用 -->
 <meta property="twitter:card" content="summary_large_image">
 <meta property="twitter:site" content="@netkeiba">
+
 <link href="https://cdnv2.netkeiba.com/img.db/common/css/reset.css?20160421" rel="stylesheet" type="text/css" media="all" />
 <link href="https://cdnv2.netkeiba.com/img.db/common/css/common.css?2020" rel="stylesheet" type="text/css" media="all" />
 <link href="https://cdnv2.netkeiba.com/img.db/common/css/db_detail.css?20250318" rel="stylesheet" type="text/css" media="all" />
@@ -32,20 +34,24 @@
 <link href="https://cdnv2.netkeiba.com/img.db/common/css/db_classic_nk01.css?201911201" rel="stylesheet" type="text/css" />
 <link href="https://cdnv2.netkeiba.com/img.db/common/css/colorbox.css" rel="stylesheet" type="text/css" />
 
+
+
+
 <script language="javascript">
 <!--
 b = navigator.userAgent.toUpperCase();
 if(b.indexOf("MAC") >= 0)
 {
-cssFile = "mac.css?20221109";
+	cssFile = "mac.css?20221109";
 }
 else
 {
-cssFile = "win.css";
+	cssFile = "win.css";
 }
 document.write("<link rel='stylesheet' type='text/css' href='https://cdnv2.netkeiba.com/img.db/common/css/" + cssFile + "'>");
 // -->
 </script>
+
 <script type="text/javascript" src="https://cdnv2.netkeiba.com/img.db/common/js/jquery-1.8.2.min.js?20160421"></script>
 <script type="text/javascript" src="https://cdnv2.netkeiba.com/img.db/common/js/jquery.cookie.js?20160421"></script>
 <script type="text/javascript" src="https://cdnv2.netkeiba.com/img.db/common/js/fontsize.js?20160421"></script>
@@ -58,6 +64,7 @@ document.write("<link rel='stylesheet' type='text/css' href='https://cdnv2.netke
 <script type="text/javascript" src="https://cdnv2.netkeiba.com/img.db/common/js/jquery.touchSwipe.min.js?20160421"></script>
 <link rel="stylesheet" type="text/css" href="https://cdnv2.netkeiba.com/img.db/common/css/ajaxtabs.css?20160421" />
 <script type="text/javascript" src="https://cdnv2.netkeiba.com/img.db/common/js/jquery.colorbox.js"></script>
+
 <script type="text/javascript" src="https://cdnv2.netkeiba.com/img.db/common/js/ajaxtabs.js?20160421">
 /***********************************************
 * Ajax Tabs Content script v2.2- c Dynamic Drive DHTML code library (www.dynamicdrive.com)
@@ -66,6 +73,7 @@ document.write("<link rel='stylesheet' type='text/css' href='https://cdnv2.netke
 ***********************************************/
 </script>
 <script type="text/javascript" src="https://cdnv2.netkeiba.com/img.db/common/js/get_ad_request.js"></script>
+
 <script type="text/javascript">
 <!--
 var _user_action_api_url    = 'https://cdnv2.netkeiba.com/img.user';
@@ -79,7 +87,9 @@ var _bbs_action_api_url     = 'https://bbs.netkeiba.com/';
 <script type="text/javascript" src="https://cdnv2.netkeiba.com/img.db//common/js/social.action.js"></script>
 <script type="text/javascript" src="https://cdnv2.netkeiba.com/img.bbs//common/js/bbs.action.js?2018053101"></script>
 <script type="text/javascript" src="https://cdnv2.netkeiba.com/img.regist.sp//common/js/monthly_goods_link.js?2017080201"></script>
+
 <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
+
 <!-- BID STRAPスクリプトの読み込み -->
 <script async src="https://fam.adingo.jp/bid-strap/netkeiba/pb.js"></script>
 <script>
@@ -102,50 +112,71 @@ googletag.pubads().refresh(slots);
 };
 </script>
 <!-- 広告枠の定義と、BID STRAPの呼び出し -->
+
 <script>
 window.googletag = window.googletag || {cmd: []};
 googletag.cmd.push(function() {
-function randomInt(min, max) {
-return Math.floor( Math.random() * (max + 1 - min) ) + min;
-}
-googletag.defineSlot("/21246805/pc_netkeiba_db_sidebar-rectangle-01_free", [[300,250]], "div-gpt-ad-23332025876-0").addService(googletag.pubads());
-googletag.defineSlot("/21246805/pc_netkeiba_db_sidebar-skyscraper-01_free", [[300,600]], "div-gpt-ad-23338466608-0").addService(googletag.pubads());
-googletag.defineSlot("/21246805/pc_netkeiba_db_header-leaderboard_free", [[728,90]], "div-gpt-ad-23331502457-0").addService(googletag.pubads());
-googletag.defineSlot("/21246805/pc_netkeiba_db_middle-leaderboard-01_free", [[728,90]], "div-gpt-ad-23331086839-0").addService(googletag.pubads());
-googletag.defineSlot("/21246805/pc_netkeiba_db_middle-leaderboard-02_free", [[728,90]], "div-gpt-ad-23331091846-0").addService(googletag.pubads());
-//オーバーレイ広告
-googletag.defineSlot("/21246805/pc_netkeiba_all_overlay-banner_free", [[728,90],[970,90]], "div-gpt-ad-23331502454-0").addService(googletag.pubads());
-googletag.pubads().setTargeting("fluct_ad_group", String(randomInt(1, 10)));
-googletag.pubads().collapseEmptyDivs();
-googletag.pubads().enableSingleRequest();
-googletag.pubads().disableInitialLoad();
-googletag.enableServices();
-bsttag.launchAuction();
+    
+    function randomInt(min, max) {
+        return Math.floor( Math.random() * (max + 1 - min) ) + min;
+    }
+
+    googletag.defineSlot("/21246805/pc_netkeiba_db_sidebar-rectangle-01_free", [[300,250]], "div-gpt-ad-23332025876-0").addService(googletag.pubads());
+    googletag.defineSlot("/21246805/pc_netkeiba_db_sidebar-skyscraper-01_free", [[300,600]], "div-gpt-ad-23338466608-0").addService(googletag.pubads());
+    googletag.defineSlot("/21246805/pc_netkeiba_db_header-leaderboard_free", [[728,90]], "div-gpt-ad-23331502457-0").addService(googletag.pubads());
+    googletag.defineSlot("/21246805/pc_netkeiba_db_middle-leaderboard-01_free", [[728,90]], "div-gpt-ad-23331086839-0").addService(googletag.pubads());
+    googletag.defineSlot("/21246805/pc_netkeiba_db_middle-leaderboard-02_free", [[728,90]], "div-gpt-ad-23331091846-0").addService(googletag.pubads());
+
+    //オーバーレイ広告
+    googletag.defineSlot("/21246805/pc_netkeiba_all_overlay-banner_free", [[728,90],[970,90]], "div-gpt-ad-23331502454-0").addService(googletag.pubads());
+    googletag.pubads().setTargeting("fluct_ad_group", String(randomInt(1, 10)));
+    googletag.pubads().collapseEmptyDivs();
+	googletag.pubads().enableSingleRequest();
+	googletag.pubads().disableInitialLoad();
+	googletag.enableServices();
+	bsttag.launchAuction();
+    
+
+    
 
 });
 </script>
+
+
 <style>
 .gam_ad {
-padding: 15px 0px 20px;
-display: block;
-text-align: center;
+    padding: 15px 0px 20px;
+    display: block;
+    text-align: center;
 }
 .gam_ad_side01 {
-margin-bottom: 20px;
-display: block;
-text-align: center;
+    margin-bottom: 20px;
+    display: block;
+    text-align: center;
 }
 .gam_ad_side02 {
-margin-top: 30px;
-margin-bottom: 20px;
-display: block;
-text-align: center;
+    margin-top: 30px;
+    margin-bottom: 20px;
+    display: block;
+    text-align: center;
 }
 .gam_ad_raceside01 {
-display: block;
-text-align: center;
+    display: block;
+    text-align: center;
 }
 </style>
+
+
+
+
+
+
+
+
+
+
+
+
 <script type="text/javascript" src="https://cdnv2.netkeiba.com/img.db/common/js/jquery.colorbox.js?20180321"></script>
 <link rel="stylesheet" href="https://cdnv2.netkeiba.com/img.db/common/css/colorbox.css?20180321" type="text/css" media="screen">
 <link rel="stylesheet" href="https://cdnv2.netkeiba.com/img.db/common/css/sweetalert_custom.css" type="text/css" media="screen">
@@ -440,10 +471,12 @@ $('#db_race_detail').addClass('classic');
 <div id="side">
 
 <div id="div-gpt-ad-23332025876-0" class="gam_ad_raceside01" style='min-width: 300px; min-height: 250px;'>
-<script>
-googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); });
-</script>
+  <script>
+    googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); });
+  </script>
 </div>
+
+
 </div><!-- / #side -->
 </div><!-- / #contents -->
 <div class="race_deta_menu">
@@ -547,25 +580,33 @@ googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); }
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*スタート指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*追走指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*上がり指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <td nowrap="nowrap">3-3-4-3</td>
 <td class="r1ml  txt_c" nowrap="nowrap"><span>38.4</span></td>
@@ -625,25 +666,33 @@ googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); }
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*スタート指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*追走指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*上がり指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <td nowrap="nowrap">1-1-1-1</td>
 <td class="bml  txt_c" nowrap="nowrap"><span>40.3</span></td>
@@ -703,25 +752,33 @@ googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); }
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*スタート指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*追走指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*上がり指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <td nowrap="nowrap">3-4-3-3</td>
 <td class="bml  txt_c" nowrap="nowrap"><span>39.4</span></td>
@@ -781,25 +838,33 @@ googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); }
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*スタート指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*追走指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*上がり指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <td nowrap="nowrap">11-11-8-6</td>
 <td class="r2ml  txt_c" nowrap="nowrap"><span>38.5</span></td>
@@ -859,25 +924,33 @@ googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); }
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*スタート指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*追走指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*上がり指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <td nowrap="nowrap">2-2-2-2</td>
 <td class="bml  txt_c" nowrap="nowrap"><span>40.3</span></td>
@@ -937,25 +1010,33 @@ googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); }
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*スタート指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*追走指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*上がり指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <td nowrap="nowrap">5-4-5-5</td>
 <td class="bml  txt_c" nowrap="nowrap"><span>39.3</span></td>
@@ -1015,25 +1096,33 @@ googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); }
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*スタート指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*追走指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*上がり指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <td nowrap="nowrap">13-14-13-12</td>
 <td class="r3ml  txt_c" nowrap="nowrap"><span>38.7</span></td>
@@ -1093,25 +1182,33 @@ googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); }
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*スタート指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*追走指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*上がり指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <td nowrap="nowrap">11-10-10-10</td>
 <td class="bml  txt_c" nowrap="nowrap"><span>39.4</span></td>
@@ -1173,25 +1270,33 @@ googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); }
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*スタート指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*追走指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*上がり指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <td nowrap="nowrap">13-12-12-10</td>
 <td class="bml  txt_c" nowrap="nowrap"><span>39.4</span></td>
@@ -1253,25 +1358,33 @@ googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); }
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*スタート指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*追走指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*上がり指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <td nowrap="nowrap">10-9-8-8</td>
 <td class="bml  txt_c" nowrap="nowrap"><span>40.2</span></td>
@@ -1333,25 +1446,33 @@ googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); }
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*スタート指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*追走指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*上がり指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <td nowrap="nowrap">6-6-6-7</td>
 <td class="bml  txt_c" nowrap="nowrap"><span>41.0</span></td>
@@ -1411,25 +1532,33 @@ googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); }
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*スタート指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*追走指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*上がり指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <td nowrap="nowrap">7-6-6-8</td>
 <td class="bml  txt_c" nowrap="nowrap"><span>41.3</span></td>
@@ -1491,25 +1620,33 @@ googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); }
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*スタート指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*追走指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*上がり指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <td nowrap="nowrap">9-12-14-14</td>
 <td class="bml  txt_c" nowrap="nowrap"><span>39.6</span></td>
@@ -1569,25 +1706,33 @@ googletag.cmd.push(function() { googletag.display('div-gpt-ad-23332025876-0'); }
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*スタート指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*追走指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <!--*上がり指数*-->
 <td class="TimeIndexMasterCell01 bml txt_right">
 
 
-
+<div class="txt_c">
+<a href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_19162" data-theme="19162">**</a>
+</div>
 </td>
 <td nowrap="nowrap">8-8-10-13</td>
 <td class="bml  txt_c" nowrap="nowrap"><span>41.1</span></td>
@@ -1867,13 +2012,19 @@ clearInterval(pollInterval);
 <tr>
 
 <th>トラックバイアス<br><span class="master_course_badge">マスター</span></th>
-
 <td class="TrackBiasCell">
-<div class="TrackBiasWrap">
-<div class="TrackBiasTxt02">レース翌週の金曜日18時頃に公開予定です。<br />
-※障害レースを除く中央競馬のみが対象となります</div>
+<a href="">
+<a class="" href="https://regist.netkeiba.com/?pid=master_introduction" id="a_monthly_goods_link_" data-theme="19102">
+<div class="TrackBiasWrap" id="master_info_new_trackBias01" data-id="master_info_new_trackBias">
+<div class="TrackBiasTxt01"><div class="TrackBiasSample01"></div></div>
+<div class="TrackBiasImg Dirt">
+<div class="TrackBiasSample02"></div>
+</div><!-- /.TrackBiasImg -->
 </div><!-- /.TrackBiasWrap -->
+</a>
+
 </td>
+
 
 </tr>
 </table>
@@ -2326,14 +2477,14 @@ toast.classList.remove("show");
 <div id='div-gpt-ad-23331502454-0'>
 <script>
 googletag.cmd.push(function() {
-googletag.display('div-gpt-ad-23331502454-0');
-googletag.pubads().addEventListener('slotRenderEnded', function(evt) {
-var slot = evt.slot;
-if (slot.getSlotElementId() === 'div-gpt-ad-23331502454-0' && evt.size) {
-var height = evt.size[1];
-document.body.style.paddingBottom = height + 'px';
-}
-});
+  googletag.display('div-gpt-ad-23331502454-0');
+    googletag.pubads().addEventListener('slotRenderEnded', function(evt) {
+      var slot = evt.slot;
+      if (slot.getSlotElementId() === 'div-gpt-ad-23331502454-0' && evt.size) {
+      var height = evt.size[1];
+      document.body.style.paddingBottom = height + 'px';
+    }
+  });
 });
 </script>
 </div>
@@ -2341,6 +2492,7 @@ document.body.style.paddingBottom = height + 'px';
 <div style="height: 0px; width: 100%; position: absolute; bottom: 0; overflow: hidden;"></div>
 </div>
 </div>
+
 <!-- Google Tag Manager -->
 <noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-K6PJT6"
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
