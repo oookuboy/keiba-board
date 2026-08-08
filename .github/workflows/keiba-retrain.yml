@@ -1,0 +1,90 @@
+name: keiba-retrain
+
+# 能力モデルの定期再学習。
+#
+# 放置するとモデルは劣化する。騎手の調子・種牡馬の傾向・馬場は動くのに、
+# モデルは学習した時点で凍結されるため。実際 2026-08-05 に学習したきり
+# 一度も更新されていなかった（どのワークフローにも train が無かった）。
+#
+# 頻度は月1。2週間ごとにしても増えるデータは +1.3%（週末1回で約940行 /
+# 総数14.8万行）で誤差にしかならず、再学習のたびに「うっかり悪いモデルへ
+# 差し替わる」リスクだけが増える。
+#
+# 頻度より効くのは検証窓をずらすこと。固定のままだと時が経つほど
+# 「古いデータで検証している」状態になる。毎回、直近3か月を検証に回す。
+
+on:
+  schedule:
+    # 毎月1日 05:00 JST = 前月末 20:00 UTC。開催の無い時間帯を選ぶ
+    - cron: "0 20 28 * *"
+  workflow_dispatch:
+    inputs:
+      valid_from:
+        description: "検証開始日 YYYY-MM-DD（空なら3か月前）"
+        required: false
+        default: ""
+      force:
+        description: "AUCが下がっても差し替える"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: keiba-retrain
+  cancel-in-progress: false
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install --default-timeout=180 -e .
+      - run: pip install --default-timeout=180 lightgbm
+
+      - uses: actions/cache@v4
+        with:
+          path: keiba/keiba.db
+          key: keiba-db-${{ hashFiles('keiba/raw/**/*.jsonl.gz') }}
+          restore-keys: keiba-db-
+
+      - name: Build
+        run: python -m keiba.cli build
+
+      - name: Retrain
+        id: retrain
+        run: |
+          VF="${{ inputs.valid_from }}"
+          # 検証窓を毎回ずらす。固定すると古いデータで検証し続けることになる
+          [ -n "$VF" ] || VF=$(date -u -d "3 months ago" +%F)
+          echo "検証開始日: $VF"
+
+          FORCE=""
+          [ "${{ inputs.force }}" = "true" ] && FORCE="--force"
+
+          # AUC が既定より下がったら cmd_train が exit 1 で差し替えを拒む
+          if python -m keiba.cli train --valid-from "$VF" $FORCE; then
+            echo "replaced=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "replaced=no" >> "$GITHUB_OUTPUT"
+            echo "::warning::AUC が低下したためモデルを差し替えなかった"
+          fi
+
+      - name: Commit
+        if: steps.retrain.outputs.replaced == 'yes'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A keiba/config/model.txt keiba/config/model.json
+          if git diff --cached --quiet; then
+            echo "変化なし"
+          else
+            git commit -m "chore(keiba): モデルを再学習"
+            git pull --rebase origin ${{ github.ref_name }}
+            git push origin HEAD:${{ github.ref_name }}
+          fi

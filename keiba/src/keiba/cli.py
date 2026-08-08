@@ -198,6 +198,11 @@ def cmd_train(args: argparse.Namespace) -> int:
     """
     from keiba import dataset, ml
 
+    meta_path = args.config_dir / "model.json"
+    previous = None
+    if meta_path.exists():
+        previous = json.loads(meta_path.read_text(encoding="utf-8")).get("auc")
+
     with Store(args.db) as store:
         df = dataset.prepare(store)
         result = ml.train(df, valid_from=args.valid_from)
@@ -207,7 +212,22 @@ def cmd_train(args: argparse.Namespace) -> int:
         scores = ml.predict(result.booster, valid)
         print()
         print(ml.format_ranking(ml.evaluate_ranking(valid, scores)))
-        ml.save(result, args.config_dir / "model.txt", args.config_dir / "model.json")
+
+        # 定期再学習で黙って悪いモデルに差し替わらないようにする。
+        # 月1で自動実行する以上、誰も数字を見ないまま入れ替わる回が必ず来る。
+        if previous is not None and not args.force:
+            drop = previous - result.auc
+            if drop > args.max_auc_drop:
+                log.error(
+                    "AUC が %.5f → %.5f（%.5f 低下）。%.5f を超える低下なので"
+                    "差し替えない。意図的に入れ替えるなら --force",
+                    previous, result.auc, drop, args.max_auc_drop,
+                )
+                return 1
+            log.info("AUC %.5f → %.5f（前回比 %+.5f）", previous, result.auc, -drop)
+
+        ml.save(result, args.config_dir / "model.txt", meta_path)
+        log.info("モデルを差し替えた: %s", args.config_dir / "model.txt")
     return 0
 
 
@@ -316,6 +336,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--valid-from", type=_date, required=True,
         help="この日以降を検証に回す（時系列で切る。ランダム分割はしない）",
+    )
+    p.add_argument(
+        "--max-auc-drop", type=float, default=0.005,
+        help="前回モデルからのAUC低下がこれを超えたら差し替えない（既定 0.005）",
+    )
+    p.add_argument(
+        "--force", action="store_true",
+        help="AUCが下がっていても差し替える",
     )
     p.set_defaults(func=cmd_train)
 
