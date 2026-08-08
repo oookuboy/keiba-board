@@ -100,6 +100,9 @@ main{padding:12px 12px 40px;max-width:900px;margin:0 auto}
   font-family:"SF Mono",Menlo,monospace}
 .grade{color:var(--amber);font-size:10px;border:1px solid var(--amber);
   border-radius:4px;padding:0 4px;margin-left:5px;vertical-align:1px}
+/* レース名の横に出す1〜3着の馬番。的中したレースは緑にする */
+.top3{margin-left:6px;font-family:"SF Mono",Menlo,monospace;font-size:11px;color:var(--dim)}
+.top3.hit{color:var(--green);font-weight:700}
 .spend{flex:0 0 auto;font-family:"SF Mono",Menlo,monospace;font-size:12px;color:var(--dim);text-align:right}
 .spend .hit{color:var(--green);font-weight:700}
 .spend .miss{color:var(--red)}
@@ -310,8 +313,13 @@ function raceCard(r){
   head.appendChild(mark);
 
   const t=el("div","rtitle");
+  // 一覧のまま結果が分かるよう、レース名の横に1〜3着の馬番を出す。
+  // 的中なら緑にして、開かなくても当たり外れが見えるようにする。
+  const top3=r.result&&r.result.top3
+    ? `<span class="top3${r.result.hit?" hit":""}">(${r.result.top3.join("-")})</span>`
+    : "";
   t.appendChild(el("div","l1",
-    `${r.venue}${r.race_no}R ${r.name}`+(r.grade?`<span class="grade">${r.grade}</span>`:"")));
+    `${r.venue}${r.race_no}R ${r.name}`+(r.grade?`<span class="grade">${r.grade}</span>`:"")+top3));
   const cond=[`${r.surface}${r.direction||""}${r.distance}m`,
               r.going?`馬場${r.going}`:null, r.post_time, `${r.field_size}頭`,
               r.pace?`${r.pace}想定`:null].filter(Boolean).join(" / ");
