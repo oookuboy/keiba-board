@@ -162,6 +162,38 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
         prev_jockey.notna() & (prev_jockey != out["jockey_id"])
     ).astype("int8")
 
+    # --- 乗り替わりの「質」 ---------------------------------------------
+    # c_jockey_change は替わったかどうかの 0/1 でしかない。上手い騎手へ
+    # 乗り替わったのか下手な方へ替わったのかを区別できていなかった。
+    # 前走騎手の複勝率との差を持たせる（教訓の「騎手強化」の数値版）。
+    prev_jockey_skill = out.groupby(horse, observed=True)["j_place_rate"].shift(1)
+    out["c_jockey_upgrade"] = out["j_place_rate"] - prev_jockey_skill
+
+    # --- 斤量の増減 ------------------------------------------------------
+    # weight_carried の絶対値しか見ておらず、前走から背負い増したのか
+    # 減ったのかを拾えていなかった。ハンデ戦や昇級で効く。
+    out["c_weight_delta"] = out["weight_carried"] - out.groupby(
+        horse, observed=True
+    )["weight_carried"].shift(1)
+
+    # --- 間隔の非線形性 --------------------------------------------------
+    # h_days_since は生の日数なので、「詰めすぎ」「叩き頃」「長期休養」の
+    # 差が線形に見えてしまう。区分として持たせて木に判断させる。
+    days = out["h_days_since"]
+    out["c_short_rest"] = (days < 15).astype("int8")       # 連闘・中1週
+    out["c_fresh"] = days.between(21, 63).astype("int8")   # 中3週〜2か月
+    out["c_layoff"] = (days >= 180).astype("int8")         # 半年以上
+
+    # --- コース形状との相性 ----------------------------------------------
+    # hv_place_rate（場）はあるが、回り・距離帯まで込みの実績が無かった。
+    # 「右回りの中距離だけ走る」型を拾うため。
+    out["hd_place_rate"] = _prior_mean(
+        out, ["horse_id", "direction", "band"], "placed"
+    )
+    out["hvd_place_rate"] = _prior_mean(
+        out, ["horse_id", "venue", "distance"], "placed"
+    )
+
     # --- 調教師 --------------------------------------------------------
     out["t_place_rate"] = _prior_mean(out, ["trainer_id"], "placed")
 
@@ -198,8 +230,12 @@ FEATURE_COLUMNS = [
     # 条件一変
     "c_distance_delta", "c_surface_switch", "c_class_delta", "c_class_drop",
     "c_second_off_layoff", "c_jockey_change", "c_switch_x_sire",
-    # 同条件実績
+    # 乗り替わりの質・斤量の増減・間隔の区分
+    "c_jockey_upgrade", "c_weight_delta",
+    "c_short_rest", "c_fresh", "c_layoff",
+    # 同条件実績（場・回り・距離まで込み）
     "hs_place_rate", "hsb_place_rate", "hv_place_rate",
+    "hd_place_rate", "hvd_place_rate",
     # 騎手・調教師
     "j_runs", "j_place_rate", "j_win_rate", "jv_place_rate",
     "hj_place_rate", "hj_runs", "t_place_rate",
