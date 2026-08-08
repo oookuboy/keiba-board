@@ -178,8 +178,20 @@ class Store:
         return len(rows)
 
     def save_card(self, card: RaceCard) -> None:
+        # 枠順確定前の出馬表（木曜〜金曜）は馬番が None で入ってくる。
+        # umaban は entries の主キーなので DB には入れられない。生の JSONL 側は
+        # 正として持ち続け、DB へは確定した馬だけを入れる。
+        # ここを弾かないと NOT NULL 制約で build ごと落ち、確定済みの他の開催日
+        # まで巻き添えで予想が作れなくなる（実際そうなった）。
+        entries = [e for e in card.entries if e.umaban is not None]
+        if len(entries) != len(card.entries):
+            log.info(
+                "%s: 枠順未確定の %d 頭を DB へ入れない（金曜確定）",
+                card.race.race_id, len(card.entries) - len(entries),
+            )
+
         self._upsert("races", [card.race.to_dict()])
-        self._upsert("entries", [e.to_dict() for e in card.entries])
+        self._upsert("entries", [e.to_dict() for e in entries])
         self._upsert("results", [r.to_dict() for r in card.results])
         self._upsert("payouts", [p.to_dict() for p in card.payouts])
         self._upsert("workouts", [w.to_dict() for w in card.workouts])

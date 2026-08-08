@@ -150,6 +150,35 @@ def test_race_list_page_is_one_hop_short_of_the_racecard() -> None:
     assert hops[0].startswith("pw01des01")
 
 
+def test_popularity_is_derived_from_odds() -> None:
+    """JRA公式の出馬表には「人気」欄が無いので、単勝オッズの昇順から導出する。
+
+    これが無いと confidence が人気を見られず、オッズが揃っていても全レースが
+    「オッズ未確定」に落ちて1点も買えない。実際に当日そうなった。
+    """
+    from keiba.models import Entry
+    from keiba.sources.jra import _assign_popularity
+
+    entries = [
+        Entry(race_id="R", umaban=i, horse_name=f"h{i}", horse_id="", market_odds=o)
+        for i, o in enumerate([12.3, 2.1, 5.0, 2.1, 88.0], start=1)
+    ]
+    _assign_popularity(entries)
+    assert [e.market_popularity for e in entries] == [4, 1, 3, 1, 5]
+
+
+def test_popularity_stays_unset_before_odds_open() -> None:
+    """オッズが無い段階で人気をでっち上げない。"""
+    from keiba.models import Entry
+    from keiba.sources.jra import _assign_popularity
+
+    entries = [
+        Entry(race_id="R", umaban=i, horse_name=f"h{i}", horse_id="") for i in range(1, 6)
+    ]
+    _assign_popularity(entries)
+    assert all(e.market_popularity is None for e in entries)
+
+
 def test_rejects_a_page_that_is_not_a_racecard() -> None:
     """別のページを食わせたら黙って空を返さず落ちること。"""
     with pytest.raises(ValueError):

@@ -244,6 +244,27 @@ def _parse_entry_row(row: Tag, race_id: str) -> Entry | None:
     )
 
 
+def _assign_popularity(entries: list[Entry]) -> None:
+    """単勝オッズから人気順位を割り当てる。
+
+    JRA公式の出馬表はオッズは載せるが「人気」欄が無い。人気とは単勝オッズの
+    昇順順位そのものなので、ここで導出する。作り事ではなく定義どおりの変換。
+
+    これが無いと confidence が人気を見られず、全レースが「オッズ未確定」に
+    落ちて1点も買えない（実際そうなった）。同オッズは同順位にする。
+    """
+    priced = [e for e in entries if e.market_odds is not None]
+    if len(priced) < 3:
+        return
+    rank = 0
+    previous: float | None = None
+    for i, entry in enumerate(sorted(priced, key=lambda e: e.market_odds), start=1):
+        if entry.market_odds != previous:
+            rank = i
+            previous = entry.market_odds
+        entry.market_popularity = rank
+
+
 def parse_racecard_page(html: str) -> list[RaceCard]:
     """出走馬一覧（1開催＝全12レース）を RaceCard のリストにする。
 
@@ -315,6 +336,7 @@ def parse_racecard_page(html: str) -> list[RaceCard]:
         ]
         if not entries:
             continue
+        _assign_popularity(entries)
 
         race = Race(
             race_id=race_id,
