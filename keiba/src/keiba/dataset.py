@@ -185,13 +185,15 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     out["c_layoff"] = (days >= 180).astype("int8")         # 半年以上
 
     # --- コース形状との相性 ----------------------------------------------
-    # hv_place_rate（場）はあるが、回り・距離帯まで込みの実績が無かった。
+    # hv_place_rate（場）はあるが、回り込みの実績が無かった。
     # 「右回りの中距離だけ走る」型を拾うため。
+    #
+    # 馬 × 場 × 距離（hvd）も試したが、1グループ平均1.54行しかなく、
+    # shift(1) を通すと過半数の行で過去が空になる。情報がほぼ無いうえに
+    # グループ数9.6万で計算だけ重いので入れない。粒度を細かくすれば
+    # 効くわけではない、の実例。
     out["hd_place_rate"] = _prior_mean(
         out, ["horse_id", "direction", "band"], "placed"
-    )
-    out["hvd_place_rate"] = _prior_mean(
-        out, ["horse_id", "venue", "distance"], "placed"
     )
 
     # --- 調教師 --------------------------------------------------------
@@ -234,8 +236,7 @@ FEATURE_COLUMNS = [
     "c_jockey_upgrade", "c_weight_delta",
     "c_short_rest", "c_fresh", "c_layoff",
     # 同条件実績（場・回り・距離まで込み）
-    "hs_place_rate", "hsb_place_rate", "hv_place_rate",
-    "hd_place_rate", "hvd_place_rate",
+    "hs_place_rate", "hsb_place_rate", "hv_place_rate", "hd_place_rate",
     # 騎手・調教師
     "j_runs", "j_place_rate", "j_win_rate", "jv_place_rate",
     "hj_place_rate", "hj_runs", "t_place_rate",
