@@ -148,10 +148,15 @@ jobs:
           python -m keiba.cli build
           python -m keiba.cli predict --date "${{ steps.plan.outputs.date }}"
 
+      # 着順はまず JRA公式から取る。db.netkeiba は結果データベースだが反映が
+      # 遅く、開催当日の夜になっても race_id を1件も出していなかった（実測）。
+      # JRA が確定前なら netkeiba へ落とす（翌日以降はこちらでも取れる）。
       - name: Review
         if: steps.plan.outputs.job == 'review'
         run: |
-          python -m keiba.cli collect --date "${{ steps.plan.outputs.date }}" --days-ahead 0 --results
+          DATE="${{ steps.plan.outputs.date }}"
+          python -m keiba.cli collect --date "$DATE" --results --from-jra \
+            || python -m keiba.cli collect --date "$DATE" --days-ahead 0 --results
           python -m keiba.cli build
           python -m keiba.cli review --date "${{ steps.plan.outputs.date }}"
 

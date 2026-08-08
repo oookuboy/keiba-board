@@ -43,7 +43,7 @@ from datetime import date
 
 from bs4 import BeautifulSoup, Tag
 
-from keiba.models import VENUES, Entry, Race, RaceCard
+from keiba.models import VENUES, Entry, Payout, Race, RaceCard, Result
 from keiba.sources.http import Fetcher, FetchError
 
 log = logging.getLogger(__name__)
@@ -75,6 +75,9 @@ KAISAI_RE = re.compile(r"pw01drl00(\d{2})(\d{4})(\d{2})(\d{2})(\d{8})")
 # レース選択ページにある「全てのレースを表示」。ここが出走馬一覧への入口で、
 # 開催リンクを叩いた先（レース選択）には出走表が1つも無い。
 ALL_RACES_RE = re.compile(r"pw01des01\d+/\w+")
+# レース結果の開催リンク。出馬表(pw01drl)とは接頭辞が違い、直近開催は
+# pw01srl0…、過去は pw01srl1… と1桁目が変わるので \d で受ける。
+RESULT_KAISAI_RE = re.compile(r"pw01srl\d0?(\d{2})(\d{4})(\d{2})(\d{2})(\d{8})")
 HORSE_ID_RE = re.compile(r"CNAME=pw01dud00(\d{10})")
 JOCKEY_ID_RE = re.compile(r"pw04kmk00(\d+)")
 TRAINER_ID_RE = re.compile(r"pw05cmk00(\d+)")
@@ -380,6 +383,213 @@ def parse_racecard_page(html: str) -> list[RaceCard]:
         cards.append(RaceCard(race=race, entries=entries, results=[], payouts=[]))
 
     return cards
+
+
+# ------------------------------------------------------------ レース結果
+
+_TIME_RE = re.compile(r"(\d+):(\d+\.\d+)|^(\d+\.\d+)$")
+_PAYOUT_RE = re.compile(r"([\d\-]+)\s+([\d,]+)\s*円\s+(\d+)\s*番人気")
+_BET_TYPES = {
+    "win": "単勝", "place": "複勝", "wakuren": "枠連", "umaren": "馬連",
+    "umatan": "馬単", "wide": "ワイド", "trio": "三連複", "tierce": "三連単",
+}
+
+
+def _time_to_sec(raw: str) -> float | None:
+    """1:21.7 → 81.7 / 59.6 → 59.6。"""
+    raw = raw.strip()
+    if m := re.fullmatch(r"(\d+):(\d+(?:\.\d+)?)", raw):
+        return int(m.group(1)) * 60 + float(m.group(2))
+    if re.fullmatch(r"\d+(?:\.\d+)?", raw):
+        return float(raw)
+    return None
+
+
+def parse_results_page(html: str) -> dict[str, list[Result]]:
+    """レース結果一覧（1開催＝全12レース）を race_id → Result のリストにする。
+
+    db.netkeiba は結果データベースだが反映が遅く、開催当日の夜になっても
+    着順を1件も出していなかった（2026-08-08 実測、race_id 0件）。JRA公式は
+    レース確定後すぐ出るので、当日中に回顧を回すにはこちらが要る。
+    """
+    soup = BeautifulSoup(html, "lxml")
+    race_date, venue_code, kai, nichi = _parse_meeting_heading(soup)
+
+    out: dict[str, list[Result]] = {}
+    for table in soup.select("table.basic"):
+        if table.select_one("td.place") is None:
+            continue
+        block = _race_block_of(table)
+        if block is None:
+            continue
+        num_img = block.select_one(".race_number img")
+        alt = str(num_img.get("alt") or "") if isinstance(num_img, Tag) else ""
+        rm = _RACE_NO_RE.search(alt)
+        if not rm:
+            continue
+        race_no = int(rm.group(1))
+        race_id = f"{race_date.year}{venue_code}{kai:02d}{nichi:02d}{race_no:02d}"
+
+        results: list[Result] = []
+        for row in table.select("tbody tr"):
+            umaban = _as_int(row.select_one("td.num"))
+            if umaban is None:
+                continue
+            # 着順は「1」「中止」「除外」など。数字でなければ None（＝完走せず）
+            place_raw = _text(row.select_one("td.place"))
+            finish = int(place_raw) if place_raw.isdigit() else None
+
+            corners = [
+                int(x) for x in _text(row.select_one("td.corner")).split()
+                if x.isdigit()
+            ]
+            body_weight = body_diff = None
+            if m := re.search(r"(\d{3})\s*\(([-+]?\d+)\)", _text(row.select_one("td.h_weight"))):
+                body_weight, body_diff = int(m.group(1)), int(m.group(2))
+
+            last3f = None
+            if m := re.search(r"(\d+\.\d+)", _text(row.select_one("td.f_time"))):
+                last3f = float(m.group(1))
+
+            results.append(
+                Result(
+                    race_id=race_id,
+                    umaban=umaban,
+                    finish_pos=finish,
+                    time_sec=_time_to_sec(_text(row.select_one("td.time"))),
+                    margin=_text(row.select_one("td.margin")) or None,
+                    corners=corners,
+                    last3f=last3f,
+                    body_weight=body_weight,
+                    body_weight_diff=body_diff,
+                )
+            )
+        if results:
+            out[race_id] = results
+    return out
+
+
+def parse_payouts_page(html: str) -> dict[str, list[Payout]]:
+    """払戻金一覧を race_id → Payout のリストにする。
+
+    配当は table ではなく ul > li.trio > dl > dt,dd の形。券種は li の class
+    （win / place / trio / tierce …）で分かる。
+    """
+    soup = BeautifulSoup(html, "lxml")
+    race_date, venue_code, kai, nichi = _parse_meeting_heading(soup)
+
+    out: dict[str, list[Payout]] = {}
+    for unit in soup.select(".refund_unit"):
+        block = _race_block_of(unit)
+        if block is None:
+            continue
+        num_img = block.select_one(".race_number img")
+        alt = str(num_img.get("alt") or "") if isinstance(num_img, Tag) else ""
+        rm = _RACE_NO_RE.search(alt)
+        if not rm:
+            continue
+        race_no = int(rm.group(1))
+        race_id = f"{race_date.year}{venue_code}{kai:02d}{nichi:02d}{race_no:02d}"
+
+        payouts: list[Payout] = []
+        for li in unit.select("li"):
+            classes = li.get("class") or []
+            bet_type = next(
+                (_BET_TYPES[c] for c in classes if c in _BET_TYPES), None
+            )
+            if bet_type is None:
+                continue
+            for dd in li.select("dd"):
+                # 「8-13 470 円 4 番人気 2-13 670 円 6 番人気」を1件ずつ拾う
+                for combo, yen, pop in _PAYOUT_RE.findall(_text(dd)):
+                    payouts.append(
+                        Payout(
+                            race_id=race_id,
+                            bet_type=bet_type,
+                            combination=combo,
+                            payout=int(yen.replace(",", "")),
+                            popularity=int(pop),
+                        )
+                    )
+        if payouts:
+            out[race_id] = payouts
+    return out
+
+
+def _parse_meeting_heading(soup: BeautifulSoup) -> tuple[date, str, int, int]:
+    """「2026年8月8日（土曜）2回新潟5日」から開催を取る。"""
+    heading = ""
+    for node in soup.select("h1, h2"):
+        text = _text(node)
+        if _DATE_RE.search(text) and _KAISAI_TEXT_RE.search(text):
+            heading = text
+            break
+    dm = _DATE_RE.search(heading)
+    km = _KAISAI_TEXT_RE.search(heading)
+    if not dm or not km:
+        raise ValueError(f"開催見出しを解釈できない: {heading[:80]!r}")
+
+    race_date = date(int(dm.group(1)), int(dm.group(2)), int(dm.group(3)))
+    kai, venue, nichi = int(km.group(1)), km.group(2).strip(), int(km.group(3))
+    venue_code = VENUE_CODE.get(venue)
+    if venue_code is None:
+        raise ValueError(f"中央の競馬場ではない: {venue!r}")
+    return race_date, venue_code, kai, nichi
+
+
+def collect_results(fetcher: Fetcher, day: date) -> dict[str, tuple[list, list]]:
+    """指定日の全開催ぶんの着順と払戻を取る。
+
+    経路は出馬表と同じ3階層だが、開催リンクの接頭辞が pw01srl と違う。
+    レース選択ページから「レース結果一覧」と「払戻金一覧」の両方を辿る。
+
+    戻り値は race_id → (results, payouts)。開催が無ければ空。
+    """
+    html = open_seed(fetcher, "results")
+    if html is None:
+        return {}
+
+    stamp = day.strftime("%Y%m%d")
+    kaisai = [
+        (a, c) for a, c in DOACTION_RE.findall(html)
+        if (m := RESULT_KAISAI_RE.match(c)) and m.group(5) == stamp
+    ]
+    if not kaisai:
+        log.info("%s の結果はJRA公式にまだ出ていない", day)
+        return {}
+
+    nav = {c for _, c in DOACTION_RE.findall(html)}
+    merged: dict[str, tuple[list, list]] = {}
+
+    for action, cname in kaisai:
+        race_list = open_page(fetcher, action, cname)
+        if race_list is None:
+            continue
+        # レース選択ページから、結果一覧と払戻一覧へ辿る。接頭辞が読めないので
+        # 順に開いてタイトルで見分ける（出馬表と違い入口が2つある）
+        results: dict[str, list] = {}
+        payouts: dict[str, list] = {}
+        for action2, cname2 in DOACTION_RE.findall(race_list):
+            if cname2 in nav or RESULT_KAISAI_RE.match(cname2):
+                continue
+            page = open_page(fetcher, action2, cname2)
+            if not page:
+                continue
+            try:
+                if "払戻金一覧" in page[:4000]:
+                    payouts = parse_payouts_page(page)
+                elif "レース結果一覧" in page[:4000]:
+                    results = parse_results_page(page)
+            except ValueError as exc:
+                log.warning("%s の解釈に失敗: %s", cname2, exc)
+            if results and payouts:
+                break
+
+        for race_id, rows in results.items():
+            merged[race_id] = (rows, payouts.get(race_id, []))
+        log.info("%s %s: 結果 %d レース", day, cname[:20], len(results))
+
+    return merged
 
 
 def post_positions_confirmed(card: RaceCard) -> bool:

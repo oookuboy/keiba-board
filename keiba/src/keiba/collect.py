@@ -138,6 +138,41 @@ def collect_upcoming(fetcher: Fetcher, out_dir: Path) -> dict[date, int]:
     return counts
 
 
+def collect_results_from_jra(fetcher: Fetcher, day: date, out_dir: Path) -> int:
+    """JRA公式から着順と払戻を取り、既存の出馬表に合流させる。
+
+    db.netkeiba は結果データベースだが反映が遅く、開催当日の夜になっても
+    着順を1件も出していなかった（2026-08-08 実測）。当日中に回顧を回すには
+    こちらが要る。翌日以降は netkeiba 側でも取れるので、両方を残しておく。
+
+    戻り値は結果を埋められたレース数。0 なら「まだ出ていない」。
+    """
+    out_path = out_dir / str(day.year) / f"{day.isoformat()}.jsonl.gz"
+    if not out_path.exists():
+        log.warning("%s の出馬表が無い。先に collect --upcoming が要る", day)
+        return 0
+
+    found = jra.collect_results(fetcher, day)
+    if not found:
+        return 0
+
+    cards = {c.race.race_id: c for c in read_jsonl(out_path)}
+    filled = 0
+    for race_id, (results, payouts) in found.items():
+        card = cards.get(race_id)
+        if card is None:
+            log.warning("%s の出馬表が手元に無い（結果だけ取れた）", race_id)
+            continue
+        card.results = results
+        card.payouts = payouts
+        filled += 1
+
+    if filled:
+        write_jsonl(cards.values(), out_path)
+        log.info("%s: %d レースに着順と払戻を入れた → %s", day, filled, out_path.name)
+    return filled
+
+
 def collect_range(
     fetcher: Fetcher,
     start: date,

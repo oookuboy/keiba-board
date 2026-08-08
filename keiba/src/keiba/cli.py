@@ -131,6 +131,17 @@ def cmd_collect(args: argparse.Namespace) -> int:
         log.error("--date か --upcoming のどちらかを指定すること")
         return 2
 
+    if args.results and args.from_jra:
+        filled = collect.collect_results_from_jra(fetcher, args.day, args.raw_dir)
+        if not filled:
+            log.warning(
+                "%s の結果をJRA公式から取得できなかった（まだ確定前の可能性）cache=%s",
+                args.day, fetcher.stats,
+            )
+            return 0
+        log.info("結果 %d レース cache=%s", filled, fetcher.stats)
+        return 0
+
     kept, failed = collect.collect_range(
         fetcher, args.day, args.days_ahead, args.raw_dir, results_only=args.results
     )
@@ -315,6 +326,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="JRA公式から発走前の出馬表を取る（--date は無視する）。"
         " db.netkeiba には発走前の race_id が存在しないため",
+    )
+    p.add_argument(
+        "--from-jra",
+        action="store_true",
+        help="--results と併用。着順と払戻をJRA公式から取る。"
+        " db.netkeiba は反映が遅く、開催当日には結果が出ていない",
     )
     p.set_defaults(func=cmd_collect)
 
