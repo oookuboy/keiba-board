@@ -244,6 +244,27 @@ def _parse_entry_row(row: Tag, race_id: str) -> Entry | None:
     )
 
 
+def _mark_scratches(entries: list[Entry]) -> None:
+    """出走取消・除外の馬に印を付ける。
+
+    JRA公式は取消馬の馬番とオッズを空にして出す。枠順確定前も同じく空なので、
+    「まだ決まっていない」と「取消になった」は単独では見分けられない。
+    レース単位で見れば区別できる — 他の馬に馬番が入っているのに自分だけ
+    空なら取消。
+
+    これをやらないと、取消馬が「馬番が無い」という理由だけで DB から静かに
+    落ち、記録上は最初から居なかったことになる。2026-08-08 に実際そうなった
+    （札幌9R ライフイズ、新潟4R セイウンヤオヨロズ）。
+    """
+    numbered = [e for e in entries if e.umaban is not None]
+    # 枠順確定前は全頭が空。過半数に馬番があるときだけ取消と判断する
+    if len(numbered) < len(entries) / 2:
+        return
+    for entry in entries:
+        if entry.umaban is None:
+            entry.scratched = True
+
+
 def _assign_popularity(entries: list[Entry]) -> None:
     """単勝オッズから人気順位を割り当てる。
 
@@ -336,6 +357,7 @@ def parse_racecard_page(html: str) -> list[RaceCard]:
         ]
         if not entries:
             continue
+        _mark_scratches(entries)
         _assign_popularity(entries)
 
         race = Race(

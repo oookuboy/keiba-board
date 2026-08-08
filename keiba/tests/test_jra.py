@@ -150,6 +150,28 @@ def test_race_list_page_is_one_hop_short_of_the_racecard() -> None:
     assert hops[0].startswith("pw01des01")
 
 
+def test_scratched_horse_is_marked_not_silently_dropped() -> None:
+    """枠順確定後に馬番が空なのは取消。印を付けて記録に残す。
+
+    付けないと「馬番が無い」という理由だけで DB から静かに落ち、記録上は
+    最初から居なかったことになる。2026-08-08 に実際そうなった。
+    """
+    from keiba.models import Entry
+    from keiba.sources.jra import _mark_scratches
+
+    entries = [
+        Entry(race_id="R", umaban=n, horse_name=f"h{i}", horse_id="")
+        for i, n in enumerate([1, 2, None, 4, 5])
+    ]
+    _mark_scratches(entries)
+    assert [e.scratched for e in entries] == [False, False, True, False, False]
+
+
+def test_pre_draw_card_is_not_treated_as_all_scratched(cards) -> None:
+    """枠順確定前は全頭の馬番が空。これを取消と読んではいけない。"""
+    assert all(not e.scratched for e in cards[0].entries)
+
+
 def test_popularity_is_derived_from_odds() -> None:
     """JRA公式の出馬表には「人気」欄が無いので、単勝オッズの昇順から導出する。
 
