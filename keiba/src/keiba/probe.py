@@ -193,6 +193,72 @@ class Probe:
                 method="POST", data={"cname": cname3},
             )
 
+    def probe_today_results(self, day: date) -> None:
+        """当日の着順が db.netkeiba に出ているかを確かめる。
+
+        「反映が遅いのだろう」で済ませず、事実として記録する。出ているなら
+        収集側の不具合、出ていないなら JRA公式へ切り替える判断材料になる。
+        """
+        stamp = day.strftime("%Y%m%d")
+        html = self.grab(
+            f"https://db.netkeiba.com/race/list/{stamp}/", f"today_list_{stamp}"
+        )
+        if not html:
+            return
+        jra = [i for i in set(RACE_ID_RE.findall(html)) if i[4:6] in VENUES]
+        log.info("db.netkeiba の %s: 中央 race_id %d件", stamp, len(jra))
+        if jra:
+            self.grab(
+                f"https://db.netkeiba.com/race/{sorted(jra)[0]}/",
+                f"today_race_{stamp}",
+            )
+
+    def walk_jra_results(self) -> None:
+        """レース結果を「開催選択 → レース選択 → 全レース表示」で辿る。
+
+        db.netkeiba は結果データベースだが反映が遅く、開催当日の夜になっても
+        着順が1件も出ていなかった（2026-08-08 実測）。JRA公式はレース確定後
+        すぐ出るので、こちらから取れれば回顧を当日中に回せる。
+
+        出馬表（accessD）と同じ構造だと当たりを付けているが、確かめる。
+        """
+        html = self.grab(
+            f"{JRA_BASE}/JRADB/accessS.html",
+            "result_L1_kaisai",
+            method="POST",
+            data={"cname": "pw01sli00/AF"},
+        )
+        if not html:
+            log.error("レース結果の開催選択ページを取得できない")
+            return
+
+        # 開催リンクの接頭辞は出馬表(pw01drl)と違う可能性がある。まず全部見る
+        nav = {"pw01dli00/F3", "pw15oli00/6D", "pw01hli00/03", "pw02uliD19999",
+               "pw01sli00/AF", "pw03trl00/29", "pw01ide01/4F"}
+        links = [(a, c) for a, c in JRA_DOACTION_RE.findall(html) if c not in nav]
+        log.info("結果ページの遷移先 %d件: %s", len(links), [c for _, c in links][:12])
+        if not links:
+            log.error("開催リンクが見つからない")
+            return
+
+        for idx, (action2, cname2) in enumerate(links[:4]):
+            page = self.grab(
+                f"{JRA_BASE}{action2}", f"result_L2_{idx}",
+                method="POST", data={"cname": cname2},
+            )
+            if not page:
+                continue
+            # レース選択ページなら「全てのレースを表示」があるはず
+            deeper = [
+                (a, c) for a, c in JRA_DOACTION_RE.findall(page)
+                if c not in nav and c != cname2
+            ]
+            for jdx, (action3, cname3) in enumerate(deeper[:3]):
+                self.grab(
+                    f"{JRA_BASE}{action3}", f"result_L3_{idx}_{jdx}",
+                    method="POST", data={"cname": cname3},
+                )
+
     def walk_jra(self, max_depth: int = 3, branches: int = 3) -> None:
         """JRA公式の POST 遷移を辿って、実データページの形を採取する。
 
@@ -283,8 +349,10 @@ class Probe:
             self.grab(f"https://db.netkeiba.com/horse/{horse_id}/", f"horse_{horse_id}")
             self.grab(f"https://db.netkeiba.com/horse/ped/{horse_id}/", f"ped_{horse_id}")
 
+        self.probe_today_results(date.today())
         self.probe_future(start)
         self.walk_jra_racecard()
+        self.walk_jra_results()
         self.walk_jra()
         self.write_manifest(kaisai_date, stamp, race_ids)
 
