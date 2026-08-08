@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections import Counter
 from datetime import date
 from pathlib import Path
@@ -140,7 +141,7 @@ def append_lessons(payload: dict, path: Path) -> None:
             "- **結果未照合**。着順を1件も取得できていない（成績ではない）",
             "  db.netkeiba への反映待ちの可能性が高い。翌日に再実行すること",
         ]
-        return _write(path, lines)
+        return _write(path, lines, day, graded)
 
     if graded < summary["races"]:
         lines.append(f"- 照合できたのは {graded}/{summary['races']}R のみ（残りは結果待ち）")
@@ -175,7 +176,7 @@ def append_lessons(payload: dict, path: Path) -> None:
             )
         ))
 
-    _write(path, lines, day)
+    _write(path, lines, day, graded)
 
 
 HEADER = (
@@ -186,16 +187,22 @@ HEADER = (
 )
 
 _UNGRADED = "結果未照合"
+# 何レース照合できた記録なのかを機械可読で残す。文面から判断しようとすると、
+# 書式を変えた瞬間に判定が壊れる（実際そうなった）。
+_GRADED_RE = re.compile(r"<!-- graded:(\d+) -->")
 
 
-def _write(path: Path, lines: list[str], day: str | None = None) -> None:
+def _write(path: Path, lines: list[str], day: str | None = None, graded: int = 0) -> None:
     """実戦ログに1日ぶんを書く。
 
-    同じ日を二重に書かない。ただし前回が「結果未照合」で終わっていたら、
-    今回の内容で差し替える。当日夜は結果が出ておらず翌日に取り直す運用なので、
-    未照合の記録が残り続けると成績が読めなくなる。
+    同じ日を二重に書かない。ただし**前回より多く照合できていれば置き換える**。
+
+    当日夜は結果が出ておらず翌日に取り直す運用なので、未照合の記録が残り
+    続けると成績が二度と記録されない。逆に、一度ちゃんと記録できた日を
+    後から薄い内容で上書きするのも困る。照合数の大小で決める。
     """
     day = day or next((line[4:].strip() for line in lines if line.startswith("\n## ")), "")
+    lines = [*lines, f"<!-- graded:{graded} -->"]
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
         path.write_text(HEADER, encoding="utf-8")
@@ -205,10 +212,13 @@ def _write(path: Path, lines: list[str], day: str | None = None) -> None:
     if marker in existing:
         head, _, rest = existing.partition(marker)
         block, sep, tail = rest.partition("\n## ")
-        if _UNGRADED not in block:
-            log.info("%s は記録済み", day)
+        m = _GRADED_RE.search(block)
+        # 印の無い記録は修正前のコードが書いたもの。0件扱いにして置き換える
+        previous = int(m.group(1)) if m else 0
+        if previous >= graded:
+            log.info("%s は記録済み（照合 %d件）", day, previous)
             return
-        log.info("%s の未照合の記録を、照合済みの内容で置き換える", day)
+        log.info("%s を置き換える（照合 %d件 → %d件）", day, previous, graded)
         existing = head + (sep + tail if sep else "")
 
     path.write_text(existing + "\n".join(lines) + "\n", encoding="utf-8")

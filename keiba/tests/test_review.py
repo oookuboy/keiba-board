@@ -73,6 +73,42 @@ def test_ungraded_record_is_replaced_when_results_arrive(tmp_path: Path) -> None
     assert "回収率 150.0%" in text
 
 
+def test_record_written_by_older_code_is_replaced(tmp_path: Path) -> None:
+    """照合数の印が無い古い記録を、照合済みの内容で置き換える。
+
+    「前回が『結果未照合』なら置き換える」という文面依存の判定にしていたため、
+    修正前のコードが書いた記録（その文言を含まない）が残り続け、36レース
+    照合できたのにログが更新されなかった。2026-08-08 に実際そうなった。
+    """
+    log = tmp_path / "LESSONS.md"
+    log.write_text(
+        "# 実戦ログ\n\n## 2026-08-08\n\n"
+        "- 対象 36R / 買い 20R / 見送り 16R\n"
+        "- 投資 12,200円 → 払戻 0円 （回収率 0.0%・的中 0R）\n"
+        "- 的中なし\n",
+        encoding="utf-8",
+    )
+    append_lessons(payload(graded=36, races=36, returned=5820, hits=2, roi=47.7), log)
+    text = log.read_text(encoding="utf-8")
+
+    assert text.count("## 2026-08-08") == 1
+    assert "回収率 47.7%" in text
+    assert "的中 2R" in text
+    assert "払戻 0円" not in text
+
+
+def test_partial_record_is_upgraded_when_more_races_are_graded(tmp_path: Path) -> None:
+    """一部しか照合できていない記録は、全部揃った時点で置き換える。"""
+    log = tmp_path / "LESSONS.md"
+    append_lessons(payload(graded=12, races=36, returned=500, hits=1, roi=50.0), log)
+    append_lessons(payload(graded=36, races=36, returned=5820, hits=2, roi=47.7), log)
+    text = log.read_text(encoding="utf-8")
+
+    assert text.count("## 2026-08-08") == 1
+    assert "照合できたのは 12/36R" not in text
+    assert "回収率 47.7%" in text
+
+
 def test_graded_record_is_not_overwritten(tmp_path: Path) -> None:
     """一度ちゃんと記録できた日は、後から上書きしない。"""
     log = tmp_path / "LESSONS.md"
