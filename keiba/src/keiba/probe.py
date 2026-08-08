@@ -232,30 +232,46 @@ class Probe:
             log.error("レース結果の開催選択ページを取得できない")
             return
 
-        # 開催リンクの接頭辞は出馬表(pw01drl)と違う可能性がある。まず全部見る
-        nav = {"pw01dli00/F3", "pw15oli00/6D", "pw01hli00/03", "pw02uliD19999",
-               "pw01sli00/AF", "pw03trl00/29", "pw01ide01/4F"}
-        links = [(a, c) for a, c in JRA_DOACTION_RE.findall(html) if c not in nav]
-        log.info("結果ページの遷移先 %d件: %s", len(links), [c for _, c in links][:12])
-        if not links:
-            log.error("開催リンクが見つからない")
+        # 結果の開催リンクは pw01srl。出馬表(pw01drl)とは接頭辞が違う。
+        # 直近の開催は pw01srl0…、過去は pw01srl1… と1桁目が変わるので \d で受ける。
+        # 総当たりで辿ると共通ナビ（レコードタイム表・WIN5…）に逃げるので、
+        # 接頭辞で狙い撃ちする。実際それで2回空振りした。
+        kaisai = [
+            (a, c) for a, c in JRA_DOACTION_RE.findall(html)
+            if re.match(r"pw01srl\d", c)
+        ]
+        if not kaisai:
+            log.error("結果の開催リンク（pw01srl）が見つからない")
             return
 
-        for idx, (action2, cname2) in enumerate(links[:4]):
+        # cname の末尾から日付を取り、最新の開催だけを辿る
+        def stamp_of(cname: str) -> str:
+            m = re.search(r"(\d{8})/", cname)
+            return m.group(1) if m else ""
+
+        latest = max(stamp_of(c) for _, c in kaisai)
+        newest = [(a, c) for a, c in kaisai if stamp_of(c) == latest]
+        log.info("結果の最新開催 %s: %d件 %s", latest, len(newest), [c for _, c in newest])
+
+        nav = {c for _, c in JRA_DOACTION_RE.findall(html)}
+        for idx, (action2, cname2) in enumerate(newest[:1]):
             page = self.grab(
-                f"{JRA_BASE}{action2}", f"result_L2_{idx}",
+                f"{JRA_BASE}{action2}", f"result_L2_racelist",
                 method="POST", data={"cname": cname2},
             )
             if not page:
                 continue
-            # レース選択ページなら「全てのレースを表示」があるはず
+            # 出馬表と同じなら「全てのレースを表示」（pw01ses…?）があるはず。
+            # 接頭辞が読めないので、ナビを除いた残りを数件辿って形を確かめる。
             deeper = [
                 (a, c) for a, c in JRA_DOACTION_RE.findall(page)
-                if c not in nav and c != cname2
+                if c not in nav and not re.match(r"pw01srl\d", c)
             ]
+            log.info("レース選択ページの遷移先 %d件: %s",
+                     len(deeper), [c for _, c in deeper][:10])
             for jdx, (action3, cname3) in enumerate(deeper[:3]):
                 self.grab(
-                    f"{JRA_BASE}{action3}", f"result_L3_{idx}_{jdx}",
+                    f"{JRA_BASE}{action3}", f"result_L3_{jdx}",
                     method="POST", data={"cname": cname3},
                 )
 
