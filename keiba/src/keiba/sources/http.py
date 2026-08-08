@@ -26,8 +26,8 @@ DEFAULT_CACHE_DIR = Path(".cache/keiba")
 
 # 明示しておく。匿名の大量アクセスにしない。
 USER_AGENT = (
-    "flap-board-keiba/0.1 (personal race-prediction research; "
-    "+https://github.com/oookuboy/flap-board)"
+    "keiba-board/0.1 (personal race-prediction research; "
+    "+https://github.com/oookuboy/keiba-board)"
 )
 
 # meta タグが無い/壊れている場合のホスト別フォールバック

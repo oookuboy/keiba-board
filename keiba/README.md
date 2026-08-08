@@ -113,10 +113,23 @@ SKILL.md の観点（血統適性・条件一変・展開・降級・騎手相�
 
 | 用途 | 経路 | 状態 |
 |---|---|---|
-| 過去成績・払戻 | `db.netkeiba.com/race/{race_id}/` | 検証済み。サーバーレンダリング |
+| 出馬表（発走前） | JRA公式 `accessD` → `pw01drl…` | 検証済み。**ここでしか取れない** |
+| 着順・払戻（当日） | JRA公式 `accessS` → `pw01srl…` | 検証済み。確定後すぐ出る |
+| 過去成績・払戻（翌日以降） | `db.netkeiba.com/race/{race_id}/` | 検証済み。3年分のバックフィル元 |
 | 血統（父・母父） | `db.netkeiba.com/horse/ped/{horse_id}/` | 検証済み |
-| 出馬表・調教（ライブ） | JRA公式 `accessD/accessT` | **未完**。出馬表は木曜公開のため実物を採取できていない |
+| 調教 | JRA公式 `accessT` | 未着手 |
 | 調教師コメント | — | **取得不能**。netkeiba は有料プラン限定 |
+
+**db.netkeiba には発走前のレースが存在しない。** 結果データベースなので、
+まだ行われていないレースは race_id ごと無い（2026-08-06 実測、8/8 の一覧に
+開催場の名前は出るが race_id は0件）。よって出馬表は JRA公式が唯一の経路。
+
+**db.netkeiba は結果の反映も遅い。** 2026-08-08 は開催当日の夜になっても
+着順を1件も出していなかった。当日中に回顧を回すには JRA公式が要る。翌日
+以降は netkeiba でも取れるので、両方の経路を残してある。
+
+JRA公式の馬IDは netkeiba と同一体系。8/8 新潟の162頭で照合して138頭が一致し、
+名前の食い違いはゼロだった（残り24頭は過去走の無い新馬）。
 
 `race.netkeiba.com`（出馬表・馬柱・結果・調教）は JavaScript レンダリングの
 空シェルで、`requests` では表のヘッダしか返らない。収集源として使えない。
@@ -136,9 +149,13 @@ python -m keiba.cli backfill-pedigree --offset 0 --limit 7000
 python -m keiba.cli build            # raw → SQLite → sire_aptitude.json
 
 # 日常運用（keiba-weekend が cron で叩く）
-python -m keiba.cli collect  --date 2026-08-08 --days-ahead 3
+python -m keiba.cli collect  --upcoming                     # 出馬表（JRA公式）
 python -m keiba.cli predict  --date 2026-08-08
+python -m keiba.cli collect  --date 2026-08-08 --results --from-jra   # 着順・払戻
 python -m keiba.cli review   --date 2026-08-08
+
+# 閲覧（file:// では fetch が CORS で弾かれるのでサーバ経由で）
+python3 -m http.server 8000   # → http://localhost:8000/
 
 # 検証
 python -m pytest keiba/tests -q
@@ -148,8 +165,8 @@ python -m keiba.cli backtest --from 2026-01-01 --to 2026-07-31
 ## ファイル構成
 
 ```
+index.html              閲覧UI（リポジトリ直下。単一ファイル・依存なし）
 keiba/
-  board.html            閲覧UI（単一ファイル・依存なし）
   data/                 ボードが読む JSON（predict/review が生成）
   raw/YYYY/*.jsonl.gz   生データの正。SQLite はここから毎回作り直す使い捨て
   raw/pedigree.jsonl.gz 血統（馬単位）
