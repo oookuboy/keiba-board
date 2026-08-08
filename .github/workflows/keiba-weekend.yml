@@ -17,8 +17,12 @@ on:
     - cron: "0 20 * * 5,6"
     # 土日 07:00 JST = 土日 22:00 UTC(前日) — 当日朝の再生成
     - cron: "0 22 * * 5,6"
-    # 土日 22:00 JST = 土日 13:00 UTC — 結果照合と回顧
-    - cron: "0 13 * * 6,0"
+    # 日月 09:00 JST = 土日 00:00 UTC — 前日の結果照合と回顧
+    #
+    # 当日22時に回したら着順を1件も取得できなかった（2026-08-08 実測）。
+    # db.netkeiba は結果データベースで反映に時間がかかるため、開催当日の夜では
+    # 早すぎる。翌朝に回す。予想の鮮度とは無関係なので遅くても困らない。
+    - cron: "0 0 * * 0,1"
   workflow_dispatch:
     inputs:
       job:
@@ -70,12 +74,19 @@ jobs:
               "0 12 * * 5")     JOB=collect ;;
               "0 20 * * 5,6")   JOB=predict ;;
               "0 22 * * 5,6")   JOB=predict ;;
-              "0 13 * * 6,0")   JOB=review  ;;
+              "0 0 * * 0,1")    JOB=review  ;;
               *)                JOB=predict ;;
             esac
           fi
           DATE="${{ inputs.date }}"
-          [ -n "$DATE" ] || DATE=$(TZ=Asia/Tokyo date +%F)
+          if [ -z "$DATE" ]; then
+            # 回顧は翌朝に走るので、対象は「今日」ではなく前日の開催
+            if [ "$JOB" = "review" ]; then
+              DATE=$(TZ=Asia/Tokyo date -d "yesterday" +%F)
+            else
+              DATE=$(TZ=Asia/Tokyo date +%F)
+            fi
+          fi
           # preview は木曜に走るので「今日」ではなく次の土日を見る
           SAT=$(TZ=Asia/Tokyo date -d "next saturday" +%F)
           SUN=$(TZ=Asia/Tokyo date -d "next sunday" +%F)

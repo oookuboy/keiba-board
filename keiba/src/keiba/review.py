@@ -41,6 +41,7 @@ def review_day(store: Store, payload: dict) -> dict:
     各レースの "result" を埋めて返す（破壊的に書き換える）。
     """
     spent = returned = hits = 0
+    graded = 0
     worked: Counter[str] = Counter()
     failed: Counter[str] = Counter()
 
@@ -48,6 +49,7 @@ def review_day(store: Store, payload: dict) -> dict:
         card = store.load_card(race["race_id"])
         if card is None or not card.results:
             continue
+        graded += 1
         top3 = _actual_top3(card)
         if top3 is None:
             continue
@@ -101,6 +103,10 @@ def review_day(store: Store, payload: dict) -> dict:
 
     store.conn.commit()
 
+    # 何レース照合できたかを必ず残す。これが無いと「結果を取れていない」と
+    # 「全部外した」がどちらも 払戻0円・的中0R になって見分けられない。
+    # 2026-08-08 に実際そうなり、全敗したように見えていた。
+    payload["summary"]["graded"] = graded
     payload["summary"]["returned"] = returned
     payload["summary"]["hits"] = hits
     payload["summary"]["roi"] = round(returned / spent * 100, 1) if spent else None
@@ -119,13 +125,30 @@ def append_lessons(payload: dict, path: Path) -> None:
     day = payload["date"]
 
     hit_races = [r for r in payload["races"] if (r.get("result") or {}).get("hit")]
+    graded = summary.get("graded", 0)
     lines = [
         f"\n## {day}",
         "",
         f"- 対象 {summary['races']}R / 買い {summary['bet']}R / 見送り {summary['skipped']}R",
-        f"- 投資 {summary['spend']:,}円 → 払戻 {summary.get('returned', 0):,}円 "
-        f"（回収率 {summary.get('roi') or 0:.1f}%・的中 {summary.get('hits', 0)}R）",
     ]
+
+    # 結果が1件も取れていないのに「回収率0%・的中0R」と書くと、全部外したのと
+    # 区別がつかない。db.netkeiba は結果の反映に時間がかかるので、開催当日の
+    # 夜に走らせるとこの状態になる。
+    if graded == 0:
+        lines += [
+            "- **結果未照合**。着順を1件も取得できていない（成績ではない）",
+            "  db.netkeiba への反映待ちの可能性が高い。翌日に再実行すること",
+        ]
+        return _write(path, lines)
+
+    if graded < summary["races"]:
+        lines.append(f"- 照合できたのは {graded}/{summary['races']}R のみ（残りは結果待ち）")
+
+    lines.append(
+        f"- 投資 {summary['spend']:,}円 → 払戻 {summary.get('returned', 0):,}円 "
+        f"（回収率 {summary.get('roi') or 0:.1f}%・的中 {summary.get('hits', 0)}R）"
+    )
 
     if hit_races:
         lines.append("- 的中:")
@@ -152,19 +175,42 @@ def append_lessons(payload: dict, path: Path) -> None:
             )
         ))
 
-    header = (
-        "# 実戦ログ\n\n"
-        "> keiba-review ワークフローが開催日ごとに追記する。機械が観測した事実の\n"
-        "> 記録であり、判断は含まない。ここを読んで SKILL.md の「学習済み教訓」を\n"
-        "> 育てるのは人の仕事。\n"
-    )
+    _write(path, lines, day)
+
+
+HEADER = (
+    "# 実戦ログ\n\n"
+    "> keiba-review ワークフローが開催日ごとに追記する。機械が観測した事実の\n"
+    "> 記録であり、判断は含まない。ここを読んで SKILL.md の「学習済み教訓」を\n"
+    "> 育てるのは人の仕事。\n"
+)
+
+_UNGRADED = "結果未照合"
+
+
+def _write(path: Path, lines: list[str], day: str | None = None) -> None:
+    """実戦ログに1日ぶんを書く。
+
+    同じ日を二重に書かない。ただし前回が「結果未照合」で終わっていたら、
+    今回の内容で差し替える。当日夜は結果が出ておらず翌日に取り直す運用なので、
+    未照合の記録が残り続けると成績が読めなくなる。
+    """
+    day = day or next((line[4:].strip() for line in lines if line.startswith("\n## ")), "")
+    path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
-        path.write_text(header, encoding="utf-8")
-    # 同じ日を二重に書かない
+        path.write_text(HEADER, encoding="utf-8")
+
     existing = path.read_text(encoding="utf-8")
-    if f"\n## {day}\n" in existing:
-        log.info("%s は記録済み", day)
-        return
+    marker = f"\n## {day}\n"
+    if marker in existing:
+        head, _, rest = existing.partition(marker)
+        block, sep, tail = rest.partition("\n## ")
+        if _UNGRADED not in block:
+            log.info("%s は記録済み", day)
+            return
+        log.info("%s の未照合の記録を、照合済みの内容で置き換える", day)
+        existing = head + (sep + tail if sep else "")
+
     path.write_text(existing + "\n".join(lines) + "\n", encoding="utf-8")
 
 
