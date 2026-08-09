@@ -11,9 +11,9 @@
    "win_rate": 0.0714
   },
   "ダ:mile": {
-   "place_rate": 0.2833,
-   "runs": 180,
-   "win_rate": 0.1333
+   "place_rate": 0.2818,
+   "runs": 181,
+   "win_rate": 0.1326
   },
   "ダ:sprint": {
    "place_rate": 0.3314,
@@ -95,9 +95,9 @@
    "win_rate": 0.0909
   },
   "ダ:sprint": {
-   "place_rate": 0.3636,
-   "runs": 11,
-   "win_rate": 0.2727
+   "place_rate": 0.3333,
+   "runs": 12,
+   "win_rate": 0.25
   },
   "芝:middle": {
    "place_rate": 0.0,
@@ -393,14 +393,14 @@
    "win_rate": 0.1842
   },
   "芝:mile": {
-   "place_rate": 0.4,
-   "runs": 55,
-   "win_rate": 0.1636
+   "place_rate": 0.3929,
+   "runs": 56,
+   "win_rate": 0.1607
   },
   "芝:sprint": {
-   "place_rate": 0.2991,
-   "runs": 107,
-   "win_rate": 0.1028
+   "place_rate": 0.2963,
+   "runs": 108,
+   "win_rate": 0.1019
   }
  },
  "Frosted (米)": {
@@ -676,9 +676,9 @@
    "win_rate": 0.1429
   },
   "ダ:sprint": {
-   "place_rate": 0.3273,
-   "runs": 110,
-   "win_rate": 0.0909
+   "place_rate": 0.3243,
+   "runs": 111,
+   "win_rate": 0.0901
   },
   "芝:long": {
    "place_rate": 0.0,
@@ -757,9 +757,9 @@
    "win_rate": 0.0294
   },
   "芝:sprint": {
-   "place_rate": 0.3462,
-   "runs": 52,
-   "win_rate": 0.1731
+   "place_rate": 0.3585,
+   "runs": 53,
+   "win_rate": 0.1698
   }
  },
  "Kitten's Joy (米)": {
@@ -934,9 +934,9 @@
    "win_rate": 0.0
   },
   "ダ:sprint": {
-   "place_rate": 0.35,
-   "runs": 20,
-   "win_rate": 0.2
+   "place_rate": 0.381,
+   "runs": 21,
+   "win_rate": 0.1905
   },
   "芝:middle": {
    "place_rate": 0.0,
@@ -1322,9 +1322,9 @@
    "win_rate": 0.375
   },
   "芝:sprint": {
-   "place_rate": 0.1333,
-   "runs": 15,
-   "win_rate": 0.0667
+   "place_rate": 0.125,
+   "runs": 16,
+   "win_rate": 0.0625
   }
  },
  "Siyouni": {
@@ -1602,9 +1602,9 @@
    "win_rate": 0.1111
   },
   "ダ:sprint": {
-   "place_rate": 0.2683,
-   "runs": 41,
-   "win_rate": 0.1707
+   "place_rate": 0.2619,
+   "runs": 42,
+   "win_rate": 0.1667
   },
   "芝:mile": {
    "place_rate": 0.6667,
@@ -1612,9 +1612,9 @@
    "win_rate": 0.0
   },
   "芝:sprint": {
-   "place_rate": 0.3,
-   "runs": 10,
-   "win_rate": 0.1
+   "place_rate": 0.2727,
+   "runs": 11,
+   "win_rate": 0.0909
   },
   "障:long": {
    "place_rate": 0.5,
@@ -1792,9 +1792,9 @@
    "win_rate": 0.0758
   },
   "ダ:sprint": {
-   "place_rate": 0.2011,
-   "runs": 741,
-   "win_rate": 0.0486
+   "place_rate": 0.2005,
+   "runs": 743,
+   "win_rate": 0.0485
   },
   "芝:long": {
    "place_rate": 0.0,
@@ -1812,9 +1812,9 @@
    "win_rate": 0.0488
   },
   "芝:sprint": {
-   "place_rate": 0.2222,
-   "runs": 108,
-   "win_rate": 0.0926
+   "place_rate": 0.2202,
+   "runs": 109,
+   "win_rate": 0.0917
   },
   "障:long": {
    "place_rate": 0.1429,
@@ -1881,14 +1881,14 @@
    "win_rate": 0.1053
   },
   "ダ:mile": {
-   "place_rate": 0.2713,
-   "runs": 129,
-   "win_rate": 0.124
+   "place_rate": 0.2672,
+   "runs": 131,
+   "win_rate": 0.1221
   },
   "ダ:sprint": {
-   "place_rate": 0.2222,
-   "runs": 90,
-   "win_rate": 0.0667
+   "place_rate": 0.2198,
+   "runs": 91,
+   "win_rate": 0.0659
   },
   "芝:long": {
    "place_rate": 0.2857,
@@ -1906,9 +1906,9 @@
    "win_rate": 0.1037
   },
   "芝:sprint": {
-   "place_rate": 0.2553,
-   "runs": 141,
-   "win_rate": 0.1348
+   "place_rate": 0.2639,
+   "runs": 144,
+   "win_rate": 0.1389
   },
   "障:long": {
    "place_rate": 1.0,
@@ -2042,9 +2042,9 @@
    "win_rate": 0.0244
   },
   "芝:sprint": {
-   "place_rate": 0.2333,
-   "runs": 30,
-   "win_rate": 0.0667
+   "place_rate": 0.2258,
+   "runs": 31,
+   "win_rate": 0.0645
   },
   "障:long": {
    "place_rate": 0.0,
@@ -2106,9 +2106,9 @@
    "win_rate": 0.0357
   },
   "ダ:sprint": {
-   "place_rate": 0.2262,
-   "runs": 84,
-   "win_rate": 0.0238
+   "place_rate": 0.2209,
+   "runs": 86,
+   "win_rate": 0.0233
   },
   "芝:long": {
    "place_rate": 0.0,
@@ -2143,14 +2143,14 @@
    "win_rate": 0.05
   },
   "ダ:mile": {
-   "place_rate": 0.1667,
-   "runs": 372,
-   "win_rate": 0.0484
+   "place_rate": 0.1662,
+   "runs": 373,
+   "win_rate": 0.0483
   },
   "ダ:sprint": {
-   "place_rate": 0.1341,
-   "runs": 328,
-   "win_rate": 0.0366
+   "place_rate": 0.1333,
+   "runs": 330,
+   "win_rate": 0.0364
   },
   "芝:long": {
    "place_rate": 0.2353,
@@ -2215,9 +2215,9 @@
    "win_rate": 0.0494
   },
   "芝:sprint": {
-   "place_rate": 0.2727,
-   "runs": 165,
-   "win_rate": 0.097
+   "place_rate": 0.2814,
+   "runs": 167,
+   "win_rate": 0.1018
   },
   "障:long": {
    "place_rate": 0.0,
@@ -2274,8 +2274,8 @@
    "win_rate": 0.0
   },
   "芝:mile": {
-   "place_rate": 0.125,
-   "runs": 8,
+   "place_rate": 0.1111,
+   "runs": 9,
    "win_rate": 0.0
   },
   "芝:sprint": {
@@ -2375,9 +2375,9 @@
    "win_rate": 0.0452
   },
   "ダ:sprint": {
-   "place_rate": 0.2087,
-   "runs": 575,
-   "win_rate": 0.0557
+   "place_rate": 0.2083,
+   "runs": 576,
+   "win_rate": 0.0556
   },
   "芝:long": {
    "place_rate": 0.0625,
@@ -2385,9 +2385,9 @@
    "win_rate": 0.0625
   },
   "芝:middle": {
-   "place_rate": 0.2254,
-   "runs": 142,
-   "win_rate": 0.0775
+   "place_rate": 0.2238,
+   "runs": 143,
+   "win_rate": 0.0769
   },
   "芝:mile": {
    "place_rate": 0.2435,
@@ -2454,9 +2454,9 @@
    "win_rate": 0.0714
   },
   "ダ:sprint": {
-   "place_rate": 0.2821,
-   "runs": 39,
-   "win_rate": 0.0513
+   "place_rate": 0.2683,
+   "runs": 41,
+   "win_rate": 0.0488
   },
   "芝:middle": {
    "place_rate": 0.2857,
@@ -2496,9 +2496,9 @@
    "win_rate": 0.3333
   },
   "芝:middle": {
-   "place_rate": 0.5,
-   "runs": 12,
-   "win_rate": 0.25
+   "place_rate": 0.4615,
+   "runs": 13,
+   "win_rate": 0.2308
   },
   "芝:mile": {
    "place_rate": 0.0,
@@ -2538,9 +2538,9 @@
    "win_rate": 0.0976
   },
   "芝:middle": {
-   "place_rate": 0.1689,
-   "runs": 148,
-   "win_rate": 0.0203
+   "place_rate": 0.1722,
+   "runs": 151,
+   "win_rate": 0.0265
   },
   "芝:mile": {
    "place_rate": 0.2394,
@@ -2575,9 +2575,9 @@
    "win_rate": 0.0
   },
   "芝:mile": {
-   "place_rate": 0.3333,
-   "runs": 6,
-   "win_rate": 0.1667
+   "place_rate": 0.2857,
+   "runs": 7,
+   "win_rate": 0.1429
   },
   "芝:sprint": {
    "place_rate": 0.0,
@@ -2612,9 +2612,9 @@
    "win_rate": 0.0
   },
   "芝:middle": {
-   "place_rate": 0.209,
-   "runs": 67,
-   "win_rate": 0.1045
+   "place_rate": 0.2059,
+   "runs": 68,
+   "win_rate": 0.1029
   },
   "芝:mile": {
    "place_rate": 0.2174,
@@ -2664,9 +2664,9 @@
    "win_rate": 0.0309
   },
   "芝:mile": {
-   "place_rate": 0.098,
-   "runs": 102,
-   "win_rate": 0.0196
+   "place_rate": 0.0971,
+   "runs": 103,
+   "win_rate": 0.0194
   },
   "芝:sprint": {
    "place_rate": 0.0942,
@@ -2738,14 +2738,14 @@
    "win_rate": 0.0625
   },
   "ダ:mile": {
-   "place_rate": 0.2134,
-   "runs": 239,
-   "win_rate": 0.0962
+   "place_rate": 0.2125,
+   "runs": 240,
+   "win_rate": 0.0958
   },
   "ダ:sprint": {
-   "place_rate": 0.2222,
-   "runs": 432,
-   "win_rate": 0.0694
+   "place_rate": 0.2212,
+   "runs": 434,
+   "win_rate": 0.0691
   },
   "芝:long": {
    "place_rate": 0.0,
@@ -2759,7 +2759,7 @@
   },
   "芝:sprint": {
    "place_rate": 0.0,
-   "runs": 5,
+   "runs": 6,
    "win_rate": 0.0
   },
   "障:long": {
@@ -2822,29 +2822,29 @@
    "win_rate": 0.0531
   },
   "ダ:sprint": {
-   "place_rate": 0.1782,
-   "runs": 331,
-   "win_rate": 0.0393
+   "place_rate": 0.1777,
+   "runs": 332,
+   "win_rate": 0.0392
   },
   "芝:long": {
-   "place_rate": 0.2532,
-   "runs": 154,
-   "win_rate": 0.0909
+   "place_rate": 0.2516,
+   "runs": 155,
+   "win_rate": 0.0903
   },
   "芝:middle": {
-   "place_rate": 0.3202,
-   "runs": 912,
-   "win_rate": 0.1096
+   "place_rate": 0.3231,
+   "runs": 916,
+   "win_rate": 0.1092
   },
   "芝:mile": {
-   "place_rate": 0.302,
-   "runs": 914,
-   "win_rate": 0.1061
+   "place_rate": 0.3025,
+   "runs": 919,
+   "win_rate": 0.1055
   },
   "芝:sprint": {
-   "place_rate": 0.1939,
-   "runs": 521,
-   "win_rate": 0.0633
+   "place_rate": 0.1935,
+   "runs": 522,
+   "win_rate": 0.0632
   },
   "障:long": {
    "place_rate": 0.25,
@@ -2928,9 +2928,9 @@
    "win_rate": 0.0957
   },
   "ダ:mile": {
-   "place_rate": 0.1876,
-   "runs": 549,
-   "win_rate": 0.0619
+   "place_rate": 0.1873,
+   "runs": 550,
+   "win_rate": 0.0618
   },
   "ダ:sprint": {
    "place_rate": 0.1263,
@@ -2943,19 +2943,19 @@
    "win_rate": 0.0794
   },
   "芝:middle": {
-   "place_rate": 0.2308,
-   "runs": 377,
-   "win_rate": 0.0663
+   "place_rate": 0.2302,
+   "runs": 378,
+   "win_rate": 0.0661
   },
   "芝:mile": {
-   "place_rate": 0.1128,
-   "runs": 195,
-   "win_rate": 0.0513
+   "place_rate": 0.1168,
+   "runs": 197,
+   "win_rate": 0.0508
   },
   "芝:sprint": {
-   "place_rate": 0.1706,
-   "runs": 252,
-   "win_rate": 0.0516
+   "place_rate": 0.1693,
+   "runs": 254,
+   "win_rate": 0.0512
   },
   "障:long": {
    "place_rate": 0.4286,
@@ -2997,9 +2997,9 @@
    "win_rate": 0.04
   },
   "ダ:sprint": {
-   "place_rate": 0.1912,
-   "runs": 68,
-   "win_rate": 0.0735
+   "place_rate": 0.1884,
+   "runs": 69,
+   "win_rate": 0.0725
   },
   "芝:mile": {
    "place_rate": 0.0,
@@ -3008,7 +3008,7 @@
   },
   "芝:sprint": {
    "place_rate": 0.0,
-   "runs": 4,
+   "runs": 5,
    "win_rate": 0.0
   }
  },
@@ -3083,9 +3083,9 @@
    "win_rate": 0.075
   },
   "ダ:sprint": {
-   "place_rate": 0.2213,
-   "runs": 357,
-   "win_rate": 0.0812
+   "place_rate": 0.2207,
+   "runs": 358,
+   "win_rate": 0.081
   },
   "芝:long": {
    "place_rate": 0.0,
@@ -3145,8 +3145,8 @@
    "win_rate": 0.0
   },
   "芝:mile": {
-   "place_rate": 0.1,
-   "runs": 50,
+   "place_rate": 0.098,
+   "runs": 51,
    "win_rate": 0.0
   },
   "芝:sprint": {
@@ -3197,8 +3197,8 @@
    "win_rate": 0.0
   },
   "芝:sprint": {
-   "place_rate": 0.0385,
-   "runs": 26,
+   "place_rate": 0.037,
+   "runs": 27,
    "win_rate": 0.0
   }
  },
@@ -3219,29 +3219,29 @@
    "win_rate": 0.1203
   },
   "ダ:sprint": {
-   "place_rate": 0.2134,
-   "runs": 328,
-   "win_rate": 0.0884
+   "place_rate": 0.2115,
+   "runs": 331,
+   "win_rate": 0.0876
   },
   "芝:long": {
-   "place_rate": 0.3128,
-   "runs": 243,
-   "win_rate": 0.1029
+   "place_rate": 0.3115,
+   "runs": 244,
+   "win_rate": 0.1025
   },
   "芝:middle": {
-   "place_rate": 0.3168,
-   "runs": 846,
-   "win_rate": 0.1288
+   "place_rate": 0.318,
+   "runs": 849,
+   "win_rate": 0.1296
   },
   "芝:mile": {
-   "place_rate": 0.3439,
-   "runs": 663,
-   "win_rate": 0.1418
+   "place_rate": 0.3429,
+   "runs": 665,
+   "win_rate": 0.1414
   },
   "芝:sprint": {
-   "place_rate": 0.2251,
-   "runs": 431,
-   "win_rate": 0.0882
+   "place_rate": 0.2269,
+   "runs": 432,
+   "win_rate": 0.088
   },
   "障:long": {
    "place_rate": 0.4833,
@@ -3267,7 +3267,7 @@
   },
   "芝:long": {
    "place_rate": 0.0,
-   "runs": 3,
+   "runs": 4,
    "win_rate": 0.0
   },
   "芝:middle": {
@@ -3298,34 +3298,34 @@
    "win_rate": 0.1017
   },
   "ダ:mile": {
-   "place_rate": 0.2923,
-   "runs": 414,
-   "win_rate": 0.1184
+   "place_rate": 0.2909,
+   "runs": 416,
+   "win_rate": 0.1178
   },
   "ダ:sprint": {
-   "place_rate": 0.1544,
-   "runs": 149,
-   "win_rate": 0.0671
+   "place_rate": 0.1533,
+   "runs": 150,
+   "win_rate": 0.0667
   },
   "芝:long": {
-   "place_rate": 0.2897,
-   "runs": 107,
-   "win_rate": 0.1215
+   "place_rate": 0.287,
+   "runs": 108,
+   "win_rate": 0.1204
   },
   "芝:middle": {
-   "place_rate": 0.3471,
-   "runs": 507,
-   "win_rate": 0.1519
+   "place_rate": 0.3477,
+   "runs": 509,
+   "win_rate": 0.1513
   },
   "芝:mile": {
-   "place_rate": 0.3416,
-   "runs": 404,
-   "win_rate": 0.1262
+   "place_rate": 0.3407,
+   "runs": 405,
+   "win_rate": 0.1259
   },
   "芝:sprint": {
-   "place_rate": 0.2757,
-   "runs": 301,
-   "win_rate": 0.0963
+   "place_rate": 0.2763,
+   "runs": 304,
+   "win_rate": 0.0954
   },
   "障:long": {
    "place_rate": 0.5135,
@@ -3466,8 +3466,8 @@
    "win_rate": 0.0399
   },
   "ダ:sprint": {
-   "place_rate": 0.1873,
-   "runs": 646,
+   "place_rate": 0.187,
+   "runs": 647,
    "win_rate": 0.0495
   },
   "芝:long": {
@@ -3476,9 +3476,9 @@
    "win_rate": 0.0
   },
   "芝:middle": {
-   "place_rate": 0.2069,
-   "runs": 58,
-   "win_rate": 0.069
+   "place_rate": 0.2034,
+   "runs": 59,
+   "win_rate": 0.0678
   },
   "芝:mile": {
    "place_rate": 0.1029,
@@ -3486,9 +3486,9 @@
    "win_rate": 0.0441
   },
   "芝:sprint": {
-   "place_rate": 0.1346,
-   "runs": 260,
-   "win_rate": 0.0423
+   "place_rate": 0.1336,
+   "runs": 262,
+   "win_rate": 0.042
   },
   "障:long": {
    "place_rate": 0.2273,
@@ -3555,16 +3555,21 @@
    "win_rate": 0.0857
   },
   "ダ:mile": {
-   "place_rate": 0.2901,
-   "runs": 262,
-   "win_rate": 0.0992
+   "place_rate": 0.2921,
+   "runs": 267,
+   "win_rate": 0.1011
   },
   "ダ:sprint": {
-   "place_rate": 0.1789,
-   "runs": 95,
-   "win_rate": 0.0632
+   "place_rate": 0.1771,
+   "runs": 96,
+   "win_rate": 0.0625
   },
   "芝:long": {
+   "place_rate": 0.0,
+   "runs": 1,
+   "win_rate": 0.0
+  },
+  "芝:middle": {
    "place_rate": 0.0,
    "runs": 1,
    "win_rate": 0.0
@@ -3760,9 +3765,9 @@
    "win_rate": 0.0943
   },
   "芝:mile": {
-   "place_rate": 0.2328,
-   "runs": 116,
-   "win_rate": 0.1207
+   "place_rate": 0.2393,
+   "runs": 117,
+   "win_rate": 0.1197
   },
   "芝:sprint": {
    "place_rate": 0.2166,
@@ -3873,14 +3878,14 @@
    "win_rate": 0.0462
   },
   "ダ:mile": {
-   "place_rate": 0.1571,
-   "runs": 522,
-   "win_rate": 0.0613
+   "place_rate": 0.1568,
+   "runs": 523,
+   "win_rate": 0.0612
   },
   "ダ:sprint": {
-   "place_rate": 0.182,
-   "runs": 654,
-   "win_rate": 0.0673
+   "place_rate": 0.1814,
+   "runs": 656,
+   "win_rate": 0.0671
   },
   "芝:long": {
    "place_rate": 0.0909,
@@ -3915,29 +3920,29 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.2787,
-   "runs": 61,
-   "win_rate": 0.0984
+   "place_rate": 0.2903,
+   "runs": 62,
+   "win_rate": 0.1129
   },
   "ダ:sprint": {
-   "place_rate": 0.375,
-   "runs": 32,
-   "win_rate": 0.125
+   "place_rate": 0.3636,
+   "runs": 33,
+   "win_rate": 0.1212
   },
   "芝:long": {
-   "place_rate": 0.3182,
-   "runs": 22,
-   "win_rate": 0.1818
+   "place_rate": 0.3478,
+   "runs": 23,
+   "win_rate": 0.2174
   },
   "芝:middle": {
-   "place_rate": 0.3026,
-   "runs": 152,
-   "win_rate": 0.1053
+   "place_rate": 0.3077,
+   "runs": 156,
+   "win_rate": 0.1026
   },
   "芝:mile": {
-   "place_rate": 0.291,
-   "runs": 134,
-   "win_rate": 0.0672
+   "place_rate": 0.292,
+   "runs": 137,
+   "win_rate": 0.0657
   },
   "芝:sprint": {
    "place_rate": 0.3333,
@@ -4100,9 +4105,9 @@
    "win_rate": 0.0351
   },
   "ダ:mile": {
-   "place_rate": 0.2194,
-   "runs": 310,
-   "win_rate": 0.0387
+   "place_rate": 0.2186,
+   "runs": 311,
+   "win_rate": 0.0386
   },
   "ダ:sprint": {
    "place_rate": 0.0862,
@@ -4115,14 +4120,14 @@
    "win_rate": 0.0519
   },
   "芝:middle": {
-   "place_rate": 0.2332,
-   "runs": 999,
-   "win_rate": 0.0671
+   "place_rate": 0.2326,
+   "runs": 1006,
+   "win_rate": 0.0676
   },
   "芝:mile": {
-   "place_rate": 0.1776,
-   "runs": 473,
-   "win_rate": 0.0486
+   "place_rate": 0.1772,
+   "runs": 474,
+   "win_rate": 0.0485
   },
   "芝:sprint": {
    "place_rate": 0.0204,
@@ -4147,14 +4152,14 @@
    "win_rate": 0.0667
   },
   "ダ:mile": {
-   "place_rate": 0.2878,
-   "runs": 278,
-   "win_rate": 0.0971
+   "place_rate": 0.2867,
+   "runs": 279,
+   "win_rate": 0.0968
   },
   "ダ:sprint": {
-   "place_rate": 0.169,
-   "runs": 290,
-   "win_rate": 0.0483
+   "place_rate": 0.1718,
+   "runs": 291,
+   "win_rate": 0.0481
   },
   "芝:middle": {
    "place_rate": 0.0,
@@ -4238,9 +4243,9 @@
    "win_rate": 0.0532
   },
   "ダ:sprint": {
-   "place_rate": 0.2486,
-   "runs": 354,
-   "win_rate": 0.0621
+   "place_rate": 0.2479,
+   "runs": 355,
+   "win_rate": 0.062
   },
   "芝:long": {
    "place_rate": 0.1154,
@@ -4258,9 +4263,9 @@
    "win_rate": 0.0614
   },
   "芝:sprint": {
-   "place_rate": 0.1784,
-   "runs": 213,
-   "win_rate": 0.0563
+   "place_rate": 0.1776,
+   "runs": 214,
+   "win_rate": 0.0561
   },
   "障:long": {
    "place_rate": 0.1429,
@@ -4337,9 +4342,9 @@
    "win_rate": 0.0563
   },
   "芝:middle": {
-   "place_rate": 0.1279,
-   "runs": 258,
-   "win_rate": 0.0349
+   "place_rate": 0.1274,
+   "runs": 259,
+   "win_rate": 0.0347
   },
   "芝:mile": {
    "place_rate": 0.1303,
@@ -4406,9 +4411,9 @@
    "win_rate": 0.0728
   },
   "ダ:sprint": {
-   "place_rate": 0.1934,
-   "runs": 181,
-   "win_rate": 0.0387
+   "place_rate": 0.1923,
+   "runs": 182,
+   "win_rate": 0.0385
   },
   "芝:long": {
    "place_rate": 0.1648,
@@ -4416,19 +4421,19 @@
    "win_rate": 0.0879
   },
   "芝:middle": {
-   "place_rate": 0.2326,
-   "runs": 430,
-   "win_rate": 0.0814
+   "place_rate": 0.2315,
+   "runs": 432,
+   "win_rate": 0.081
   },
   "芝:mile": {
-   "place_rate": 0.1953,
-   "runs": 297,
-   "win_rate": 0.0741
+   "place_rate": 0.1946,
+   "runs": 298,
+   "win_rate": 0.0738
   },
   "芝:sprint": {
-   "place_rate": 0.25,
-   "runs": 228,
-   "win_rate": 0.0921
+   "place_rate": 0.2489,
+   "runs": 229,
+   "win_rate": 0.0917
   },
   "障:long": {
    "place_rate": 0.4,
@@ -4454,7 +4459,7 @@
   },
   "芝:middle": {
    "place_rate": 0.0,
-   "runs": 5,
+   "runs": 7,
    "win_rate": 0.0
   },
   "芝:mile": {
@@ -4480,9 +4485,9 @@
    "win_rate": 0.1351
   },
   "ダ:mile": {
-   "place_rate": 0.2455,
-   "runs": 444,
-   "win_rate": 0.0991
+   "place_rate": 0.2449,
+   "runs": 445,
+   "win_rate": 0.0989
   },
   "ダ:sprint": {
    "place_rate": 0.2,
@@ -4495,9 +4500,9 @@
    "win_rate": 0.0
   },
   "芝:middle": {
-   "place_rate": 0.15,
-   "runs": 40,
-   "win_rate": 0.05
+   "place_rate": 0.1463,
+   "runs": 41,
+   "win_rate": 0.0488
   },
   "芝:mile": {
    "place_rate": 0.1081,
@@ -4527,9 +4532,9 @@
    "win_rate": 0.1429
   },
   "ダ:mile": {
-   "place_rate": 0.1659,
-   "runs": 217,
-   "win_rate": 0.0553
+   "place_rate": 0.1644,
+   "runs": 219,
+   "win_rate": 0.0548
   },
   "ダ:sprint": {
    "place_rate": 0.2071,
@@ -4542,14 +4547,14 @@
    "win_rate": 0.0667
   },
   "芝:middle": {
-   "place_rate": 0.2989,
-   "runs": 261,
-   "win_rate": 0.1188
+   "place_rate": 0.2966,
+   "runs": 263,
+   "win_rate": 0.1179
   },
   "芝:mile": {
-   "place_rate": 0.3071,
-   "runs": 254,
-   "win_rate": 0.1339
+   "place_rate": 0.3059,
+   "runs": 255,
+   "win_rate": 0.1333
   },
   "芝:sprint": {
    "place_rate": 0.3069,
@@ -4655,9 +4660,9 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.2222,
-   "runs": 27,
-   "win_rate": 0.1481
+   "place_rate": 0.25,
+   "runs": 28,
+   "win_rate": 0.1429
   },
   "ダ:sprint": {
    "place_rate": 0.4,
@@ -4675,14 +4680,14 @@
    "win_rate": 0.1333
   },
   "芝:mile": {
-   "place_rate": 0.4118,
-   "runs": 68,
-   "win_rate": 0.1912
+   "place_rate": 0.4203,
+   "runs": 69,
+   "win_rate": 0.2029
   },
   "芝:sprint": {
-   "place_rate": 0.3433,
-   "runs": 67,
-   "win_rate": 0.1343
+   "place_rate": 0.3429,
+   "runs": 70,
+   "win_rate": 0.1286
   }
  },
  "シニスターミニスター": {
@@ -4697,14 +4702,14 @@
    "win_rate": 0.0938
   },
   "ダ:mile": {
-   "place_rate": 0.3221,
-   "runs": 1102,
-   "win_rate": 0.1216
+   "place_rate": 0.3218,
+   "runs": 1103,
+   "win_rate": 0.1215
   },
   "ダ:sprint": {
-   "place_rate": 0.2574,
-   "runs": 839,
-   "win_rate": 0.0858
+   "place_rate": 0.2571,
+   "runs": 840,
+   "win_rate": 0.0857
   },
   "芝:middle": {
    "place_rate": 0.0,
@@ -4781,9 +4786,9 @@
    "win_rate": 0.048
   },
   "ダ:sprint": {
-   "place_rate": 0.2069,
-   "runs": 464,
-   "win_rate": 0.0603
+   "place_rate": 0.2065,
+   "runs": 465,
+   "win_rate": 0.0602
   },
   "芝:long": {
    "place_rate": 0.0588,
@@ -4823,9 +4828,9 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.1133,
-   "runs": 203,
-   "win_rate": 0.0394
+   "place_rate": 0.1176,
+   "runs": 204,
+   "win_rate": 0.0392
   },
   "ダ:sprint": {
    "place_rate": 0.1479,
@@ -4877,9 +4882,9 @@
    "win_rate": 0.0
   },
   "ダ:sprint": {
-   "place_rate": 0.1818,
-   "runs": 11,
-   "win_rate": 0.0909
+   "place_rate": 0.1667,
+   "runs": 12,
+   "win_rate": 0.0833
   },
   "芝:middle": {
    "place_rate": 0.1111,
@@ -4909,14 +4914,14 @@
    "win_rate": 0.0303
   },
   "ダ:mile": {
-   "place_rate": 0.1683,
-   "runs": 315,
-   "win_rate": 0.0698
+   "place_rate": 0.1709,
+   "runs": 316,
+   "win_rate": 0.0696
   },
   "ダ:sprint": {
-   "place_rate": 0.1624,
-   "runs": 388,
-   "win_rate": 0.0464
+   "place_rate": 0.162,
+   "runs": 389,
+   "win_rate": 0.0463
   },
   "芝:long": {
    "place_rate": 0.25,
@@ -4929,14 +4934,14 @@
    "win_rate": 0.0879
   },
   "芝:mile": {
-   "place_rate": 0.2135,
-   "runs": 459,
-   "win_rate": 0.061
+   "place_rate": 0.2152,
+   "runs": 460,
+   "win_rate": 0.063
   },
   "芝:sprint": {
-   "place_rate": 0.217,
-   "runs": 507,
-   "win_rate": 0.0533
+   "place_rate": 0.2161,
+   "runs": 509,
+   "win_rate": 0.053
   },
   "障:long": {
    "place_rate": 0.28,
@@ -5025,14 +5030,14 @@
    "win_rate": 0.072
   },
   "ダ:mile": {
-   "place_rate": 0.2079,
-   "runs": 611,
-   "win_rate": 0.0786
+   "place_rate": 0.2088,
+   "runs": 613,
+   "win_rate": 0.0783
   },
   "ダ:sprint": {
-   "place_rate": 0.2425,
-   "runs": 367,
-   "win_rate": 0.0654
+   "place_rate": 0.2446,
+   "runs": 368,
+   "win_rate": 0.0652
   },
   "芝:long": {
    "place_rate": 0.303,
@@ -5040,14 +5045,14 @@
    "win_rate": 0.1061
   },
   "芝:middle": {
-   "place_rate": 0.2815,
-   "runs": 238,
-   "win_rate": 0.084
+   "place_rate": 0.2803,
+   "runs": 239,
+   "win_rate": 0.0837
   },
   "芝:mile": {
-   "place_rate": 0.2025,
-   "runs": 242,
-   "win_rate": 0.0496
+   "place_rate": 0.2016,
+   "runs": 243,
+   "win_rate": 0.0494
   },
   "芝:sprint": {
    "place_rate": 0.1538,
@@ -5136,9 +5141,9 @@
    "win_rate": 0.0455
   },
   "ダ:sprint": {
-   "place_rate": 0.165,
-   "runs": 206,
-   "win_rate": 0.0583
+   "place_rate": 0.1691,
+   "runs": 207,
+   "win_rate": 0.058
   },
   "芝:middle": {
    "place_rate": 0.125,
@@ -5200,9 +5205,9 @@
    "win_rate": 0.0455
   },
   "ダ:mile": {
-   "place_rate": 0.2128,
-   "runs": 235,
-   "win_rate": 0.0596
+   "place_rate": 0.2161,
+   "runs": 236,
+   "win_rate": 0.0636
   },
   "ダ:sprint": {
    "place_rate": 0.1646,
@@ -5225,9 +5230,9 @@
    "win_rate": 0.0947
   },
   "芝:sprint": {
-   "place_rate": 0.2308,
-   "runs": 143,
-   "win_rate": 0.042
+   "place_rate": 0.2345,
+   "runs": 145,
+   "win_rate": 0.0414
   },
   "障:long": {
    "place_rate": 0.5,
@@ -5274,9 +5279,9 @@
    "win_rate": 0.1429
   },
   "ダ:sprint": {
-   "place_rate": 0.2411,
-   "runs": 141,
-   "win_rate": 0.0496
+   "place_rate": 0.2465,
+   "runs": 142,
+   "win_rate": 0.0493
   },
   "芝:long": {
    "place_rate": 0.0,
@@ -5333,9 +5338,9 @@
    "win_rate": 0.0406
   },
   "ダ:sprint": {
-   "place_rate": 0.1331,
-   "runs": 248,
-   "win_rate": 0.0282
+   "place_rate": 0.1365,
+   "runs": 249,
+   "win_rate": 0.0321
   },
   "芝:long": {
    "place_rate": 0.3333,
@@ -5540,9 +5545,9 @@
    "win_rate": 0.0694
   },
   "ダ:sprint": {
-   "place_rate": 0.1902,
-   "runs": 184,
-   "win_rate": 0.0707
+   "place_rate": 0.1935,
+   "runs": 186,
+   "win_rate": 0.0753
   },
   "芝:long": {
    "place_rate": 0.25,
@@ -5550,19 +5555,19 @@
    "win_rate": 0.1562
   },
   "芝:middle": {
-   "place_rate": 0.2872,
-   "runs": 195,
-   "win_rate": 0.0821
+   "place_rate": 0.2857,
+   "runs": 196,
+   "win_rate": 0.0816
   },
   "芝:mile": {
-   "place_rate": 0.243,
-   "runs": 251,
-   "win_rate": 0.0837
+   "place_rate": 0.2421,
+   "runs": 252,
+   "win_rate": 0.0833
   },
   "芝:sprint": {
-   "place_rate": 0.1898,
-   "runs": 216,
-   "win_rate": 0.0694
+   "place_rate": 0.1889,
+   "runs": 217,
+   "win_rate": 0.0691
   },
   "障:long": {
    "place_rate": 0.6667,
@@ -5592,8 +5597,8 @@
    "win_rate": 0.0
   },
   "芝:sprint": {
-   "place_rate": 0.0909,
-   "runs": 33,
+   "place_rate": 0.0857,
+   "runs": 35,
    "win_rate": 0.0
   }
  },
@@ -5656,9 +5661,9 @@
    "win_rate": 0.0385
   },
   "ダ:sprint": {
-   "place_rate": 0.2083,
-   "runs": 24,
-   "win_rate": 0.0417
+   "place_rate": 0.2,
+   "runs": 25,
+   "win_rate": 0.04
   },
   "芝:mile": {
    "place_rate": 0.0,
@@ -5757,9 +5762,9 @@
    "win_rate": 0.0196
   },
   "芝:sprint": {
-   "place_rate": 0.2583,
-   "runs": 120,
-   "win_rate": 0.05
+   "place_rate": 0.2541,
+   "runs": 122,
+   "win_rate": 0.0492
   },
   "障:long": {
    "place_rate": 0.375,
@@ -5779,9 +5784,14 @@
    "win_rate": 0.0449
   },
   "ダ:sprint": {
-   "place_rate": 0.1939,
-   "runs": 294,
-   "win_rate": 0.0544
+   "place_rate": 0.1966,
+   "runs": 295,
+   "win_rate": 0.0576
+  },
+  "芝:long": {
+   "place_rate": 0.0,
+   "runs": 1,
+   "win_rate": 0.0
   },
   "芝:middle": {
    "place_rate": 0.1429,
@@ -5794,9 +5804,9 @@
    "win_rate": 0.0169
   },
   "芝:sprint": {
-   "place_rate": 0.2159,
-   "runs": 315,
-   "win_rate": 0.0794
+   "place_rate": 0.2188,
+   "runs": 320,
+   "win_rate": 0.0781
   },
   "障:long": {
    "place_rate": 0.0,
@@ -5883,9 +5893,9 @@
    "win_rate": 0.0581
   },
   "芝:sprint": {
-   "place_rate": 0.235,
-   "runs": 600,
-   "win_rate": 0.0633
+   "place_rate": 0.2342,
+   "runs": 602,
+   "win_rate": 0.0631
   },
   "障:long": {
    "place_rate": 0.2747,
@@ -5911,13 +5921,13 @@
   },
   "芝:long": {
    "place_rate": 0.0,
-   "runs": 1,
+   "runs": 2,
    "win_rate": 0.0
   },
   "芝:middle": {
-   "place_rate": 0.2353,
-   "runs": 17,
-   "win_rate": 0.0588
+   "place_rate": 0.2222,
+   "runs": 18,
+   "win_rate": 0.0556
   },
   "芝:mile": {
    "place_rate": 0.1786,
@@ -6011,9 +6021,9 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.1639,
-   "runs": 61,
-   "win_rate": 0.0656
+   "place_rate": 0.1587,
+   "runs": 63,
+   "win_rate": 0.0635
   },
   "ダ:sprint": {
    "place_rate": 0.0972,
@@ -6031,8 +6041,8 @@
    "win_rate": 0.1333
   },
   "芝:mile": {
-   "place_rate": 0.0625,
-   "runs": 48,
+   "place_rate": 0.0612,
+   "runs": 49,
    "win_rate": 0.0
   },
   "芝:sprint": {
@@ -6063,9 +6073,9 @@
    "win_rate": 0.0769
   },
   "芝:middle": {
-   "place_rate": 0.1573,
-   "runs": 286,
-   "win_rate": 0.049
+   "place_rate": 0.1568,
+   "runs": 287,
+   "win_rate": 0.0488
   },
   "芝:mile": {
    "place_rate": 0.2312,
@@ -6073,9 +6083,9 @@
    "win_rate": 0.0618
   },
   "芝:sprint": {
-   "place_rate": 0.1618,
-   "runs": 136,
-   "win_rate": 0.0588
+   "place_rate": 0.1594,
+   "runs": 138,
+   "win_rate": 0.058
   },
   "障:long": {
    "place_rate": 0.3333,
@@ -6090,9 +6100,9 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.175,
-   "runs": 80,
-   "win_rate": 0.025
+   "place_rate": 0.1687,
+   "runs": 83,
+   "win_rate": 0.0241
   },
   "ダ:sprint": {
    "place_rate": 0.0986,
@@ -6100,8 +6110,8 @@
    "win_rate": 0.0423
   },
   "芝:long": {
-   "place_rate": 1.0,
-   "runs": 2,
+   "place_rate": 0.6667,
+   "runs": 3,
    "win_rate": 0.0
   },
   "芝:middle": {
@@ -6132,9 +6142,9 @@
    "win_rate": 0.0645
   },
   "ダ:mile": {
-   "place_rate": 0.2649,
-   "runs": 385,
-   "win_rate": 0.0805
+   "place_rate": 0.2642,
+   "runs": 386,
+   "win_rate": 0.0803
   },
   "ダ:sprint": {
    "place_rate": 0.2809,
@@ -6179,9 +6189,9 @@
    "win_rate": 0.0588
   },
   "ダ:mile": {
-   "place_rate": 0.1398,
-   "runs": 322,
-   "win_rate": 0.059
+   "place_rate": 0.1393,
+   "runs": 323,
+   "win_rate": 0.0588
   },
   "ダ:sprint": {
    "place_rate": 0.1923,
@@ -6204,9 +6214,9 @@
    "win_rate": 0.0
   },
   "芝:sprint": {
-   "place_rate": 0.125,
-   "runs": 64,
-   "win_rate": 0.0625
+   "place_rate": 0.1385,
+   "runs": 65,
+   "win_rate": 0.0769
   },
   "障:long": {
    "place_rate": 0.2143,
@@ -6226,14 +6236,14 @@
    "win_rate": 0.1
   },
   "ダ:mile": {
-   "place_rate": 0.2082,
-   "runs": 269,
-   "win_rate": 0.0706
+   "place_rate": 0.2074,
+   "runs": 270,
+   "win_rate": 0.0704
   },
   "ダ:sprint": {
-   "place_rate": 0.2352,
-   "runs": 574,
-   "win_rate": 0.0801
+   "place_rate": 0.2348,
+   "runs": 575,
+   "win_rate": 0.08
   },
   "芝:long": {
    "place_rate": 0.0,
@@ -6251,9 +6261,9 @@
    "win_rate": 0.0189
   },
   "芝:sprint": {
-   "place_rate": 0.1823,
-   "runs": 192,
-   "win_rate": 0.0573
+   "place_rate": 0.1804,
+   "runs": 194,
+   "win_rate": 0.0567
   },
   "障:long": {
    "place_rate": 0.3333,
@@ -6288,9 +6298,9 @@
    "win_rate": 0.0493
   },
   "芝:middle": {
-   "place_rate": 0.2683,
-   "runs": 328,
-   "win_rate": 0.0701
+   "place_rate": 0.2675,
+   "runs": 329,
+   "win_rate": 0.0699
   },
   "芝:mile": {
    "place_rate": 0.2311,
@@ -6347,14 +6357,14 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.0748,
-   "runs": 107,
-   "win_rate": 0.0187
+   "place_rate": 0.0741,
+   "runs": 108,
+   "win_rate": 0.0185
   },
   "ダ:sprint": {
-   "place_rate": 0.1395,
-   "runs": 172,
-   "win_rate": 0.0291
+   "place_rate": 0.1445,
+   "runs": 173,
+   "win_rate": 0.0289
   },
   "芝:long": {
    "place_rate": 0.2,
@@ -6362,8 +6372,8 @@
    "win_rate": 0.0
   },
   "芝:middle": {
-   "place_rate": 0.1129,
-   "runs": 62,
+   "place_rate": 0.1111,
+   "runs": 63,
    "win_rate": 0.0
   },
   "芝:mile": {
@@ -6404,9 +6414,9 @@
    "win_rate": 0.0604
   },
   "芝:long": {
-   "place_rate": 0.4667,
-   "runs": 15,
-   "win_rate": 0.0667
+   "place_rate": 0.5,
+   "runs": 16,
+   "win_rate": 0.0625
   },
   "芝:middle": {
    "place_rate": 0.2,
@@ -6414,14 +6424,14 @@
    "win_rate": 0.0533
   },
   "芝:mile": {
-   "place_rate": 0.1667,
-   "runs": 90,
-   "win_rate": 0.0444
+   "place_rate": 0.163,
+   "runs": 92,
+   "win_rate": 0.0435
   },
   "芝:sprint": {
-   "place_rate": 0.2258,
-   "runs": 124,
-   "win_rate": 0.0806
+   "place_rate": 0.224,
+   "runs": 125,
+   "win_rate": 0.08
   },
   "障:long": {
    "place_rate": 0.2857,
@@ -6441,9 +6451,9 @@
    "win_rate": 0.0469
   },
   "ダ:mile": {
-   "place_rate": 0.2028,
-   "runs": 503,
-   "win_rate": 0.0676
+   "place_rate": 0.204,
+   "runs": 505,
+   "win_rate": 0.0673
   },
   "ダ:sprint": {
    "place_rate": 0.2094,
@@ -6461,14 +6471,14 @@
    "win_rate": 0.0857
   },
   "芝:mile": {
-   "place_rate": 0.2086,
-   "runs": 163,
-   "win_rate": 0.092
+   "place_rate": 0.2134,
+   "runs": 164,
+   "win_rate": 0.0915
   },
   "芝:sprint": {
-   "place_rate": 0.1893,
-   "runs": 169,
-   "win_rate": 0.0769
+   "place_rate": 0.186,
+   "runs": 172,
+   "win_rate": 0.0756
   },
   "障:long": {
    "place_rate": 0.25,
@@ -6498,9 +6508,9 @@
    "win_rate": 0.0
   },
   "芝:middle": {
-   "place_rate": 0.1724,
-   "runs": 29,
-   "win_rate": 0.0345
+   "place_rate": 0.1667,
+   "runs": 30,
+   "win_rate": 0.0333
   },
   "芝:mile": {
    "place_rate": 0.0952,
@@ -6587,9 +6597,9 @@
    "win_rate": 0.0
   },
   "芝:mile": {
-   "place_rate": 0.2,
-   "runs": 10,
-   "win_rate": 0.1
+   "place_rate": 0.1818,
+   "runs": 11,
+   "win_rate": 0.0909
   },
   "芝:sprint": {
    "place_rate": 0.1176,
@@ -6619,9 +6629,9 @@
    "win_rate": 0.0714
   },
   "ダ:sprint": {
-   "place_rate": 0.2014,
-   "runs": 139,
-   "win_rate": 0.0432
+   "place_rate": 0.2,
+   "runs": 140,
+   "win_rate": 0.0429
   },
   "芝:long": {
    "place_rate": 0.0,
@@ -6762,9 +6772,9 @@
    "win_rate": 0.0204
   },
   "芝:long": {
-   "place_rate": 0.2667,
-   "runs": 45,
-   "win_rate": 0.0889
+   "place_rate": 0.2609,
+   "runs": 46,
+   "win_rate": 0.087
   },
   "芝:middle": {
    "place_rate": 0.2237,
@@ -6863,14 +6873,14 @@
    "win_rate": 0.0753
   },
   "ダ:mile": {
-   "place_rate": 0.2783,
-   "runs": 733,
-   "win_rate": 0.101
+   "place_rate": 0.2779,
+   "runs": 734,
+   "win_rate": 0.1008
   },
   "ダ:sprint": {
-   "place_rate": 0.1901,
-   "runs": 342,
-   "win_rate": 0.0673
+   "place_rate": 0.1895,
+   "runs": 343,
+   "win_rate": 0.0671
   },
   "芝:long": {
    "place_rate": 0.3694,
@@ -6878,9 +6888,9 @@
    "win_rate": 0.1306
   },
   "芝:middle": {
-   "place_rate": 0.2879,
-   "runs": 646,
-   "win_rate": 0.0898
+   "place_rate": 0.2886,
+   "runs": 648,
+   "win_rate": 0.091
   },
   "芝:mile": {
    "place_rate": 0.2811,
@@ -6957,8 +6967,8 @@
    "win_rate": 0.037
   },
   "芝:mile": {
-   "place_rate": 0.3333,
-   "runs": 3,
+   "place_rate": 0.25,
+   "runs": 4,
    "win_rate": 0.0
   },
   "芝:sprint": {
@@ -6979,19 +6989,19 @@
    "win_rate": 0.1149
   },
   "ダ:mile": {
-   "place_rate": 0.2696,
-   "runs": 1406,
-   "win_rate": 0.0939
+   "place_rate": 0.27,
+   "runs": 1411,
+   "win_rate": 0.0943
   },
   "ダ:sprint": {
-   "place_rate": 0.2719,
-   "runs": 1243,
-   "win_rate": 0.1014
+   "place_rate": 0.2721,
+   "runs": 1246,
+   "win_rate": 0.1011
   },
   "芝:long": {
-   "place_rate": 0.3571,
-   "runs": 28,
-   "win_rate": 0.1071
+   "place_rate": 0.3667,
+   "runs": 30,
+   "win_rate": 0.1
   },
   "芝:middle": {
    "place_rate": 0.1565,
@@ -7004,9 +7014,9 @@
    "win_rate": 0.0735
   },
   "芝:sprint": {
-   "place_rate": 0.2507,
-   "runs": 367,
-   "win_rate": 0.0654
+   "place_rate": 0.2473,
+   "runs": 376,
+   "win_rate": 0.0665
   },
   "障:long": {
    "place_rate": 0.3478,
@@ -7063,14 +7073,14 @@
    "win_rate": 0.1818
   },
   "ダ:mile": {
-   "place_rate": 0.3759,
-   "runs": 439,
-   "win_rate": 0.1754
+   "place_rate": 0.3747,
+   "runs": 443,
+   "win_rate": 0.1738
   },
   "ダ:sprint": {
-   "place_rate": 0.378,
-   "runs": 291,
-   "win_rate": 0.1409
+   "place_rate": 0.3788,
+   "runs": 293,
+   "win_rate": 0.1433
   },
   "芝:middle": {
    "place_rate": 0.0,
@@ -7216,9 +7226,9 @@
    "win_rate": 0.1018
   },
   "ダ:sprint": {
-   "place_rate": 0.2699,
-   "runs": 478,
-   "win_rate": 0.0816
+   "place_rate": 0.2693,
+   "runs": 479,
+   "win_rate": 0.0814
   },
   "芝:long": {
    "place_rate": 0.0,
@@ -7310,9 +7320,9 @@
    "win_rate": 0.0
   },
   "芝:sprint": {
-   "place_rate": 0.2784,
-   "runs": 97,
-   "win_rate": 0.0619
+   "place_rate": 0.2755,
+   "runs": 98,
+   "win_rate": 0.0612
   },
   "障:long": {
    "place_rate": 0.0,
@@ -7369,9 +7379,9 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.0964,
-   "runs": 83,
-   "win_rate": 0.012
+   "place_rate": 0.0952,
+   "runs": 84,
+   "win_rate": 0.0119
   },
   "ダ:sprint": {
    "place_rate": 0.0317,
@@ -7406,9 +7416,9 @@
    "win_rate": 0.0909
   },
   "ダ:sprint": {
-   "place_rate": 0.191,
-   "runs": 89,
-   "win_rate": 0.0787
+   "place_rate": 0.1889,
+   "runs": 90,
+   "win_rate": 0.0778
   },
   "芝:middle": {
    "place_rate": 0.25,
@@ -7522,9 +7532,9 @@
    "win_rate": 0.0303
   },
   "芝:long": {
-   "place_rate": 0.226,
-   "runs": 208,
-   "win_rate": 0.0577
+   "place_rate": 0.2238,
+   "runs": 210,
+   "win_rate": 0.0571
   },
   "芝:middle": {
    "place_rate": 0.2439,
@@ -7532,14 +7542,14 @@
    "win_rate": 0.0808
   },
   "芝:mile": {
-   "place_rate": 0.2435,
-   "runs": 460,
-   "win_rate": 0.0804
+   "place_rate": 0.243,
+   "runs": 461,
+   "win_rate": 0.0803
   },
   "芝:sprint": {
-   "place_rate": 0.181,
-   "runs": 210,
-   "win_rate": 0.0476
+   "place_rate": 0.1801,
+   "runs": 211,
+   "win_rate": 0.0474
   },
   "障:long": {
    "place_rate": 0.3269,
@@ -7569,9 +7579,9 @@
    "win_rate": 0.0294
   },
   "芝:long": {
-   "place_rate": 0.1887,
-   "runs": 53,
-   "win_rate": 0.0943
+   "place_rate": 0.2037,
+   "runs": 54,
+   "win_rate": 0.0926
   },
   "芝:middle": {
    "place_rate": 0.1875,
@@ -7611,9 +7621,9 @@
    "win_rate": 0.0233
   },
   "ダ:sprint": {
-   "place_rate": 0.1364,
-   "runs": 88,
-   "win_rate": 0.0568
+   "place_rate": 0.1348,
+   "runs": 89,
+   "win_rate": 0.0562
   },
   "芝:long": {
    "place_rate": 0.0,
@@ -7702,14 +7712,14 @@
    "win_rate": 0.1039
   },
   "ダ:mile": {
-   "place_rate": 0.2573,
-   "runs": 649,
-   "win_rate": 0.0909
+   "place_rate": 0.2581,
+   "runs": 651,
+   "win_rate": 0.0906
   },
   "ダ:sprint": {
-   "place_rate": 0.2671,
-   "runs": 629,
-   "win_rate": 0.0827
+   "place_rate": 0.2683,
+   "runs": 630,
+   "win_rate": 0.0825
   },
   "芝:long": {
    "place_rate": 0.0,
@@ -7813,13 +7823,13 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.1064,
-   "runs": 141,
-   "win_rate": 0.0142
+   "place_rate": 0.1056,
+   "runs": 142,
+   "win_rate": 0.0141
   },
   "ダ:sprint": {
-   "place_rate": 0.1648,
-   "runs": 534,
+   "place_rate": 0.1645,
+   "runs": 535,
    "win_rate": 0.0393
   },
   "芝:long": {
@@ -7838,9 +7848,9 @@
    "win_rate": 0.0143
   },
   "芝:sprint": {
-   "place_rate": 0.2643,
-   "runs": 874,
-   "win_rate": 0.0915
+   "place_rate": 0.2634,
+   "runs": 877,
+   "win_rate": 0.0912
   },
   "障:long": {
    "place_rate": 0.25,
@@ -7880,9 +7890,9 @@
    "win_rate": 0.0414
   },
   "芝:mile": {
-   "place_rate": 0.0706,
-   "runs": 85,
-   "win_rate": 0.0235
+   "place_rate": 0.0698,
+   "runs": 86,
+   "win_rate": 0.0233
   },
   "芝:sprint": {
    "place_rate": 0.13,
@@ -7902,24 +7912,24 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.2073,
-   "runs": 82,
-   "win_rate": 0.061
+   "place_rate": 0.2048,
+   "runs": 83,
+   "win_rate": 0.0602
   },
   "ダ:sprint": {
-   "place_rate": 0.1297,
-   "runs": 293,
-   "win_rate": 0.0683
+   "place_rate": 0.1293,
+   "runs": 294,
+   "win_rate": 0.068
   },
   "芝:long": {
    "place_rate": 0.0,
-   "runs": 1,
+   "runs": 2,
    "win_rate": 0.0
   },
   "芝:middle": {
-   "place_rate": 0.1364,
-   "runs": 22,
-   "win_rate": 0.0455
+   "place_rate": 0.1304,
+   "runs": 23,
+   "win_rate": 0.0435
   },
   "芝:mile": {
    "place_rate": 0.1324,
@@ -7927,9 +7937,9 @@
    "win_rate": 0.0294
   },
   "芝:sprint": {
-   "place_rate": 0.2617,
-   "runs": 363,
-   "win_rate": 0.1047
+   "place_rate": 0.2596,
+   "runs": 366,
+   "win_rate": 0.1038
   }
  },
  "フィエールマン": {
@@ -7944,9 +7954,9 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.1954,
-   "runs": 87,
-   "win_rate": 0.0345
+   "place_rate": 0.191,
+   "runs": 89,
+   "win_rate": 0.0337
   },
   "ダ:sprint": {
    "place_rate": 0.129,
@@ -7954,24 +7964,24 @@
    "win_rate": 0.0
   },
   "芝:long": {
-   "place_rate": 0.2727,
-   "runs": 44,
-   "win_rate": 0.0682
+   "place_rate": 0.2889,
+   "runs": 45,
+   "win_rate": 0.0667
   },
   "芝:middle": {
-   "place_rate": 0.25,
-   "runs": 184,
-   "win_rate": 0.0707
+   "place_rate": 0.2473,
+   "runs": 186,
+   "win_rate": 0.0699
   },
   "芝:mile": {
-   "place_rate": 0.28,
-   "runs": 125,
-   "win_rate": 0.104
+   "place_rate": 0.2857,
+   "runs": 126,
+   "win_rate": 0.1111
   },
   "芝:sprint": {
-   "place_rate": 0.2444,
-   "runs": 90,
-   "win_rate": 0.0444
+   "place_rate": 0.2391,
+   "runs": 92,
+   "win_rate": 0.0435
   },
   "障:long": {
    "place_rate": 0.0,
@@ -7986,14 +7996,19 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.1944,
-   "runs": 36,
-   "win_rate": 0.0278
+   "place_rate": 0.2162,
+   "runs": 37,
+   "win_rate": 0.0541
   },
   "ダ:sprint": {
-   "place_rate": 0.1735,
-   "runs": 98,
-   "win_rate": 0.0612
+   "place_rate": 0.18,
+   "runs": 100,
+   "win_rate": 0.06
+  },
+  "芝:long": {
+   "place_rate": 0.0,
+   "runs": 1,
+   "win_rate": 0.0
   },
   "芝:middle": {
    "place_rate": 0.0,
@@ -8075,9 +8090,9 @@
    "win_rate": 0.0143
   },
   "ダ:sprint": {
-   "place_rate": 0.269,
-   "runs": 368,
-   "win_rate": 0.0734
+   "place_rate": 0.2668,
+   "runs": 371,
+   "win_rate": 0.0728
   },
   "芝:middle": {
    "place_rate": 0.2857,
@@ -8085,9 +8100,9 @@
    "win_rate": 0.0
   },
   "芝:mile": {
-   "place_rate": 0.303,
-   "runs": 33,
-   "win_rate": 0.1515
+   "place_rate": 0.2941,
+   "runs": 34,
+   "win_rate": 0.1471
   },
   "芝:sprint": {
    "place_rate": 0.2193,
@@ -8191,9 +8206,9 @@
    "win_rate": 0.0443
   },
   "芝:long": {
-   "place_rate": 0.26,
-   "runs": 50,
-   "win_rate": 0.08
+   "place_rate": 0.25,
+   "runs": 52,
+   "win_rate": 0.0769
   },
   "芝:middle": {
    "place_rate": 0.2653,
@@ -8201,9 +8216,9 @@
    "win_rate": 0.0816
   },
   "芝:mile": {
-   "place_rate": 0.1705,
-   "runs": 129,
-   "win_rate": 0.062
+   "place_rate": 0.1692,
+   "runs": 130,
+   "win_rate": 0.0615
   },
   "芝:sprint": {
    "place_rate": 0.0965,
@@ -8228,29 +8243,29 @@
    "win_rate": 0.0685
   },
   "ダ:mile": {
-   "place_rate": 0.2197,
-   "runs": 396,
-   "win_rate": 0.0556
+   "place_rate": 0.2186,
+   "runs": 398,
+   "win_rate": 0.0553
   },
   "ダ:sprint": {
-   "place_rate": 0.1893,
-   "runs": 169,
-   "win_rate": 0.0592
+   "place_rate": 0.193,
+   "runs": 171,
+   "win_rate": 0.0585
   },
   "芝:long": {
-   "place_rate": 0.1772,
-   "runs": 79,
-   "win_rate": 0.0506
+   "place_rate": 0.175,
+   "runs": 80,
+   "win_rate": 0.05
   },
   "芝:middle": {
-   "place_rate": 0.2567,
-   "runs": 374,
-   "win_rate": 0.0775
+   "place_rate": 0.258,
+   "runs": 376,
+   "win_rate": 0.0771
   },
   "芝:mile": {
-   "place_rate": 0.2741,
-   "runs": 394,
-   "win_rate": 0.0812
+   "place_rate": 0.2727,
+   "runs": 396,
+   "win_rate": 0.0808
   },
   "芝:sprint": {
    "place_rate": 0.2152,
@@ -8346,13 +8361,13 @@
    "win_rate": 0.0769
   },
   "ダ:mile": {
-   "place_rate": 0.3036,
-   "runs": 863,
-   "win_rate": 0.095
+   "place_rate": 0.3029,
+   "runs": 865,
+   "win_rate": 0.0948
   },
   "ダ:sprint": {
-   "place_rate": 0.2329,
-   "runs": 1172,
+   "place_rate": 0.2327,
+   "runs": 1173,
    "win_rate": 0.0904
   },
   "芝:long": {
@@ -8388,9 +8403,9 @@
    "win_rate": 0.069
   },
   "ダ:sprint": {
-   "place_rate": 0.2,
-   "runs": 30,
-   "win_rate": 0.0667
+   "place_rate": 0.1935,
+   "runs": 31,
+   "win_rate": 0.0645
   },
   "芝:long": {
    "place_rate": 0.0,
@@ -8494,9 +8509,9 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.303,
-   "runs": 33,
-   "win_rate": 0.1515
+   "place_rate": 0.2857,
+   "runs": 35,
+   "win_rate": 0.1429
   },
   "ダ:sprint": {
    "place_rate": 0.2857,
@@ -8514,14 +8529,14 @@
    "win_rate": 0.1471
   },
   "芝:mile": {
-   "place_rate": 0.2131,
-   "runs": 61,
-   "win_rate": 0.0984
+   "place_rate": 0.2063,
+   "runs": 63,
+   "win_rate": 0.0952
   },
   "芝:sprint": {
-   "place_rate": 0.1831,
-   "runs": 71,
-   "win_rate": 0.0845
+   "place_rate": 0.1781,
+   "runs": 73,
+   "win_rate": 0.0822
   }
  },
  "ベーカバド": {
@@ -8579,12 +8594,12 @@
   },
   "ダ:mile": {
    "place_rate": 0.2412,
-   "runs": 1107,
-   "win_rate": 0.075
+   "runs": 1111,
+   "win_rate": 0.0747
   },
   "ダ:sprint": {
-   "place_rate": 0.1434,
-   "runs": 558,
+   "place_rate": 0.1431,
+   "runs": 559,
    "win_rate": 0.0376
   },
   "芝:long": {
@@ -8625,9 +8640,9 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.1067,
-   "runs": 75,
-   "win_rate": 0.0133
+   "place_rate": 0.1053,
+   "runs": 76,
+   "win_rate": 0.0132
   },
   "ダ:sprint": {
    "place_rate": 0.0612,
@@ -8684,9 +8699,9 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.25,
-   "runs": 24,
-   "win_rate": 0.125
+   "place_rate": 0.24,
+   "runs": 25,
+   "win_rate": 0.12
   },
   "ダ:sprint": {
    "place_rate": 0.0,
@@ -8699,19 +8714,19 @@
    "win_rate": 0.0
   },
   "芝:middle": {
-   "place_rate": 0.5,
-   "runs": 18,
-   "win_rate": 0.0556
+   "place_rate": 0.5263,
+   "runs": 19,
+   "win_rate": 0.0526
   },
   "芝:mile": {
-   "place_rate": 0.4259,
-   "runs": 54,
-   "win_rate": 0.1852
+   "place_rate": 0.4182,
+   "runs": 55,
+   "win_rate": 0.1818
   },
   "芝:sprint": {
-   "place_rate": 0.3125,
-   "runs": 16,
-   "win_rate": 0.0625
+   "place_rate": 0.2941,
+   "runs": 17,
+   "win_rate": 0.0588
   }
  },
  "マインドユアビスケッツ": {
@@ -8726,14 +8741,14 @@
    "win_rate": 0.0638
   },
   "ダ:mile": {
-   "place_rate": 0.2221,
-   "runs": 806,
-   "win_rate": 0.0769
+   "place_rate": 0.223,
+   "runs": 807,
+   "win_rate": 0.0768
   },
   "ダ:sprint": {
-   "place_rate": 0.1667,
-   "runs": 444,
-   "win_rate": 0.0563
+   "place_rate": 0.1682,
+   "runs": 446,
+   "win_rate": 0.0583
   },
   "芝:long": {
    "place_rate": 0.0833,
@@ -8741,9 +8756,9 @@
    "win_rate": 0.0833
   },
   "芝:middle": {
-   "place_rate": 0.1979,
-   "runs": 96,
-   "win_rate": 0.0729
+   "place_rate": 0.1959,
+   "runs": 97,
+   "win_rate": 0.0722
   },
   "芝:mile": {
    "place_rate": 0.1977,
@@ -8857,9 +8872,9 @@
    "win_rate": 0.087
   },
   "ダ:mile": {
-   "place_rate": 0.1987,
-   "runs": 906,
-   "win_rate": 0.0728
+   "place_rate": 0.1989,
+   "runs": 910,
+   "win_rate": 0.0736
   },
   "ダ:sprint": {
    "place_rate": 0.1771,
@@ -8867,9 +8882,9 @@
    "win_rate": 0.0821
   },
   "芝:long": {
-   "place_rate": 0.0,
-   "runs": 3,
-   "win_rate": 0.0
+   "place_rate": 0.25,
+   "runs": 4,
+   "win_rate": 0.25
   },
   "芝:middle": {
    "place_rate": 0.0769,
@@ -8963,14 +8978,14 @@
    "win_rate": 0.5
   },
   "ダ:mile": {
-   "place_rate": 0.0682,
-   "runs": 44,
+   "place_rate": 0.0667,
+   "runs": 45,
    "win_rate": 0.0
   },
   "ダ:sprint": {
-   "place_rate": 0.1591,
-   "runs": 132,
-   "win_rate": 0.0682
+   "place_rate": 0.1567,
+   "runs": 134,
+   "win_rate": 0.0672
   },
   "芝:middle": {
    "place_rate": 0.0,
@@ -9037,9 +9052,9 @@
    "win_rate": 0.0706
   },
   "ダ:sprint": {
-   "place_rate": 0.202,
-   "runs": 198,
-   "win_rate": 0.0707
+   "place_rate": 0.201,
+   "runs": 199,
+   "win_rate": 0.0704
   },
   "芝:middle": {
    "place_rate": 0.0,
@@ -9052,9 +9067,9 @@
    "win_rate": 0.0682
   },
   "芝:sprint": {
-   "place_rate": 0.2097,
-   "runs": 186,
-   "win_rate": 0.0591
+   "place_rate": 0.2128,
+   "runs": 188,
+   "win_rate": 0.0638
   },
   "障:long": {
    "place_rate": 0.0,
@@ -9069,14 +9084,14 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.25,
-   "runs": 56,
-   "win_rate": 0.0893
+   "place_rate": 0.2456,
+   "runs": 57,
+   "win_rate": 0.0877
   },
   "ダ:sprint": {
-   "place_rate": 0.2774,
-   "runs": 155,
-   "win_rate": 0.0903
+   "place_rate": 0.2756,
+   "runs": 156,
+   "win_rate": 0.0897
   },
   "芝:middle": {
    "place_rate": 0.0,
@@ -9089,9 +9104,9 @@
    "win_rate": 0.0
   },
   "芝:sprint": {
-   "place_rate": 0.1277,
-   "runs": 47,
-   "win_rate": 0.0213
+   "place_rate": 0.125,
+   "runs": 48,
+   "win_rate": 0.0208
   }
  },
  "ミッキーアイル": {
@@ -9106,14 +9121,14 @@
    "win_rate": 0.0688
   },
   "ダ:sprint": {
-   "place_rate": 0.2251,
-   "runs": 702,
-   "win_rate": 0.0726
+   "place_rate": 0.2259,
+   "runs": 704,
+   "win_rate": 0.0724
   },
   "芝:long": {
-   "place_rate": 0.1538,
-   "runs": 13,
-   "win_rate": 0.0769
+   "place_rate": 0.1429,
+   "runs": 14,
+   "win_rate": 0.0714
   },
   "芝:middle": {
    "place_rate": 0.2614,
@@ -9126,9 +9141,9 @@
    "win_rate": 0.0949
   },
   "芝:sprint": {
-   "place_rate": 0.2358,
-   "runs": 598,
-   "win_rate": 0.0652
+   "place_rate": 0.235,
+   "runs": 600,
+   "win_rate": 0.065
   },
   "障:long": {
    "place_rate": 0.375,
@@ -9163,9 +9178,9 @@
    "win_rate": 0.0
   },
   "芝:middle": {
-   "place_rate": 0.0385,
-   "runs": 26,
-   "win_rate": 0.0385
+   "place_rate": 0.0357,
+   "runs": 28,
+   "win_rate": 0.0357
   },
   "芝:mile": {
    "place_rate": 0.2439,
@@ -9370,14 +9385,14 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.2971,
-   "runs": 239,
-   "win_rate": 0.1172
+   "place_rate": 0.2988,
+   "runs": 241,
+   "win_rate": 0.1162
   },
   "ダ:sprint": {
-   "place_rate": 0.3191,
-   "runs": 376,
-   "win_rate": 0.125
+   "place_rate": 0.321,
+   "runs": 377,
+   "win_rate": 0.1273
   },
   "芝:long": {
    "place_rate": 0.0,
@@ -9395,9 +9410,9 @@
    "win_rate": 0.05
   },
   "芝:sprint": {
-   "place_rate": 0.2412,
-   "runs": 170,
-   "win_rate": 0.0765
+   "place_rate": 0.2398,
+   "runs": 171,
+   "win_rate": 0.076
   }
  },
  "モンテロッソ": {
@@ -9459,9 +9474,9 @@
    "win_rate": 0.037
   },
   "ダ:mile": {
-   "place_rate": 0.2034,
-   "runs": 236,
-   "win_rate": 0.072
+   "place_rate": 0.2025,
+   "runs": 237,
+   "win_rate": 0.0717
   },
   "ダ:sprint": {
    "place_rate": 0.2168,
@@ -9511,19 +9526,19 @@
    "win_rate": 0.0278
   },
   "芝:middle": {
-   "place_rate": 0.2065,
-   "runs": 402,
-   "win_rate": 0.0896
+   "place_rate": 0.2079,
+   "runs": 404,
+   "win_rate": 0.0916
   },
   "芝:mile": {
-   "place_rate": 0.3087,
-   "runs": 664,
-   "win_rate": 0.1009
+   "place_rate": 0.3078,
+   "runs": 666,
+   "win_rate": 0.1006
   },
   "芝:sprint": {
-   "place_rate": 0.2265,
-   "runs": 755,
-   "win_rate": 0.0887
+   "place_rate": 0.2253,
+   "runs": 759,
+   "win_rate": 0.0883
   },
   "障:long": {
    "place_rate": 0.16,
@@ -9549,7 +9564,7 @@
   },
   "芝:long": {
    "place_rate": 0.0,
-   "runs": 5,
+   "runs": 6,
    "win_rate": 0.0
   },
   "芝:middle": {
@@ -9713,9 +9728,9 @@
    "win_rate": 0.0588
   },
   "ダ:mile": {
-   "place_rate": 0.1471,
-   "runs": 204,
-   "win_rate": 0.0539
+   "place_rate": 0.1463,
+   "runs": 205,
+   "win_rate": 0.0537
   },
   "ダ:sprint": {
    "place_rate": 0.1181,
@@ -9733,9 +9748,9 @@
    "win_rate": 0.0662
   },
   "芝:mile": {
-   "place_rate": 0.1518,
-   "runs": 112,
-   "win_rate": 0.0268
+   "place_rate": 0.1504,
+   "runs": 113,
+   "win_rate": 0.0265
   },
   "芝:sprint": {
    "place_rate": 0.219,
@@ -9760,14 +9775,14 @@
    "win_rate": 0.1081
   },
   "ダ:mile": {
-   "place_rate": 0.2098,
-   "runs": 386,
-   "win_rate": 0.0725
+   "place_rate": 0.2093,
+   "runs": 387,
+   "win_rate": 0.0724
   },
   "ダ:sprint": {
-   "place_rate": 0.1555,
-   "runs": 238,
-   "win_rate": 0.0672
+   "place_rate": 0.1548,
+   "runs": 239,
+   "win_rate": 0.0669
   },
   "芝:long": {
    "place_rate": 0.0,
@@ -9807,14 +9822,14 @@
    "win_rate": 0.129
   },
   "ダ:mile": {
-   "place_rate": 0.2374,
-   "runs": 657,
-   "win_rate": 0.0944
+   "place_rate": 0.2371,
+   "runs": 658,
+   "win_rate": 0.0942
   },
   "ダ:sprint": {
-   "place_rate": 0.2643,
-   "runs": 488,
-   "win_rate": 0.0799
+   "place_rate": 0.2638,
+   "runs": 489,
+   "win_rate": 0.0798
   },
   "芝:long": {
    "place_rate": 0.1884,
@@ -9822,9 +9837,9 @@
    "win_rate": 0.087
   },
   "芝:middle": {
-   "place_rate": 0.3021,
-   "runs": 384,
-   "win_rate": 0.099
+   "place_rate": 0.299,
+   "runs": 388,
+   "win_rate": 0.0979
   },
   "芝:mile": {
    "place_rate": 0.311,
@@ -9854,9 +9869,9 @@
    "win_rate": 0.0778
   },
   "ダ:mile": {
-   "place_rate": 0.2254,
-   "runs": 639,
-   "win_rate": 0.0751
+   "place_rate": 0.225,
+   "runs": 640,
+   "win_rate": 0.075
   },
   "ダ:sprint": {
    "place_rate": 0.1919,
@@ -9869,19 +9884,19 @@
    "win_rate": 0.1538
   },
   "芝:middle": {
-   "place_rate": 0.1757,
-   "runs": 239,
-   "win_rate": 0.0586
+   "place_rate": 0.175,
+   "runs": 240,
+   "win_rate": 0.0583
   },
   "芝:mile": {
-   "place_rate": 0.2394,
-   "runs": 330,
-   "win_rate": 0.0636
+   "place_rate": 0.2417,
+   "runs": 331,
+   "win_rate": 0.0634
   },
   "芝:sprint": {
-   "place_rate": 0.2154,
-   "runs": 492,
-   "win_rate": 0.0549
+   "place_rate": 0.2141,
+   "runs": 495,
+   "win_rate": 0.0545
   },
   "障:long": {
    "place_rate": 0.1923,
@@ -9911,9 +9926,9 @@
    "win_rate": 0.5
   },
   "芝:middle": {
-   "place_rate": 0.1429,
-   "runs": 14,
-   "win_rate": 0.0714
+   "place_rate": 0.1333,
+   "runs": 15,
+   "win_rate": 0.0667
   },
   "芝:mile": {
    "place_rate": 0.0,
@@ -10027,18 +10042,18 @@
    "win_rate": 0.0656
   },
   "ダ:mile": {
-   "place_rate": 0.3583,
-   "runs": 709,
-   "win_rate": 0.1312
+   "place_rate": 0.3589,
+   "runs": 716,
+   "win_rate": 0.1313
   },
   "ダ:sprint": {
-   "place_rate": 0.2082,
-   "runs": 365,
-   "win_rate": 0.0795
+   "place_rate": 0.2077,
+   "runs": 366,
+   "win_rate": 0.0792
   },
   "芝:long": {
-   "place_rate": 0.2,
-   "runs": 5,
+   "place_rate": 0.1667,
+   "runs": 6,
    "win_rate": 0.0
   },
   "芝:middle": {
@@ -10069,9 +10084,9 @@
    "win_rate": 0.0522
   },
   "ダ:mile": {
-   "place_rate": 0.1905,
-   "runs": 819,
-   "win_rate": 0.0549
+   "place_rate": 0.1912,
+   "runs": 821,
+   "win_rate": 0.056
   },
   "ダ:sprint": {
    "place_rate": 0.164,
@@ -10084,9 +10099,9 @@
    "win_rate": 0.0824
   },
   "芝:middle": {
-   "place_rate": 0.191,
-   "runs": 513,
-   "win_rate": 0.0604
+   "place_rate": 0.1907,
+   "runs": 514,
+   "win_rate": 0.0603
   },
   "芝:mile": {
    "place_rate": 0.1991,
@@ -10094,9 +10109,9 @@
    "win_rate": 0.0602
   },
   "芝:sprint": {
-   "place_rate": 0.2041,
-   "runs": 294,
-   "win_rate": 0.0544
+   "place_rate": 0.2068,
+   "runs": 295,
+   "win_rate": 0.0542
   },
   "障:long": {
    "place_rate": 0.2208,
@@ -10116,29 +10131,29 @@
    "win_rate": 0.0702
   },
   "ダ:mile": {
-   "place_rate": 0.2562,
-   "runs": 402,
-   "win_rate": 0.0846
+   "place_rate": 0.2574,
+   "runs": 404,
+   "win_rate": 0.0842
   },
   "ダ:sprint": {
-   "place_rate": 0.1626,
-   "runs": 123,
-   "win_rate": 0.0569
+   "place_rate": 0.1613,
+   "runs": 124,
+   "win_rate": 0.0565
   },
   "芝:long": {
-   "place_rate": 0.3387,
-   "runs": 124,
-   "win_rate": 0.1532
+   "place_rate": 0.336,
+   "runs": 125,
+   "win_rate": 0.152
   },
   "芝:middle": {
-   "place_rate": 0.2447,
-   "runs": 474,
-   "win_rate": 0.0949
+   "place_rate": 0.2427,
+   "runs": 478,
+   "win_rate": 0.0941
   },
   "芝:mile": {
-   "place_rate": 0.2476,
-   "runs": 319,
-   "win_rate": 0.0909
+   "place_rate": 0.2461,
+   "runs": 321,
+   "win_rate": 0.0903
   },
   "芝:sprint": {
    "place_rate": 0.2,
@@ -10237,14 +10252,14 @@
    "win_rate": 0.087
   },
   "ダ:mile": {
-   "place_rate": 0.2488,
-   "runs": 201,
-   "win_rate": 0.0796
+   "place_rate": 0.2475,
+   "runs": 202,
+   "win_rate": 0.0792
   },
   "ダ:sprint": {
-   "place_rate": 0.2062,
-   "runs": 325,
-   "win_rate": 0.0677
+   "place_rate": 0.2055,
+   "runs": 326,
+   "win_rate": 0.0675
   },
   "芝:long": {
    "place_rate": 0.25,
@@ -10262,9 +10277,9 @@
    "win_rate": 0.0462
   },
   "芝:sprint": {
-   "place_rate": 0.127,
-   "runs": 189,
-   "win_rate": 0.0476
+   "place_rate": 0.1263,
+   "runs": 190,
+   "win_rate": 0.0474
   },
   "障:long": {
    "place_rate": 0.0,
@@ -10410,9 +10425,9 @@
    "win_rate": 0.0625
   },
   "芝:middle": {
-   "place_rate": 0.2658,
-   "runs": 79,
-   "win_rate": 0.0506
+   "place_rate": 0.275,
+   "runs": 80,
+   "win_rate": 0.05
   },
   "芝:mile": {
    "place_rate": 0.1944,
@@ -10437,9 +10452,9 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.1053,
-   "runs": 19,
-   "win_rate": 0.0526
+   "place_rate": 0.1,
+   "runs": 20,
+   "win_rate": 0.05
   },
   "ダ:sprint": {
    "place_rate": 0.3529,
@@ -10590,14 +10605,14 @@
    "win_rate": 0.0897
   },
   "ダ:mile": {
-   "place_rate": 0.2043,
-   "runs": 798,
-   "win_rate": 0.0777
+   "place_rate": 0.2035,
+   "runs": 801,
+   "win_rate": 0.0774
   },
   "ダ:sprint": {
-   "place_rate": 0.2624,
-   "runs": 1189,
-   "win_rate": 0.0959
+   "place_rate": 0.263,
+   "runs": 1190,
+   "win_rate": 0.0958
   },
   "芝:long": {
    "place_rate": 0.1667,
@@ -10605,19 +10620,19 @@
    "win_rate": 0.0625
   },
   "芝:middle": {
-   "place_rate": 0.2651,
-   "runs": 298,
-   "win_rate": 0.1107
+   "place_rate": 0.2676,
+   "runs": 299,
+   "win_rate": 0.1137
   },
   "芝:mile": {
-   "place_rate": 0.3278,
-   "runs": 668,
-   "win_rate": 0.1153
+   "place_rate": 0.3294,
+   "runs": 671,
+   "win_rate": 0.1162
   },
   "芝:sprint": {
-   "place_rate": 0.2671,
-   "runs": 992,
-   "win_rate": 0.0988
+   "place_rate": 0.267,
+   "runs": 1000,
+   "win_rate": 0.098
   },
   "障:long": {
    "place_rate": 0.4032,
@@ -10812,9 +10827,9 @@
    "win_rate": 0.0
   },
   "ダ:mile": {
-   "place_rate": 0.1562,
-   "runs": 64,
-   "win_rate": 0.0469
+   "place_rate": 0.1493,
+   "runs": 67,
+   "win_rate": 0.0448
   },
   "ダ:sprint": {
    "place_rate": 0.2273,
@@ -10901,13 +10916,13 @@
    "win_rate": 0.0385
   },
   "ダ:sprint": {
-   "place_rate": 0.1339,
-   "runs": 112,
-   "win_rate": 0.0446
+   "place_rate": 0.1327,
+   "runs": 113,
+   "win_rate": 0.0442
   },
   "芝:long": {
-   "place_rate": 0.0667,
-   "runs": 15,
+   "place_rate": 0.0625,
+   "runs": 16,
    "win_rate": 0.0
   },
   "芝:middle": {
