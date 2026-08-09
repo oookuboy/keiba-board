@@ -1,0 +1,68 @@
+name: keiba-pages
+
+# ボードを GitHub Pages へ配信する。
+#
+# 元はブランチからの自動配信（Settings の Source = main / root）に任せていたが、
+# ある時点から main へ push しても pages-build-deployment が起動しなくなり、
+# サイトが 404 になった。設定側は触れないので、配信を明示的にこちらへ持ってくる。
+#
+# ついでに**配信するファイルを選べる**ようになるのが大きい。ルート配信は
+# リポジトリ内の全ファイルを配るので、keiba/raw/ の中身まで URL で取れていた。
+# ここではボードと表示用 JSON だけを載せる。
+#
+# ※ これが効くのは Settings → Pages → Source が "GitHub Actions" のとき。
+#   "Deploy from a branch" のままだとデプロイ手順が失敗するので、そのときは
+#   ログにそう出る。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "keiba/board.html"
+      - "keiba/data/**"
+      - ".github/workflows/keiba-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  # 予想・回顧が続けて push すると多重に走る。最新だけ配ればよい
+  group: keiba-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # 配信するものを明示的に組み立てる。ここに入れなかったものは公開されない。
+      - name: Assemble site
+        run: |
+          mkdir -p _site/keiba/data
+          cp index.html _site/
+          cp keiba/board.html _site/keiba/ 2>/dev/null || true
+          # data/ が空のまま配ると、ボードが「読めない」と出るだけで
+          # 原因が分からない。何を載せたかをログに残す。
+          if compgen -G "keiba/data/*.json" > /dev/null; then
+            cp keiba/data/*.json _site/keiba/data/
+          else
+            echo "::error::keiba/data に JSON が無い。predict / review が動いていない"
+            exit 1
+          fi
+          echo "配信するファイル:"
+          find _site -type f | sort
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4
