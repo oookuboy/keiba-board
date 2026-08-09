@@ -60,7 +60,12 @@ jobs:
           echo "配信するファイル:"
           find _site -type f | sort
 
+      # enablement: true が要る。Pages がリポジトリ側で無効になっていて
+      # （`Get Pages site failed ... Not Found`）、既定の false だとそこで
+      # 落ちる。true にすると Actions から有効化して配信元も workflow にする。
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
