@@ -227,3 +227,32 @@ def format_bands(table: pd.DataFrame) -> str:
         " 市場が取りこぼしている情報がある。",
     ]
     return "\n".join(lines)
+
+
+# 荒れ型・堅型の定義。chaos.py で測った結果に基づく。
+# 荒れ型は三連複の中央値 9,510円・3万超 21.2%、堅型は 1,445円・3.5%。
+CHAOTIC_FAV_ODDS = 3.0
+CHAOTIC_FIELD = 14
+SOLID_FAV_ODDS = 2.0
+SOLID_FIELD = 12
+
+
+def race_shape(valid: pd.DataFrame) -> pd.Series:
+    """市場の形からレースを分類する。
+
+    配当が大きい場所（荒れ型）が分かっても、そこで市場が正確なら期待値は
+    変わらない。**荒れ型でだけ市場が緩んでいるか**を確かめるための分類。
+    """
+    fav = valid.groupby("race_id")["market_odds"].transform("min")
+    size = valid["field_size"]
+    return pd.Series(
+        np.select(
+            [
+                (fav >= CHAOTIC_FAV_ODDS) & (size >= CHAOTIC_FIELD),
+                (fav < SOLID_FAV_ODDS) & (size <= SOLID_FIELD),
+            ],
+            ["荒れ型", "堅型"],
+            default="その他",
+        ),
+        index=valid.index,
+    )

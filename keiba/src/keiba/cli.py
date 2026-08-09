@@ -289,6 +289,22 @@ def cmd_edge(args: argparse.Namespace) -> int:
         edge.by_odds_band(valid, dataset.TARGET, p_model - p_market, place)
     ))
 
+    # 配当が大きい場所（荒れ型）が分かっても、そこで市場が正確なら期待値は
+    # 変わらない。荒れ型でだけ市場が緩んでいるかを確かめる。ここが本題。
+    shape = edge.race_shape(valid)
+    for name in ("荒れ型", "堅型"):
+        mask = (shape == name).to_numpy()
+        if mask.sum() < 2000:
+            continue
+        print()
+        print(f"■ {name}（{mask.sum():,} 行 / "
+              f"{valid.loc[mask, 'race_id'].nunique():,} レース）")
+        print(edge.format_bands(
+            edge.by_odds_band(
+                valid[mask], dataset.TARGET, (p_model - p_market)[mask], place[mask]
+            )
+        ))
+
     # 狙いは穴なので、人気薄に絞っても同じことを見る。全体で妙味が無くても
     # 人気薄だけにあるなら、そこが買い場になる。
     longshot = valid["market_popularity"] >= args.longshot_from
