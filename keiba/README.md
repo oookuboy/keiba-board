@@ -117,8 +117,13 @@ SKILL.md の観点（血統適性・条件一変・展開・降級・騎手相�
 | 着順・払戻（当日） | JRA公式 `accessS` → `pw01srl…` | 検証済み。確定後すぐ出る |
 | 過去成績・払戻（翌日以降） | `db.netkeiba.com/race/{race_id}/` | 検証済み。3年分のバックフィル元 |
 | 血統（父・母父） | `db.netkeiba.com/horse/ped/{horse_id}/` | 検証済み |
-| 調教 | JRA公式 `accessT` | 未着手 |
-| 調教師コメント | — | **取得不能**。netkeiba は有料プラン限定 |
+| 調教タイム | `db.netkeiba.com/?pid=horse_training&id={horse_id}` | 有料プラン。**rid を付けない**と1回で全履歴が返る |
+| 調教師コメント | `db.netkeiba.com/horse/kyusya_comment.html?id=…` | 有料プラン。ログイン後は開く |
+
+調教は当初 JRA公式 `accessT` から取るつもりだったが、netkeiba の有料プランに
+加入したので、そちらから馬単位で引く。`rid` を付けるとそのレース向けの1本だけ、
+外すとその馬の全履歴が1リクエストで返る（実測 2本 vs 13本）。約14.9万回と
+約2.4万回の差になるので、必ず外して引く。
 
 **db.netkeiba には発走前のレースが存在しない。** 結果データベースなので、
 まだ行われていないレースは race_id ごと無い（2026-08-06 実測、8/8 の一覧に
@@ -170,12 +175,23 @@ keiba/
   data/                 ボードが読む JSON（predict/review が生成）
   raw/YYYY/*.jsonl.gz   生データの正。SQLite はここから毎回作り直す使い捨て
   raw/pedigree.jsonl.gz 血統（馬単位）
+  raw/workouts*.jsonl.gz 調教（netkeiba 有料）。**コミットしない**（gitignore 済み）
   config/weights.yml    全重み。チューニングはここだけを触る
   config/sire_aptitude.json  種牡馬適性表（build が生成）
   LESSONS.md            review が追記する実戦ログ
   src/keiba/            実装
   tests/fixtures/       probe が採取した実HTML
 ```
+
+### 調教データをリポジトリに置かない理由
+
+調教タイムは netkeiba の有料コンテンツで、このリポジトリは公開されている。
+GitHub Pages はルート配信だと**リポジトリ内の全ファイル**を配るので（ボードが
+`keiba/data/index.json` を取れているのがその証拠）、置けば URL を知る誰でも
+落とせる。2.4万頭ぶんとなると、個人利用の範囲を明らかに超える。
+
+そのため収集結果は Actions の artifact に出すだけにし、学習時にそこから取る。
+`keiba-workouts.yml` の evaluate モードがその手順。
 
 ## 注意
 

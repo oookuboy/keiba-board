@@ -189,3 +189,115 @@ def load_pedigree_file(store: Store, path: Path) -> int:
             if line.strip():
                 rows.append(json.loads(line))
     return store.upsert_horses(rows)
+
+
+TRAINING_URL = "https://db.netkeiba.com/?pid=horse_training&id={horse_id}"
+
+# 調教が空で返る馬はデビュー前などで普通に居る。ただし**全部空**なら、
+# それは馬の問題ではなくログインが切れている。この開発では「収集は成功・
+# 中身は空」を何度も踏んでいるので、比率で見張って落とす。
+EMPTY_RATIO_LIMIT = 0.5
+EMPTY_CHECK_AFTER = 40
+
+
+def collect_workouts(
+    fetcher: Fetcher,
+    store: Store,
+    out_path: Path,
+    limit: int | None = None,
+    offset: int = 0,
+) -> int:
+    """netkeiba 有料プランの調教タイムを馬単位で引く。
+
+    rid を付けなければ1リクエストでその馬の全履歴が返るので、出走ごとでは
+    なく馬ごとに引く（実測。約14.9万回が約2.4万回になる）。
+
+    対象は最終出走日の新しい順。途中で止めても「直近◯ヶ月は揃っている」
+    状態になり、その期間だけで調教あり／なしを比べられる。
+    """
+    from keiba.sources import netkeiba_auth
+
+    # 未ログインでも netkeiba は200で案内ページを返す。黙って空を積まないよう、
+    # ここは認証情報が無い時点で落とす。
+    netkeiba_auth.login(fetcher, required=True)
+
+    targets = store.horse_ids_without_workouts()[offset:]
+    if limit:
+        targets = targets[:limit]
+    if not targets:
+        log.info("調教の未取得馬なし")
+        return 0
+
+    log.info("調教を引く対象: %d頭", len(targets))
+    records: list[dict] = []
+    empty = 0
+    for i, horse_id in enumerate(targets, 1):
+        try:
+            html = fetcher.fetch(TRAINING_URL.format(horse_id=horse_id))
+        except FetchError as exc:
+            log.warning("調教を取得できない %s: %s", horse_id, exc)
+            continue
+
+        rows = netkeiba.parse_horse_training(html, horse_id)
+        if not rows:
+            empty += 1
+        records.extend(w.to_dict() for w in rows)
+
+        if i == EMPTY_CHECK_AFTER and empty / i > EMPTY_RATIO_LIMIT:
+            # ここで止めないと、空のまま2.4万頭ぶん走って何時間も無駄にする。
+            raise RuntimeError(
+                f"最初の{i}頭のうち{empty}頭が空。ログインが効いていない可能性が高い。"
+                " 有料プランの状態と Secrets を確かめること"
+            )
+        if i % 200 == 0:
+            log.info("  %d/%d（空 %d頭・調教 %d本）", i, len(targets), empty, len(records))
+
+    if records:
+        store.upsert_horse_workouts(records)
+        _merge_workout_file(records, out_path)
+    log.info("調教 %d本 / %d頭（うち空 %d頭）", len(records), len(targets), empty)
+    return len(records)
+
+
+def _merge_workout_file(records: list[dict], path: Path) -> None:
+    """調教は馬・日付・コース単位の追記型ファイルにまとめる。
+
+    血統と同じ形。既存分と突き合わせて書き直すので、途中で止めて再実行しても
+    重複せず、git の差分も追記だけになる。
+    """
+    import gzip
+    import json
+
+    def key(row: dict) -> tuple[str, str, str]:
+        return (row["horse_id"], row["workout_date"], row["course"])
+
+    merged: dict[tuple[str, str, str], dict] = {}
+    if path.exists():
+        with gzip.open(path, "rt", encoding="utf-8") as fh:
+            for line in fh:
+                if line.strip():
+                    row = json.loads(line)
+                    merged[key(row)] = row
+    for row in records:
+        merged[key(row)] = row
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with gzip.open(path, "wt", encoding="utf-8") as fh:
+        for k in sorted(merged):
+            fh.write(json.dumps(merged[k], ensure_ascii=False, sort_keys=True))
+            fh.write("\n")
+
+
+def load_workout_file(store: Store, path: Path) -> int:
+    """raw の調教ファイルを horse_workouts へ流し込む（rebuild 時に使う）。"""
+    if not path.exists():
+        return 0
+    import gzip
+    import json
+
+    rows = []
+    with gzip.open(path, "rt", encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                rows.append(json.loads(line))
+    return store.upsert_horse_workouts(rows)

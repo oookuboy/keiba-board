@@ -169,3 +169,118 @@ def test_parse_pedigree_foreign_dam() -> None:
     assert ped["sire"] == "コントレイル"
     assert ped["dam"] == "コンクエストハーラネイト"
     assert ped["damsire"] == "Harlan's Holiday"
+
+
+# ------------------------------------------------------------ 調教タイム
+
+
+def _training_fixture(name: str) -> str:
+    """調教のフィクスチャは skip せずに落とす。
+
+    fixture() は無ければ skip するが、このテストは probe が採取した実物が
+    無いと意味が無い。以前バックテストのテストが黙って skip に成り下がって
+    いたのを踏んでいるので、ここは欠けたら赤くする。
+    """
+    path = FIXTURES / name
+    assert path.exists(), f"{name} が無い。probe を回して採取すること"
+    return path.read_text(encoding="utf-8")
+
+
+def test_training_history_comes_back_whole_without_rid() -> None:
+    """rid を付けなければ、その馬の調教履歴が1リクエストで全部返ること。
+
+    ここがバックフィルの規模を決める。1頭1リクエストで済むなら約2.4万回
+    （血統と同じ約10時間）、1出走1リクエストなら約14.9万回（約62時間）で
+    10倍以上違う。実測をテストに固定しておかないと、次に触ったときに
+    「念のため rid を付ける」と書いてしまう。
+    """
+    from keiba.sources.netkeiba import parse_horse_training
+
+    whole = parse_horse_training(_training_fixture("netkeiba_horse_training_all.html"), "2023100375")
+    one_race = parse_horse_training(_training_fixture("netkeiba_horse_training.html"), "2023100375")
+
+    assert len(whole) > len(one_race), "rid 無しのほうが多く返るはず"
+    assert len(whole) >= 10
+
+
+def test_training_rows_are_fully_populated() -> None:
+    """調教の各列が実物から読めていること。
+
+    「収集は成功・中身は空」を何度も踏んでいるので、件数だけでなく
+    中身が入っていることを確かめる。
+    """
+    from keiba.sources.netkeiba import parse_horse_training
+
+    rows = parse_horse_training(_training_fixture("netkeiba_horse_training_all.html"), "2023100375")
+
+    assert all(w.horse_id == "2023100375" for w in rows)
+    assert all(w.course for w in rows), "コースが空の行を作らない"
+    assert all(len(w.times) == 5 for w in rows), "区間は常に5つ。詰めない"
+    # 坂路（栗坂）は800mしか走らないので6F・5Fは計測されない。
+    # ここを詰めてしまうと坂路の4Fをコースの6Fとして読むことになる。
+    slopes = [w for w in rows if "坂" in w.course]
+    assert slopes, "フィクスチャに坂路が含まれている前提"
+    assert all(w.times[0] is None for w in slopes)
+    assert all(w.times[3] is not None for w in slopes), "3Fは入っているはず"
+    assert any(w.rank for w in rows), "追い切り評価（S/A/B/C）が読めていない"
+    assert any(w.evaluation for w in rows), "短評が読めていない"
+
+
+def test_training_is_sorted_and_deduplicated() -> None:
+    """同じ調教が二重に入らないこと。
+
+    調教ページはレースごとに表が分かれており、同じ1本が前走向けの表と
+    次走向けの表の両方に載る。素直に積むと重複する。
+    """
+    from keiba.sources.netkeiba import parse_horse_training
+
+    rows = parse_horse_training(_training_fixture("netkeiba_horse_training_all.html"), "2023100375")
+    keys = [(w.workout_date, w.course) for w in rows]
+    assert len(keys) == len(set(keys))
+    assert keys == sorted(keys)
+
+
+def test_paywalled_training_page_yields_nothing() -> None:
+    """未ログインの案内ページから行を作らないこと。
+
+    案内ページは97行の料金表を持つので、表を素直に読むと大量の
+    ゴミ行ができる。「調教タイム」の見出しで弾く。
+    """
+    from keiba.sources.netkeiba import parse_horse_training
+
+    html = (
+        "<table><tr><th>コース</th><th>料金</th></tr>"
+        "<tr><td>マスター</td><td>4,980円/月</td></tr></table>"
+    )
+    assert parse_horse_training(html, "2023100375") == []
+
+
+def test_workouts_survive_the_round_trip_through_sqlite(tmp_path) -> None:
+    """調教が保存して読み戻せること。**走らせる前に**確かめる。
+
+    調教のバックフィルは約10時間かかる。走らせてから
+    「NOT NULL constraint failed」で全滅、という踏み方を出馬表で既にして
+    いるので、保存経路だけは手元で通しておく。
+    """
+    import datetime
+
+    from keiba.sources.netkeiba import parse_horse_training
+    from keiba.store import Store
+
+    rows = parse_horse_training(
+        _training_fixture("netkeiba_horse_training_all.html"), "2023100375"
+    )
+    with Store(tmp_path / "t.db") as store:
+        store.upsert_horse_workouts([w.to_dict() for w in rows])
+        # 二度入れても増えない（途中で止めて再実行する前提の設計）
+        store.upsert_horse_workouts([w.to_dict() for w in rows])
+
+        got = store.workouts_before("2023100375", datetime.date(2026, 7, 26))
+
+    assert got, "書いたのに読み戻せない"
+    assert len(got) < len(rows), "レース日より後の調教まで返している（先読み）"
+    assert all(g["workout_date"] < "2026-07-26" for g in got)
+    # times は list を JSON にして格納している。文字列のまま壊れていないこと
+    import json
+
+    assert len(json.loads(got[0]["times"])) == 5

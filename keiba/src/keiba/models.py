@@ -157,6 +157,34 @@ class Workout(_Row):
 
 
 @dataclass
+class HorseWorkout(_Row):
+    """netkeiba 有料プランの調教タイム1本ぶん。
+
+    既存の Workout がレース単位（race_id, umaban）なのに対し、こちらは
+    **馬単位**で持つ。netkeiba の調教ページが馬ごとに履歴を返す形なのが
+    理由の半分で、残り半分は先読み防止のため。
+
+    レースに紐づけて持つと「そのレース向けの追い切り」しか入らないが、
+    馬単位で日付ごとに持てば、任意のレースについて `workout_date < race_date`
+    で切るだけで先読みなしの特徴量が作れる。過去走の集計と同じ扱いにできる。
+    """
+
+    horse_id: str
+    workout_date: date
+    course: str                      # 栗東CW 美浦坂路 …
+    going: str | None = None         # 馬場
+    rider: str | None = None         # 乗り役
+    # 長い距離から順に5つ（6F-5F-4F-3F-1F）。計測していない区間は None で埋める。
+    # 坂路は800mしか走らないので先頭2つが常に None になる。詰めてしまうと
+    # 坂路の4Fタイムとコースの6Fタイムを取り違えるため、位置を保つ。
+    times: list[float | None] = field(default_factory=list)
+    position: str | None = None      # 併せ馬での位置
+    leg: str | None = None           # 脚色（一杯 強め 馬也）
+    evaluation: str | None = None    # 短評（動き軽快 反応平凡 …）
+    rank: str | None = None          # netkeiba の追い切り評価 S A B C
+
+
+@dataclass
 class TrainerComment(_Row):
     race_id: str
     umaban: int
