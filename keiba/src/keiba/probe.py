@@ -244,15 +244,38 @@ class Probe:
             netkeiba_auth.login(self.fetcher)
         except netkeiba_auth.LoginError as exc:
             log.error("ログインできない: %s", exc)
+            # 診断はログではなく manifest に残す。Actions のログを丸ごと取りに
+            # いくのは重く、必要な数行を探すのに毎回大きな往復が要るため。
             self.manifest.append(
-                {"label": "member_login", "url": netkeiba_auth.LOGIN_URL,
-                 "ok": False, "error": str(exc)}
+                {
+                    "label": "member_login",
+                    "url": netkeiba_auth.LOGIN_URL,
+                    "ok": False,
+                    "error": str(exc),
+                    "form": netkeiba_auth.inspect_login_form(self.fetcher),
+                }
             )
             return
 
         self.manifest.append(
             {"label": "member_login", "url": netkeiba_auth.LOGIN_URL, "ok": True}
         )
+
+        # ここが今回の目的。課金した情報が実際に開くかを、壁の有無で判定する
+        if horse_ids:
+            verdict = netkeiba_auth.check_paid_access(
+                self.fetcher, horse_ids[0], race_id
+            )
+            for name, info in verdict.items():
+                log.info(
+                    "有料ページ %s: %s（%s）",
+                    name,
+                    "**開いた**" if not info.get("paywalled", True) else "まだ壁",
+                    info.get("title", info.get("error", "")),
+                )
+            self.manifest.append(
+                {"label": "paid_access", "url": "", "ok": True, "verdict": verdict}
+            )
 
         # 会員ページのヘッダにはアカウント名やメールアドレスが載る。
         # このリポジトリは公開なので、HTML をそのままコミットすると漏れる。

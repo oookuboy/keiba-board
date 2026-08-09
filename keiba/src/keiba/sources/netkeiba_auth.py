@@ -152,6 +152,32 @@ _PROBE_WORDS = (
 )
 
 
+def check_paid_access(fetcher: Fetcher, horse_id: str, race_id: str) -> dict:
+    """有料ページが実際に開くかを確かめる。
+
+    これが今回の目的そのもの。課金しても取れないなら、モデルに足す前に
+    そう分かる必要がある。「取れたつもりで空」が一番損なので、壁の有無を
+    はっきり返す。本文はログに出さない（Actions のログは公開）。
+    """
+    from keiba.probe import HORSE_LEVEL_PAGES, _table_structure
+
+    out: dict[str, dict] = {}
+    for name, tmpl in HORSE_LEVEL_PAGES:
+        url = tmpl.format(horse_id=horse_id, race_id=race_id)
+        try:
+            html = fetcher.fetch(url, force=True)
+        except FetchError as exc:
+            out[name] = {"error": str(exc)}
+            continue
+        out[name] = {
+            "title": _title(html),
+            "len": len(html),
+            "paywalled": is_paywalled(html),
+            "tables": _table_structure(html),
+        }
+    return out
+
+
 def inspect_login_form(fetcher: Fetcher) -> dict:
     """ログイン画面のフォーム構造を読む。
 
