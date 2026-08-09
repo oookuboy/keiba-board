@@ -64,7 +64,7 @@
       "label": "db_race_list_20260802",
       "url": "https://db.netkeiba.com/race/list/20260802/",
       "ok": true,
-      "chars": 55215,
+      "chars": 55400,
       "title": "2026年08月02日のレース情報 | 競馬データベース - netkeiba"
     },
     {
@@ -91,6 +91,13 @@
     {
       "label": "horse_training_main",
       "url": "https://db.netkeiba.com/?pid=horse_training&id=2023100375&rid=202607020412",
+      "ok": true,
+      "chars": 47607,
+      "title": "プレミアムサービス案内 - netkeiba"
+    },
+    {
+      "label": "horse_training_all_main",
+      "url": "https://db.netkeiba.com/?pid=horse_training&id=2023100375",
       "ok": true,
       "chars": 47607,
       "title": "プレミアムサービス案内 - netkeiba"
@@ -124,10 +131,17 @@
       "title": "プレミアムサービス案内 - netkeiba"
     },
     {
+      "label": "horse_training_all_sub",
+      "url": "https://db.netkeiba.com/?pid=horse_training&id=2023100699",
+      "ok": true,
+      "chars": 47607,
+      "title": "プレミアムサービス案内 - netkeiba"
+    },
+    {
       "label": "horse_2023100375",
       "url": "https://db.netkeiba.com/horse/2023100375/",
       "ok": true,
-      "chars": 63551,
+      "chars": 63378,
       "title": "エールドリー (Ailes Dorees) | 競走馬データ - netkeiba"
     },
     {
@@ -141,7 +155,7 @@
       "label": "horse_2023100699",
       "url": "https://db.netkeiba.com/horse/2023100699/",
       "ok": true,
-      "chars": 62714,
+      "chars": 62576,
       "title": "ヒマラヤミュサ (Himalaya Musa) | 競走馬データ - netkeiba"
     },
     {
@@ -164,7 +178,7 @@
         "kyusya_comment": {
           "title": "エールドリーの厩舎コメント | 競走馬データ- netkeiba",
           "len": 41092,
-          "paywalled": true,
+          "paywalled": false,
           "tables": [
             {
               "class": [
@@ -236,7 +250,7 @@
         "horse_training": {
           "title": "エールドリーの調教タイム｜競走馬データ- netkeiba",
           "len": 40958,
-          "paywalled": true,
+          "paywalled": false,
           "tables": [
             {
               "class": [
@@ -290,6 +304,268 @@
               ]
             }
           ]
+        },
+        "horse_training_all": {
+          "title": "エールドリーの調教タイム｜競走馬データ- netkeiba",
+          "len": 49398,
+          "paywalled": false,
+          "tables": [
+            {
+              "class": [
+                "race_table_01",
+                "nk_tb_common"
+              ],
+              "rows": 3,
+              "headers": [
+                "日付",
+                "コース",
+                "馬場",
+                "乗り役",
+                "調教タイム",
+                "位置",
+                "脚色",
+                "評価",
+                "映像"
+              ],
+              "cell_classes": [
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "TrainingTimeData",
+                  "txt_l"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ]
+              ]
+            },
+            {
+              "class": [
+                "race_table_01",
+                "nk_tb_common"
+              ],
+              "rows": 3,
+              "headers": [
+                "日付",
+                "コース",
+                "馬場",
+                "乗り役",
+                "調教タイム",
+                "位置",
+                "脚色",
+                "評価",
+                "映像"
+              ],
+              "cell_classes": [
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "TrainingTimeData",
+                  "txt_l"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ]
+              ]
+            },
+            {
+              "class": [
+                "race_table_01",
+                "nk_tb_common"
+              ],
+              "rows": 6,
+              "headers": [
+                "日付",
+                "コース",
+                "馬場",
+                "乗り役",
+                "調教タイム",
+                "位置",
+                "脚色",
+                "評価",
+                "映像"
+              ],
+              "cell_classes": [
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "TrainingTimeData",
+                  "txt_l"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ]
+              ]
+            },
+            {
+              "class": [
+                "race_table_01",
+                "nk_tb_common"
+              ],
+              "rows": 5,
+              "headers": [
+                "日付",
+                "コース",
+                "馬場",
+                "乗り役",
+                "調教タイム",
+                "位置",
+                "脚色",
+                "評価",
+                "映像"
+              ],
+              "cell_classes": [
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "TrainingTimeData",
+                  "txt_l"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ]
+              ]
+            },
+            {
+              "class": [
+                "race_table_01",
+                "nk_tb_common"
+              ],
+              "rows": 4,
+              "headers": [
+                "日付",
+                "コース",
+                "馬場",
+                "乗り役",
+                "調教タイム",
+                "位置",
+                "脚色",
+                "評価",
+                "映像"
+              ],
+              "cell_classes": [
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "TrainingTimeData",
+                  "txt_l"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ],
+                [
+                  "txt_center"
+                ]
+              ]
+            }
+          ]
         }
       }
     },
@@ -297,7 +573,7 @@
       "label": "member_kyusya_comment_0",
       "url": "https://db.netkeiba.com/horse/kyusya_comment.html?id=2023100375",
       "ok": true,
-      "paywalled": true,
+      "paywalled": false,
       "structure": [
         {
           "class": [
@@ -370,7 +646,7 @@
       "label": "member_horse_training_0",
       "url": "https://db.netkeiba.com/?pid=horse_training&id=2023100375&rid=202607020412",
       "ok": true,
-      "paywalled": true,
+      "paywalled": false,
       "structure": [
         {
           "class": [
@@ -426,10 +702,273 @@
       ]
     },
     {
+      "label": "member_horse_training_all_0",
+      "url": "https://db.netkeiba.com/?pid=horse_training&id=2023100375",
+      "ok": true,
+      "paywalled": false,
+      "structure": [
+        {
+          "class": [
+            "race_table_01",
+            "nk_tb_common"
+          ],
+          "rows": 3,
+          "headers": [
+            "日付",
+            "コース",
+            "馬場",
+            "乗り役",
+            "調教タイム",
+            "位置",
+            "脚色",
+            "評価",
+            "映像"
+          ],
+          "cell_classes": [
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "TrainingTimeData",
+              "txt_l"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ]
+          ]
+        },
+        {
+          "class": [
+            "race_table_01",
+            "nk_tb_common"
+          ],
+          "rows": 3,
+          "headers": [
+            "日付",
+            "コース",
+            "馬場",
+            "乗り役",
+            "調教タイム",
+            "位置",
+            "脚色",
+            "評価",
+            "映像"
+          ],
+          "cell_classes": [
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "TrainingTimeData",
+              "txt_l"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ]
+          ]
+        },
+        {
+          "class": [
+            "race_table_01",
+            "nk_tb_common"
+          ],
+          "rows": 6,
+          "headers": [
+            "日付",
+            "コース",
+            "馬場",
+            "乗り役",
+            "調教タイム",
+            "位置",
+            "脚色",
+            "評価",
+            "映像"
+          ],
+          "cell_classes": [
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "TrainingTimeData",
+              "txt_l"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ]
+          ]
+        },
+        {
+          "class": [
+            "race_table_01",
+            "nk_tb_common"
+          ],
+          "rows": 5,
+          "headers": [
+            "日付",
+            "コース",
+            "馬場",
+            "乗り役",
+            "調教タイム",
+            "位置",
+            "脚色",
+            "評価",
+            "映像"
+          ],
+          "cell_classes": [
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "TrainingTimeData",
+              "txt_l"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ]
+          ]
+        },
+        {
+          "class": [
+            "race_table_01",
+            "nk_tb_common"
+          ],
+          "rows": 4,
+          "headers": [
+            "日付",
+            "コース",
+            "馬場",
+            "乗り役",
+            "調教タイム",
+            "位置",
+            "脚色",
+            "評価",
+            "映像"
+          ],
+          "cell_classes": [
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "TrainingTimeData",
+              "txt_l"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ]
+          ]
+        }
+      ]
+    },
+    {
       "label": "member_kyusya_comment_1",
       "url": "https://db.netkeiba.com/horse/kyusya_comment.html?id=2023100699",
       "ok": true,
-      "paywalled": true,
+      "paywalled": false,
       "structure": [
         {
           "class": [
@@ -467,24 +1006,134 @@
       "structure": []
     },
     {
+      "label": "member_horse_training_all_1",
+      "url": "https://db.netkeiba.com/?pid=horse_training&id=2023100699",
+      "ok": true,
+      "paywalled": false,
+      "structure": [
+        {
+          "class": [
+            "race_table_01",
+            "nk_tb_common"
+          ],
+          "rows": 3,
+          "headers": [
+            "日付",
+            "コース",
+            "馬場",
+            "乗り役",
+            "調教タイム",
+            "位置",
+            "脚色",
+            "評価",
+            "映像"
+          ],
+          "cell_classes": [
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "TrainingTimeData",
+              "txt_l"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ]
+          ]
+        },
+        {
+          "class": [
+            "race_table_01",
+            "nk_tb_common"
+          ],
+          "rows": 7,
+          "headers": [
+            "日付",
+            "コース",
+            "馬場",
+            "乗り役",
+            "調教タイム",
+            "位置",
+            "脚色",
+            "評価",
+            "映像"
+          ],
+          "cell_classes": [
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "TrainingTimeData",
+              "txt_l"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ],
+            [
+              "txt_center"
+            ]
+          ]
+        }
+      ]
+    },
+    {
       "label": "today_list_20260809",
       "url": "https://db.netkeiba.com/race/list/20260809/",
       "ok": true,
-      "chars": 31132,
+      "chars": 31121,
       "title": "2026年08月09日のレース情報 | 競馬データベース - netkeiba"
     },
     {
       "label": "future_list_20260808",
       "url": "https://db.netkeiba.com/race/list/20260808/",
       "ok": true,
-      "chars": 32591,
+      "chars": 32602,
       "title": "2026年08月08日のレース情報 | 競馬データベース - netkeiba"
     },
     {
       "label": "future_list_20260809",
       "url": "https://db.netkeiba.com/race/list/20260809/",
       "ok": true,
-      "chars": 31220,
+      "chars": 31121,
       "title": "2026年08月09日のレース情報 | 競馬データベース - netkeiba"
     },
     {
@@ -6882,7 +7531,7 @@
       "label": "jra_info_L1",
       "url": "https://www.jra.go.jp/JRADB/accessI.html",
       "ok": true,
-      "chars": 67950,
+      "chars": 67948,
       "title": "今週の開催お知らせ JRA",
       "doAction": [
         {
