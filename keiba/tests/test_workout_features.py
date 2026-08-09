@@ -160,3 +160,41 @@ def test_missing_workouts_do_not_break_the_pipeline(tmp_path) -> None:
     got = attach(entries, workouts)
     assert pd.isna(got.loc[0, "w_last_3f"])
     assert coverage(got) == 0.0
+
+
+def test_concatenated_gzip_chunks_read_back_as_one(tmp_path) -> None:
+    """分割して集めた調教を、繋ぐだけで1本として読めること。
+
+    収集は3チャンクに分かれて別々の artifact に出る。ワークフローは
+    `cat workouts-*.jsonl.gz > workouts.jsonl.gz` で繋いでいるだけで、
+    これは gzip が連結を1本のストリームとして読める仕様に頼っている。
+
+    ここが崩れると、集め終わってから「読めない」と分かる。10時間かけた
+    あとで気づくのは高いので、先に固定しておく。
+    """
+    import gzip
+
+    from keiba.backfill import load_workout_file
+    from keiba.store import Store
+
+    chunks = []
+    for chunk in range(3):
+        path = tmp_path / f"workouts-{chunk}.jsonl.gz"
+        with gzip.open(path, "wt", encoding="utf-8") as fh:
+            for i in range(2):
+                fh.write(
+                    '{"horse_id": "H%d%d", "workout_date": "2026-01-0%d",'
+                    ' "course": "栗坂", "times": "[null, null, 52.0, 38.0, 13.0]",'
+                    ' "going": "良", "rider": null, "position": null,'
+                    ' "leg": null, "evaluation": null, "rank": "B"}\n'
+                    % (chunk, i, i + 1)
+                )
+        chunks.append(path)
+
+    merged = tmp_path / "workouts.jsonl.gz"
+    merged.write_bytes(b"".join(p.read_bytes() for p in chunks))
+
+    with Store(tmp_path / "m.db") as store:
+        assert load_workout_file(store, merged) == 6, "連結したぶんが全部読めていない"
+        rows = store.conn.execute("SELECT COUNT(*) FROM horse_workouts").fetchone()[0]
+    assert rows == 6
