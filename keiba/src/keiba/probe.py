@@ -73,8 +73,13 @@ DATA_TABLE_CLASSES = ("nk_tb_common", "race_table", "db_table", "tb_common")
 # ログイン後に取ったページのヘッダに入るアカウント情報。
 # gitignore のパスを間違えていたせいで、これを含むHTMLを公開リポジトリへ
 # 4回コミットしていた。パスの綴りに頼らず、書き出す直前に必ず落とす。
+#
+# パターンは文字列を組み立てて作る。履歴を洗浄したとき、この行そのものが
+# 置換対象に一致して書き換えられ、洗浄コードのほうが壊れた。同じ形を
+# 繰り返さないよう、生のパターンをソースに直接置かない。
+_NICKNAME_TAG = "header_nickname"
 ACCOUNT_PATTERNS = (
-    re.compile(r'<span class="header_nickname">(scrubbed)</span>', re.S),
+    re.compile(r'<span class="' + _NICKNAME_TAG + r'">.*?</span>', re.S),
     re.compile(r'https?://[^"\'\s]*findfriends\.jp/img/profile/[^"\'\s]*'),
     re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"),
 )

@@ -200,14 +200,17 @@ def test_scrub_removes_the_logged_in_header() -> None:
     """
     from keiba.probe import scrub_account
 
+    # 履歴の洗浄でこのテストごと書き換えられて、何も確かめない状態に
+    # なっていたことがある。入力も組み立てて作る。
+    nickname = "だれかの表示名"
     html = (
-        '<span class="header_nickname">(scrubbed)</span>'
-        '<img src="(scrubbed)" />'
-        '<a>someone@example.com</a>'
+        '<span class="' + "header_nickname" + '">' + nickname + "</span>"
+        '<img src="https://cdnv2.findfriends.jp/img/profile/15/1234_4.jpg?897" />'
+        "<a>someone@example.com</a>"
         '<table class="race_table_01"><tr><td>栗東CW 82.4</td></tr></table>'
     )
     out = scrub_account(html)
-    assert "おじや" not in out
+    assert nickname not in out
     assert "findfriends.jp" not in out
     assert "someone@example.com" not in out
     assert "82.4" in out, "本文の表は残すこと"
