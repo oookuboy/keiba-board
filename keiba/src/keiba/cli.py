@@ -224,6 +224,60 @@ def cmd_review(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_edge(args: argparse.Namespace) -> int:
+    """モデルと市場の食い違いに妙味があるかを、実払戻で測る。
+
+    モデルの順位付けは市場より下手だが、それは儲からないことを意味しない。
+    賭けで必要なのは平均的に上手いことではなく、市場が間違えている場所を
+    見つけること。ここで妙味がゼロなら、能力モデルを積み増しても構造は
+    変わらない可能性が高い。次に何をするかがこの測定で決まる。
+    """
+    import numpy as np
+
+    from keiba import dataset, edge, ml
+
+    with Store(args.db) as store:
+        df = dataset.prepare(store)
+        train = df[df["race_date"] < str(args.valid_from)]
+        valid = df[df["race_date"] >= str(args.valid_from)].copy()
+        if train.empty or valid.empty:
+            log.error("分割が空になった（境界 %s）", args.valid_from)
+            return 1
+
+        # 市場カーブは学習期間だけで作る。未来を混ぜると市場が実際より
+        # 賢く見え、モデルの乖離が過小評価される。
+        curve = edge.market_curve(train, dataset.TARGET)
+        log.info("市場の織り込み（単勝オッズ帯 → 3着内率）:\n%s", curve.to_string())
+
+        result = ml.train(df, valid_from=args.valid_from)
+        p_model = ml.predict(result.booster, valid)
+        p_market = edge.apply_curve(valid, curve).to_numpy()
+
+        place = edge.returns_for(valid, edge.payout_map(store, "複勝"))
+        win = edge.returns_for(valid, edge.payout_map(store, "単勝"))
+
+    print()
+    print(f"モデル AUC {result.auc:.5f} / 検証 {len(valid):,} 行")
+    table = edge.by_edge(valid, dataset.TARGET, p_model - p_market, place, win)
+    print(edge.format_table(table, "モデルと市場の乖離ごとの実回収率"))
+
+    # 狙いは穴なので、人気薄に絞っても同じことを見る。全体で妙味が無くても
+    # 人気薄だけにあるなら、そこが買い場になる。
+    longshot = valid["market_popularity"] >= args.longshot_from
+    if longshot.sum() > 1000:
+        mask = longshot.to_numpy()
+        print()
+        print(edge.format_table(
+            edge.by_edge(
+                valid[mask], dataset.TARGET,
+                (p_model - p_market)[mask], place[mask], win[mask],
+                buckets=5,
+            ),
+            f"人気薄（{args.longshot_from}番人気以下）だけで見た場合",
+        ))
+    return 0
+
+
 def cmd_eval_workouts(args: argparse.Namespace) -> int:
     """調教を足すと精度が動くかを、同じ分割で並べて測る。
 
@@ -420,6 +474,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--offset", type=int, default=0, help="対象リストの先頭から飛ばす頭数（並列分割用）"
     )
     p.set_defaults(func=cmd_backfill_workouts)
+
+    p = sub.add_parser(
+        "edge", help="モデルと市場の乖離に妙味があるかを実払戻で測る"
+    )
+    p.add_argument("--valid-from", type=_date, required=True)
+    p.add_argument(
+        "--longshot-from", type=int, default=6, help="人気薄とみなす人気順"
+    )
+    p.set_defaults(func=cmd_edge)
 
     p = sub.add_parser(
         "eval-workouts", help="調教を足すと精度が動くかを並べて測る"
