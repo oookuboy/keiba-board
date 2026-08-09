@@ -96,6 +96,17 @@ CREATE TABLE IF NOT EXISTS workouts (
     PRIMARY KEY (race_id, umaban)
 );
 
+-- netkeiba 有料プランの調教タイム。馬単位・日付単位で持つ。
+-- レースに紐づけないのは、任意のレースについて workout_date < race_date で
+-- 切るだけで先読みなしの特徴量を作れるようにするため。
+CREATE TABLE IF NOT EXISTS horse_workouts (
+    horse_id TEXT NOT NULL, workout_date TEXT NOT NULL, course TEXT NOT NULL,
+    going TEXT, rider TEXT, times TEXT, position TEXT, leg TEXT, evaluation TEXT,
+    PRIMARY KEY (horse_id, workout_date, course)
+);
+CREATE INDEX IF NOT EXISTS idx_horse_workouts_date
+    ON horse_workouts(horse_id, workout_date);
+
 CREATE TABLE IF NOT EXISTS comments (
     race_id TEXT NOT NULL, umaban INTEGER NOT NULL,
     body TEXT, source TEXT, fetched_at TEXT,
