@@ -71,7 +71,7 @@
       "label": "db_race_main",
       "url": "https://db.netkeiba.com/race/202607020412/",
       "ok": true,
-      "chars": 97714,
+      "chars": 97565,
       "title": "3歳未勝利｜2026年8月2日 | 競馬データベース - netkeiba"
     },
     {
@@ -127,7 +127,7 @@
       "label": "horse_2023100375",
       "url": "https://db.netkeiba.com/horse/2023100375/",
       "ok": true,
-      "chars": 63484,
+      "chars": 63552,
       "title": "エールドリー (Ailes Dorees) | 競走馬データ - netkeiba"
     },
     {
@@ -141,7 +141,7 @@
       "label": "horse_2023100699",
       "url": "https://db.netkeiba.com/horse/2023100699/",
       "ok": true,
-      "chars": 62772,
+      "chars": 62693,
       "title": "ヒマラヤミュサ (Himalaya Musa) | 競走馬データ - netkeiba"
     },
     {
@@ -161,14 +161,14 @@
       "label": "today_list_20260809",
       "url": "https://db.netkeiba.com/race/list/20260809/",
       "ok": true,
-      "chars": 33469,
+      "chars": 33665,
       "title": "2026年08月09日のレース情報 | 競馬データベース - netkeiba"
     },
     {
       "label": "future_list_20260808",
       "url": "https://db.netkeiba.com/race/list/20260808/",
       "ok": true,
-      "chars": 35135,
+      "chars": 34939,
       "title": "2026年08月08日のレース情報 | 競馬データベース - netkeiba"
     },
     {
