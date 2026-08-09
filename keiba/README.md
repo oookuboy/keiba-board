@@ -165,14 +165,29 @@ python -m keiba.cli backtest --from 2026-01-01 --to 2026-07-31
 ## ファイル構成
 
 ```
-index.html              閲覧UI（リポジトリ直下。単一ファイル・依存なし）
-keiba/
+docs/                   **GitHub Pages の配信元はここだけ**
+  index.html            閲覧UI（単一ファイル・依存なし）
   data/                 ボードが読む JSON（predict/review が生成）
+keiba/
   raw/YYYY/*.jsonl.gz   生データの正。SQLite はここから毎回作り直す使い捨て
   raw/pedigree.jsonl.gz 血統（馬単位）
+  raw/workouts*.jsonl.gz 調教（netkeiba 有料）。gitignore 済み
   config/weights.yml    全重み。チューニングはここだけを触る
   config/sire_aptitude.json  種牡馬適性表（build が生成）
   LESSONS.md            review が追記する実戦ログ
+
+### Pages の配信範囲について
+
+GitHub Pages はルートから配信すると**リポジトリ内の全ファイル**を配る。
+ボードが `keiba/data/index.json` を取れていたのがその証拠で、同じ理屈で
+`keiba/raw/` の中身も URL を叩けば誰でも落とせる。リポジトリを非公開に
+しても Pages が配っているものは公開のままなので、有料データを置く前に
+配信元を絞る必要がある。
+
+    Settings → Pages → Source → Deploy from a branch → main / **docs**
+
+この設定を戻すと、調教データが公開される。テスト（test_publication.py）が
+構造側を見張っているが、Settings 側は見張れないので触らないこと。
   src/keiba/            実装
   tests/fixtures/       probe が採取した実HTML
 ```

@@ -212,10 +212,10 @@ let INDEX=null, DAY=null, FILTER="all";
 
 async function boot(){
   try{
-    INDEX=await (await fetch("keiba/data/index.json",{cache:"no-cache"})).json();
+    INDEX=await (await fetch("data/index.json",{cache:"no-cache"})).json();
   }catch(e){
     document.getElementById("races").innerHTML=
-      '<p class="empty">keiba/data/index.json を読めない。<br>'+
+      '<p class="empty">data/index.json を読めない。<br>'+
       'keiba-predict ワークフローがまだ走っていない可能性がある。</p>';
     return;
   }
@@ -253,7 +253,7 @@ function renderDays(){
 async function load(date){
   [...document.querySelectorAll("#days button")]
     .forEach(b=>b.classList.toggle("on",b.dataset.date===date));
-  DAY=await (await fetch(`keiba/data/${date}.json`,{cache:"no-cache"})).json();
+  DAY=await (await fetch(`data/${date}.json`,{cache:"no-cache"})).json();
   renderSummary();
   renderRaces();
 }
