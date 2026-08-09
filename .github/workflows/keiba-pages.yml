@@ -22,6 +22,18 @@ on:
       - "keiba/board.html"
       - "keiba/data/**"
       - ".github/workflows/keiba-pages.yml"
+
+  # 予想・回顧が結果を push しても、上の push トリガでは**起動しない**。
+  # Actions の標準トークンで行った push は他のワークフローを起こさない、
+  # というGitHubの仕様（無限ループ防止）のため。実際これで、回顧が終わって
+  # いるのにサイトが前日のままになった。
+  #
+  # workflow_run なら push ではなくワークフローの完了で起動するので、
+  # この制限を受けない。
+  workflow_run:
+    workflows: ["keiba-weekend"]
+    types: [completed]
+
   workflow_dispatch:
 
 permissions:

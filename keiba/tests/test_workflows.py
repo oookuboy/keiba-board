@@ -130,3 +130,35 @@ def test_the_review_runs_on_the_day_of_the_races() -> None:
     minute, hour, _, _, dow = same_day.group(1).split()
     assert int(hour) < 14, "JST の深夜になる。UTC 13時=JST 22時あたりに置くこと"
     assert set(dow.split(",")) == {"6", "0"}, "土日に走らせること"
+
+
+def test_data_committing_workflows_can_trigger_a_redeploy() -> None:
+    """結果を push するワークフローが、配信を起こせること。
+
+    Actions の標準トークンで行った push は、他のワークフローを起動しない
+    （GitHub の無限ループ防止の仕様）。そのため keiba-weekend が回顧結果を
+    コミットしても、paths を見ている push トリガでは配信が走らない。実際に
+    これで、回顧が終わっているのにサイトが前日のままになった。
+
+    workflow_run で拾えば push を経由しないので、この制限を受けない。
+    """
+    import yaml
+
+    pages = yaml.safe_load((WORKFLOWS / "keiba-pages.yml").read_text(encoding="utf-8"))
+    triggers = pages[True]           # YAML の `on:` は真偽値 True として読まれる
+    assert "workflow_run" in triggers, (
+        "配信が workflow_run で起動しない。標準トークンの push では"
+        " 起動しないので、これが無いと結果がサイトに出ない"
+    )
+
+    watched = triggers["workflow_run"]["workflows"]
+    committers = []
+    for path in WORKFLOWS.glob("*.yml"):
+        text = path.read_text(encoding="utf-8")
+        if "keiba/data" in text and "git push" in text:
+            committers.append(yaml.safe_load(text)["name"])
+
+    missing = [name for name in committers if name not in watched]
+    assert not missing, (
+        f"データをコミットするのに配信を起こさないワークフロー: {missing}"
+    )
