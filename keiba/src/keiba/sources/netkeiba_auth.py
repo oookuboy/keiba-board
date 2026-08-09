@@ -85,12 +85,18 @@ def login(fetcher: Fetcher, *, required: bool = False) -> bool:
     """
     creds = credentials()
     if creds is None:
+        # 「Secretsに入れたのに届いていない」と「値が間違っている」は別問題。
+        # 名前の綴り違いは実際よくあるので、どちらが欠けたかを出す（値は出さない）。
+        detail = (
+            f"{EMAIL_ENV}={'あり' if os.environ.get(EMAIL_ENV) else 'なし'} "
+            f"{PASSWORD_ENV}={'あり' if os.environ.get(PASSWORD_ENV) else 'なし'}"
+        )
         if required:
             raise LoginError(
-                f"{EMAIL_ENV} / {PASSWORD_ENV} が設定されていない。"
-                " GitHub Actions では Secrets から env に渡すこと"
+                f"認証情報が env に届いていない（{detail}）。"
+                " Secrets の名前の綴りと、ワークフローの env: 渡しを確認すること"
             )
-        log.info("netkeiba の認証情報なし。無料範囲で動かす")
+        log.info("netkeiba の認証情報なし（%s）。無料範囲で動かす", detail)
         return False
 
     email, password = creds
@@ -98,7 +104,7 @@ def login(fetcher: Fetcher, *, required: bool = False) -> bool:
 
     try:
         # ログインは毎回ネットワークに出す。キャッシュに載せない
-        fetcher.fetch(
+        response = fetcher.fetch(
             LOGIN_URL,
             method="POST",
             data={
@@ -122,14 +128,49 @@ def login(fetcher: Fetcher, *, required: bool = False) -> bool:
 
     if not any(m in page for m in LOGGED_IN_MARKERS):
         fetcher.cache_namespace = ""
+        # 何が起きたかを、認証情報を出さずに分かる形で残す。
+        # 当てずっぽうで直すより、手がかりを持って直すほうが早い。
+        log.error("ログイン診断: %s", diagnose(response, page))
         raise LoginError(
             "ログインしたつもりで未ログインのまま。"
-            " メールアドレスかパスワードが違う可能性がある"
-            "（値はログに出していない）"
+            " 上の診断を見て、投稿先・フィールド名・判定文言のどれが違うかを絞ること"
+            "（認証情報はログに出していない）"
         )
 
     log.info("netkeiba にログインした")
     return True
+
+
+# ログイン後のページに出そうな語の候補。どれが実際に出るか分からないので、
+# 判定に使う LOGGED_IN_MARKERS とは別に、診断用として広めに見る。
+_PROBE_WORDS = (
+    "ログアウト", "マイページ", "会員情報", "ログイン", "パスワード",
+    "メールアドレス", "登録", "エラー", "正しく", "一致しません",
+    "プレミアム", "退会", "ようこそ",
+)
+
+
+def diagnose(login_response: str, verify_page: str) -> dict:
+    """ログインが通らない原因を絞るための手がかり。
+
+    認証情報は一切含めない。ページのタイトルと、特定の語が出たかどうかの
+    真偽値だけを返す。Actions のログは公開リポジトリでは誰でも読めるので、
+    本文をそのまま出してはいけない。
+    """
+    import re
+
+    def title(html: str) -> str:
+        m = re.search(r"<title>(.*?)</title>", html, re.S)
+        return re.sub(r"\s+", " ", m.group(1)).strip()[:60] if m else "(なし)"
+
+    return {
+        "login_title": title(login_response),
+        "login_len": len(login_response),
+        "verify_title": title(verify_page),
+        "verify_len": len(verify_page),
+        "login_words": [w for w in _PROBE_WORDS if w in login_response],
+        "verify_words": [w for w in _PROBE_WORDS if w in verify_page],
+    }
 
 
 def _mask(email: str) -> str:
