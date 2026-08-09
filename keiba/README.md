@@ -117,8 +117,13 @@ SKILL.md の観点（血統適性・条件一変・展開・降級・騎手相�
 | 着順・払戻（当日） | JRA公式 `accessS` → `pw01srl…` | 検証済み。確定後すぐ出る |
 | 過去成績・払戻（翌日以降） | `db.netkeiba.com/race/{race_id}/` | 検証済み。3年分のバックフィル元 |
 | 血統（父・母父） | `db.netkeiba.com/horse/ped/{horse_id}/` | 検証済み |
-| 調教 | JRA公式 `accessT` | 未着手 |
-| 調教師コメント | — | **取得不能**。netkeiba は有料プラン限定 |
+| 調教タイム | `db.netkeiba.com/?pid=horse_training&id={horse_id}` | 有料プラン。**rid を付けない**と1回で全履歴が返る |
+| 調教師コメント | `db.netkeiba.com/horse/kyusya_comment.html?id=…` | 有料プラン。ログイン後は開く |
+
+調教は当初 JRA公式 `accessT` から取るつもりだったが、netkeiba の有料プランに
+加入したので、そちらから馬単位で引く。`rid` を付けるとそのレース向けの1本だけ、
+外すとその馬の全履歴が1リクエストで返る（実測 2本 vs 13本）。約14.9万回と
+約2.4万回の差になるので、必ず外して引く。
 
 **db.netkeiba には発走前のレースが存在しない。** 結果データベースなので、
 まだ行われていないレースは race_id ごと無い（2026-08-06 実測、8/8 の一覧に
@@ -175,6 +180,9 @@ keiba/
   config/weights.yml    全重み。チューニングはここだけを触る
   config/sire_aptitude.json  種牡馬適性表（build が生成）
   LESSONS.md            review が追記する実戦ログ
+  src/keiba/            実装
+  tests/fixtures/       probe が採取した実HTML
+```
 
 ### Pages の配信範囲について
 
@@ -188,9 +196,6 @@ GitHub Pages はルートから配信すると**リポジトリ内の全ファ�
 
 この設定を戻すと、調教データが公開される。テスト（test_publication.py）が
 構造側を見張っているが、Settings 側は見張れないので触らないこと。
-  src/keiba/            実装
-  tests/fixtures/       probe が採取した実HTML
-```
 
 ## 注意
 
