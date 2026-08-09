@@ -137,12 +137,16 @@ def test_member_fixtures_are_not_committable() -> None:
 
     ログイン後のページはヘッダにアカウント名やメールアドレスを含む。
     このリポジトリは公開なので、コミットすると漏れる。gitignore で塞ぐ。
+
+    以前ここは fixtures/member/ を見ていたが、probe の実際の出力先は
+    fixtures/probe/member/ だった。存在しないパスを見ていたので通り続け、
+    その裏で4回コミットしていた。**実際の出力先**を書くこと。
     """
     import pathlib
     import subprocess
 
     repo = pathlib.Path(__file__).parents[2]
-    target = "keiba/tests/fixtures/member/kyusya_comment_0.html"
+    target = "keiba/tests/fixtures/probe/member/kyusya_comment_0.html"
     result = subprocess.run(
         ["git", "check-ignore", target],
         cwd=repo, capture_output=True, text=True,
@@ -151,6 +155,62 @@ def test_member_fixtures_are_not_committable() -> None:
         f"{target} が gitignore されていない。会員ページを公開リポジトリへ"
         " コミットするとアカウント情報が漏れる"
     )
+
+
+def test_no_committed_fixture_carries_account_information() -> None:
+    """コミット済みのフィクスチャにアカウント情報が無いこと。
+
+    gitignore のパスを1つ守るテストでは足りなかった。ログインすると会員
+    ページに限らず**あらゆるページ**のヘッダにニックネームが入るため、
+    一覧ページ経由でも漏れていた。
+
+    パスを当てにいくのをやめ、実際に追跡されているファイルを全部見る。
+    こうしておけば、次に置き場所が変わっても気づける。
+    """
+    import pathlib
+    import subprocess
+
+    repo = pathlib.Path(__file__).parents[2]
+    tracked = subprocess.run(
+        ["git", "ls-files", "keiba/tests/fixtures"],
+        cwd=repo, capture_output=True, text=True, check=True,
+    ).stdout.split()
+
+    markers = ("header_nickname", "findfriends.jp/img/profile")
+    guilty = []
+    for name in tracked:
+        path = repo / name
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if any(m in text for m in markers):
+            guilty.append(name)
+
+    assert not guilty, (
+        "ログイン後のヘッダ（アカウント名・プロフィール画像）を含むファイルが"
+        f" コミットされている: {guilty[:5]}"
+    )
+
+
+def test_scrub_removes_the_logged_in_header() -> None:
+    """書き出す前にアカウント情報を落とせること。
+
+    gitignore のパス指定は綴りを間違えれば黙って効かなくなる。実際にそれで
+    漏らした。パスに頼らず、書き出す直前に必ず落とす側の保険をここで固定する。
+    """
+    from keiba.probe import scrub_account
+
+    html = (
+        '<span class="header_nickname">(scrubbed)</span>'
+        '<img src="(scrubbed)" />'
+        '<a>someone@example.com</a>'
+        '<table class="race_table_01"><tr><td>栗東CW 82.4</td></tr></table>'
+    )
+    out = scrub_account(html)
+    assert "おじや" not in out
+    assert "findfriends.jp" not in out
+    assert "someone@example.com" not in out
+    assert "82.4" in out, "本文の表は残すこと"
 
 
 def test_structure_summary_hides_cell_contents() -> None:

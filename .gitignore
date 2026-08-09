@@ -20,4 +20,11 @@ package-lock.json
 
 # 会員ログイン後に採取したHTML。ヘッダにアカウント名やメールが載るので
 # 公開リポジトリに絶対にコミットしない。パーサを書くための手元専用。
+#
+# 最初ここを keiba/tests/fixtures/member/ と書いていたが、probe の実際の
+# 出力先は fixtures/probe/member/ で、1文字も一致していなかった。守れて
+# いるつもりで4回コミットしていた（テストも存在しないパスを見ていたので
+# 通ってしまった）。パスを直したうえで、probe 側でも書き出す前に
+# アカウント情報を落とすようにしてある。gitignore だけに頼らない。
 keiba/tests/fixtures/member/
+keiba/tests/fixtures/probe/member/

@@ -70,6 +70,29 @@ HORSE_LEVEL_PAGES = [
 # netkeiba がデータ表に付けるクラス。レイアウト用の table と区別するために使う。
 DATA_TABLE_CLASSES = ("nk_tb_common", "race_table", "db_table", "tb_common")
 
+# ログイン後に取ったページのヘッダに入るアカウント情報。
+# gitignore のパスを間違えていたせいで、これを含むHTMLを公開リポジトリへ
+# 4回コミットしていた。パスの綴りに頼らず、書き出す直前に必ず落とす。
+ACCOUNT_PATTERNS = (
+    re.compile(r'<span class="header_nickname">(scrubbed)</span>', re.S),
+    re.compile(r'https?://[^"\'\s]*findfriends\.jp/img/profile/[^"\'\s]*'),
+    re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"),
+)
+
+
+def scrub_account(html: str) -> str:
+    """ログイン後のページからアカウントを特定できる部分を落とす。
+
+    ログインすると、会員ページに限らず**あらゆるページ**のヘッダに
+    ニックネームとプロフィール画像URLが入る。「会員ページだけ気をつける」
+    では足りず、実際に一覧ページ経由でも漏れていた。
+
+    パーサに要るのは本文の表なので、ヘッダを落としても困らない。
+    """
+    for pattern in ACCOUNT_PATTERNS:
+        html = pattern.sub("(scrubbed)", html)
+    return html
+
 
 def _extract_tables(html: str) -> str:
     """データの表だけを切り出す。
@@ -174,8 +197,10 @@ class Probe:
             )
             return None
 
+        # probe が書き出すファイルは全部ここを通る。ログイン後はどのページの
+        # ヘッダにもアカウント名が入るので、置き場所を問わず落としてから書く。
         (self.out_dir / f"{label}__{_safe_name(url)}.html").write_text(
-            html, encoding="utf-8"
+            scrub_account(html), encoding="utf-8"
         )
         entry: dict = {
             "label": label,
@@ -365,7 +390,9 @@ class Probe:
                 )
                 # 手元でパーサを書くためにファイルには残すが、gitignore 済みの
                 # member/ に置いてコミットされないようにする
-                (member_dir / f"{name}_{idx}.html").write_text(html, encoding="utf-8")
+                (member_dir / f"{name}_{idx}.html").write_text(
+                    scrub_account(html), encoding="utf-8"
+                )
 
                 # 表だけを切り出したものは pinned/ に置いてコミットする。
                 # 個人情報はページのヘッダ側にあり、表の中身は調教タイムと
