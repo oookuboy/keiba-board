@@ -28,3 +28,8 @@ package-lock.json
 # アカウント情報を落とすようにしてある。gitignore だけに頼らない。
 keiba/tests/fixtures/member/
 keiba/tests/fixtures/probe/member/
+
+# netkeiba 有料プランの調教タイム。公開リポジトリに置くと、課金者向けの
+# データを誰でも取れる形で再配布することになる。Actions の artifact に
+# 出して、学習時にそこから取る。リポジトリを非公開にするなら外してよい。
+keiba/raw/workouts*.jsonl.gz

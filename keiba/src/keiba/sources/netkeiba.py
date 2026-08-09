@@ -22,7 +22,15 @@ from datetime import date
 
 from bs4 import BeautifulSoup, Tag
 
-from keiba.models import VENUES, Entry, Payout, Race, RaceCard, Result
+from keiba.models import (
+    VENUES,
+    Entry,
+    HorseWorkout,
+    Payout,
+    Race,
+    RaceCard,
+    Result,
+)
 
 log = logging.getLogger(__name__)
 
@@ -370,3 +378,89 @@ def parse_pedigree(html: str) -> dict[str, str | None]:
         damsire = horse_name(bottom[1] if len(bottom) > 1 else None)
 
     return {"sire": sire, "dam": dam, "damsire": damsire, "sire_line": line}
+
+
+# ---------------------------------------------------------------- 調教タイム
+#
+# 有料プラン限定。/?pid=horse_training&id={horse_id} で、その馬の調教履歴が
+# **1リクエストで全部**返る（rid を付けるとそのレース向けの1本に絞られる）。
+# 実測で確かめた差で、馬単位なら約2.4万リクエスト、出走単位なら約14.9万に
+# なる。バックフィルの規模が10倍違うので、rid は付けない。
+#
+# 表はレースごとに分かれて並ぶが、こちらはレースに紐づけず馬と日付で持つ。
+# そうすれば任意のレースについて workout_date < race_date で切るだけで
+# 先読みなしの特徴量が作れる。
+#
+# 列は見出しが9個なのに td が10個ある。見出しの無い列が追い切り評価
+# （S/A/B/C）で、その手前が短評。見出しと突き合わせて位置を決めると
+# ずれるので、左からの位置で読む。
+TRAINING_DATE_RE = re.compile(r"(\d{4})/(\d{1,2})/(\d{1,2})")
+
+# 調教タイムは長い距離から順に5つ。計測していない区間は「-」で埋まる。
+# 坂路は800mしか走らないので先頭2つが常に「-」になる。詰めると坂路の4Fと
+# コースの6Fを取り違えるため、位置を保ったまま None を入れる。
+TRAINING_TIME_SLOTS = 5
+
+
+def _training_times(value: str) -> list[float | None]:
+    parts = value.split()
+    out: list[float | None] = []
+    for part in parts[:TRAINING_TIME_SLOTS]:
+        try:
+            out.append(float(part))
+        except ValueError:
+            out.append(None)
+    out += [None] * (TRAINING_TIME_SLOTS - len(out))
+    return out
+
+
+def parse_horse_training(html: str, horse_id: str) -> list[HorseWorkout]:
+    """馬の調教履歴。有料プランでログインしていないと表そのものが出ない。
+
+    表が0件でも例外にはしない。デビュー前などで本当に空の馬が居るため。
+    「ログインが切れていて全馬0件」との区別は、件数の比率で backfill 側が見る。
+    """
+    soup = BeautifulSoup(html, "lxml")
+    out: list[HorseWorkout] = []
+    seen: set[tuple[str, str]] = set()
+
+    for table in soup.select("table"):
+        headers = [_text(c) for c in table.find_all("tr")[0].find_all(["th", "td"])]
+        if "調教タイム" not in headers:
+            continue
+
+        for row in table.find_all("tr")[1:]:
+            cells = row.find_all("td")
+            if len(cells) < 9:
+                continue
+            m = TRAINING_DATE_RE.search(_text(cells[0]))
+            if not m:
+                continue
+            day = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+            course = _text(cells[1])
+            if not course:
+                continue
+            # 同じ馬・同じ日・同じコースは同じ1本。レースごとの表に重複して
+            # 現れる（次走向けの表にも前走向けの表にも載る）ので落とす。
+            key = (day.isoformat(), course)
+            if key in seen:
+                continue
+            seen.add(key)
+
+            out.append(
+                HorseWorkout(
+                    horse_id=horse_id,
+                    workout_date=day,
+                    course=course,
+                    going=_text(cells[2]) or None,
+                    rider=_text(cells[3]) or None,
+                    times=_training_times(_text(cells[4])),
+                    position=_text(cells[5]) or None,
+                    leg=_text(cells[6]) or None,
+                    evaluation=_text(cells[7]) or None,
+                    rank=_text(cells[8]) or None,
+                )
+            )
+
+    out.sort(key=lambda w: w.workout_date)
+    return out

@@ -101,7 +101,8 @@ CREATE TABLE IF NOT EXISTS workouts (
 -- 切るだけで先読みなしの特徴量を作れるようにするため。
 CREATE TABLE IF NOT EXISTS horse_workouts (
     horse_id TEXT NOT NULL, workout_date TEXT NOT NULL, course TEXT NOT NULL,
-    going TEXT, rider TEXT, times TEXT, position TEXT, leg TEXT, evaluation TEXT,
+    going TEXT, rider TEXT, times TEXT, position TEXT, leg TEXT,
+    evaluation TEXT, rank TEXT,
     PRIMARY KEY (horse_id, workout_date, course)
 );
 CREATE INDEX IF NOT EXISTS idx_horse_workouts_date
@@ -221,6 +222,54 @@ class Store:
         n = self._upsert("horses", horses)
         self.conn.commit()
         return n
+
+    def upsert_horse_workouts(self, rows: Iterable[dict]) -> int:
+        n = self._upsert("horse_workouts", rows)
+        self.conn.commit()
+        return n
+
+    def horse_ids_without_workouts(self) -> list[str]:
+        """調教をまだ引いていない馬。**直近に走った馬から**返す。
+
+        血統のときは horse_id 昇順にしたが、こちらは最終出走日の新しい順に
+        する。理由は、途中まででも意味のあるデータにするため。
+
+        調教が効くかどうかは全部揃えるまで分からない、では困る。新しい側から
+        埋めれば、途中で止めても「直近◯ヶ月は全馬ぶん揃っている」状態になり、
+        その期間だけで調教あり／なしの学習を並べて比べられる。効かないと
+        分かったら、残りを引く必要がなくなる。
+        """
+        return [
+            r[0]
+            for r in self.conn.execute(
+                """
+                SELECT e.horse_id, MAX(r.race_date) AS last_run
+                FROM entries e
+                JOIN races r ON r.race_id = e.race_id
+                LEFT JOIN horse_workouts w ON w.horse_id = e.horse_id
+                WHERE e.horse_id <> '' AND w.horse_id IS NULL
+                GROUP BY e.horse_id
+                ORDER BY last_run DESC, e.horse_id
+                """
+            )
+        ]
+
+    def workouts_before(self, horse_id: str, before: date) -> list[dict]:
+        """そのレースより前の調教だけ。先読みを構造で防ぐ。
+
+        before は開催日そのもの。当日の追い切りは存在しない（最終追いは
+        水木）ので、等号を含めず素直に「より前」で切る。
+        """
+        cur = self.conn.execute(
+            """
+            SELECT * FROM horse_workouts
+            WHERE horse_id = ? AND workout_date < ?
+            ORDER BY workout_date DESC
+            """,
+            (horse_id, before.isoformat()),
+        )
+        cols = [c[0] for c in cur.description]
+        return [dict(zip(cols, row)) for row in cur]
 
     def apply_pedigree(self) -> int:
         """horses の血統を entries に流し込む。

@@ -28,6 +28,7 @@ RAW_DIR = Path("keiba/raw")
 CONFIG_DIR = Path("keiba/config")
 DB_PATH = Path("keiba/keiba.db")
 PEDIGREE_PATH = RAW_DIR / "pedigree.jsonl.gz"
+WORKOUT_PATH = RAW_DIR / "workouts.jsonl.gz"
 WEIGHTS_PATH = CONFIG_DIR / "weights.yml"
 SIRE_PATH = CONFIG_DIR / "sire_aptitude.json"
 DATA_DIR = Path("keiba/data")
@@ -63,12 +64,34 @@ def cmd_backfill_pedigree(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_backfill_workouts(args: argparse.Namespace) -> int:
+    """netkeiba 有料プランの調教タイムを収集する。
+
+    認証情報が無ければ collect_workouts が落とす。未ログインでも netkeiba は
+    200 で案内ページを返すので、黙って空を積ませないため。
+    """
+    with Store(args.db) as store:
+        rebuild(store, args.raw_dir)
+        backfill.load_workout_file(store, args.workouts)
+        fetched = backfill.collect_workouts(
+            Fetcher(cache_dir=args.cache),
+            store,
+            args.workouts,
+            args.limit,
+            args.offset,
+        )
+        remaining = len(store.horse_ids_without_workouts())
+    log.info("調教 %d本を取得。未取得の残り %d頭", fetched, remaining)
+    return 0
+
+
 def cmd_build(args: argparse.Namespace) -> int:
     """raw から SQLite を作り直し、種牡馬適性テーブルを吐く。"""
     args.db.unlink(missing_ok=True)
     with Store(args.db) as store:
         races = rebuild(store, args.raw_dir)
         backfill.load_pedigree_file(store, args.pedigree)
+        backfill.load_workout_file(store, args.workouts)
         updated = store.apply_pedigree()
         counts = store.counts()
 
@@ -292,6 +315,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--db", type=Path, default=DB_PATH)
     parser.add_argument("--config-dir", type=Path, default=CONFIG_DIR)
     parser.add_argument("--pedigree", type=Path, default=PEDIGREE_PATH)
+    parser.add_argument("--workouts", type=Path, default=WORKOUT_PATH)
     parser.add_argument("--cache", type=Path, default=Path(".cache/keiba"))
     parser.add_argument("--data-dir", type=Path, default=DATA_DIR)
     parser.add_argument("--lessons", type=Path, default=LESSONS_PATH)
@@ -309,6 +333,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--offset", type=int, default=0, help="対象リストの先頭から飛ばす頭数（並列分割用）"
     )
     p.set_defaults(func=cmd_backfill_pedigree)
+
+    p = sub.add_parser("backfill-workouts", help="調教タイムを収集する（要 netkeiba 有料）")
+    p.add_argument("--limit", type=int, default=None, help="1回で引く頭数の上限")
+    p.add_argument(
+        "--offset", type=int, default=0, help="対象リストの先頭から飛ばす頭数（並列分割用）"
+    )
+    p.set_defaults(func=cmd_backfill_workouts)
 
     p = sub.add_parser("build", help="raw から SQLite と種牡馬適性を作る")
     p.add_argument("--min-sire-runs", type=int, default=30)

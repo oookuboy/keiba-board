@@ -174,10 +174,14 @@ class HorseWorkout(_Row):
     course: str                      # 栗東CW 美浦坂路 …
     going: str | None = None         # 馬場
     rider: str | None = None         # 乗り役
-    times: list[float] = field(default_factory=list)  # 長い距離から順（6F-5F-4F-3F-1F）
+    # 長い距離から順に5つ（6F-5F-4F-3F-1F）。計測していない区間は None で埋める。
+    # 坂路は800mしか走らないので先頭2つが常に None になる。詰めてしまうと
+    # 坂路の4Fタイムとコースの6Fタイムを取り違えるため、位置を保つ。
+    times: list[float | None] = field(default_factory=list)
     position: str | None = None      # 併せ馬での位置
-    leg: str | None = None           # 脚色（一杯 強め 馬なり）
-    evaluation: str | None = None    # 評価
+    leg: str | None = None           # 脚色（一杯 強め 馬也）
+    evaluation: str | None = None    # 短評（動き軽快 反応平凡 …）
+    rank: str | None = None          # netkeiba の追い切り評価 S A B C
 
 
 @dataclass
