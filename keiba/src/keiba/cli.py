@@ -235,7 +235,9 @@ def cmd_eval_workouts(args: argparse.Namespace) -> int:
     被覆率の高い期間に絞って比べる。揃っていない期間を混ぜると、調教が
     効かないのかデータが無いのか区別が付かなくなる。
     """
-    from keiba import dataset, ml, workout_features
+    import numpy as np  # noqa: F401  （型注釈で使う）
+
+    from keiba import dataset, ml, workout_features, workout_slices
 
     with Store(args.db) as store:
         df = dataset.prepare(store)
@@ -262,18 +264,43 @@ def cmd_eval_workouts(args: argparse.Namespace) -> int:
         return 1
 
     valid = df[df["race_date"] >= str(args.valid_from)]
+    scores: dict[str, "np.ndarray"] = {}
+    importance: list[tuple[str, int]] = []
+
     for label, features in (
         ("調教なし", dataset.FEATURE_COLUMNS),
         ("調教あり", dataset.FEATURE_COLUMNS + workout_features.WORKOUT_FEATURES),
     ):
         result = ml.train(df, valid_from=args.valid_from, features=features)
-        scores = result.booster.predict(
+        scores[label] = result.booster.predict(
             valid[features], num_iteration=result.booster.best_iteration
         )
-        stats = ml.evaluate_ranking(valid, scores)
         print()
         print(f"【{label}】特徴量 {len(features)}個  AUC {result.auc:.5f}")
-        print(ml.format_ranking(stats))
+        print(ml.format_ranking(ml.evaluate_ranking(valid, scores[label])))
+        if label == "調教あり":
+            importance = result.importance
+
+    # 全体で潰れても、特定の条件だけ効くことはある。むしろ調教はそういう
+    # 性質のデータなので、切り口ごとに見る。切り口は先に決めてあり、
+    # データを見てから増やさない（増やせば必ず「効いた」切り口が見つかる）。
+    print()
+    print(workout_slices.format_slices(
+        workout_slices.compare(
+            valid, dataset.TARGET, scores["調教なし"], scores["調教あり"]
+        )
+    ))
+
+    # モデルがそもそも調教を使っているか。使っていないなら、切り口を
+    # 探す以前の問題（データが薄いか、特徴量の作り方が悪い）。
+    used = [(n, g) for n, g in importance if n in workout_features.WORKOUT_FEATURES]
+    total = sum(g for _, g in importance) or 1
+    print()
+    print("調教特徴量の寄与（gain・全体に占める割合）")
+    for name, gain in used:
+        print(f"  {name:<16}{gain:>12,}{gain / total:>8.2%}")
+    print(f"  {'合計':<16}{sum(g for _, g in used):>12,}"
+          f"{sum(g for _, g in used) / total:>8.2%}")
     return 0
 
 
