@@ -71,7 +71,7 @@
       "label": "db_race_main",
       "url": "https://db.netkeiba.com/race/202607020412/",
       "ok": true,
-      "chars": 97565,
+      "chars": 97761,
       "title": "3歳未勝利｜2026年8月2日 | 競馬データベース - netkeiba"
     },
     {
@@ -106,7 +106,7 @@
       "label": "db_race_sub",
       "url": "https://db.netkeiba.com/race/202601010401/",
       "ok": true,
-      "chars": 86855,
+      "chars": 86659,
       "title": "3歳未勝利｜2026年8月2日 | 競馬データベース - netkeiba"
     },
     {
@@ -141,7 +141,7 @@
       "label": "horse_2023100375",
       "url": "https://db.netkeiba.com/horse/2023100375/",
       "ok": true,
-      "chars": 63378,
+      "chars": 63298,
       "title": "エールドリー (Ailes Dorees) | 競走馬データ - netkeiba"
     },
     {
@@ -155,7 +155,7 @@
       "label": "horse_2023100699",
       "url": "https://db.netkeiba.com/horse/2023100699/",
       "ok": true,
-      "chars": 62576,
+      "chars": 62508,
       "title": "ヒマラヤミュサ (Himalaya Musa) | 競走馬データ - netkeiba"
     },
     {
@@ -249,7 +249,7 @@
         },
         "horse_training": {
           "title": "エールドリーの調教タイム｜競走馬データ- netkeiba",
-          "len": 40958,
+          "len": 40890,
           "paywalled": false,
           "tables": [
             {
@@ -307,7 +307,7 @@
         },
         "horse_training_all": {
           "title": "エールドリーの調教タイム｜競走馬データ- netkeiba",
-          "len": 49398,
+          "len": 49455,
           "paywalled": false,
           "tables": [
             {
@@ -1126,14 +1126,14 @@
       "label": "future_list_20260808",
       "url": "https://db.netkeiba.com/race/list/20260808/",
       "ok": true,
-      "chars": 32602,
+      "chars": 32591,
       "title": "2026年08月08日のレース情報 | 競馬データベース - netkeiba"
     },
     {
       "label": "future_list_20260809",
       "url": "https://db.netkeiba.com/race/list/20260809/",
       "ok": true,
-      "chars": 31121,
+      "chars": 31132,
       "title": "2026年08月09日のレース情報 | 競馬データベース - netkeiba"
     },
     {
@@ -1948,7 +1948,7 @@
       "label": "result_L1_kaisai",
       "url": "https://www.jra.go.jp/JRADB/accessS.html",
       "ok": true,
-      "chars": 80532,
+      "chars": 82116,
       "title": "レース結果 開催選択 JRA",
       "doAction": [
         {
@@ -2197,7 +2197,7 @@
       "label": "result_L2_racelist",
       "url": "https://www.jra.go.jp/JRADB/accessS.html",
       "ok": true,
-      "chars": 67418,
+      "chars": 71115,
       "title": "レース結果 レース選択 JRA",
       "doAction": [
         {
@@ -2335,6 +2335,26 @@
         {
           "action": "/JRADB/accessO.html",
           "cname": "pw151ouS304202602060520260809Z/7B"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw151ouS304202602060620260809Z/30"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608091/8E"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw151ouS304202602060720260809Z/E5"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608091/8E"
+        },
+        {
+          "action": "/JRADB/accessO.html",
+          "cname": "pw151ouS304202602060820260809Z/9A"
         }
       ]
     },
@@ -2342,7 +2362,7 @@
       "label": "result_L3_0",
       "url": "https://www.jra.go.jp/JRADB/accessS.html",
       "ok": true,
-      "chars": 191018,
+      "chars": 265018,
       "title": "レース結果一覧 JRA",
       "doAction": [
         {
@@ -2591,7 +2611,7 @@
       "label": "result_L3_1",
       "url": "https://www.jra.go.jp/JRADB/accessH.html",
       "ok": true,
-      "chars": 104910,
+      "chars": 132795,
       "title": "払戻金一覧 JRA",
       "doAction": [
         {
@@ -2701,6 +2721,14 @@
         {
           "action": "/JRADB/accessH.html",
           "cname": "pw01hli00/03"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608091/8E"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608091/8E"
         }
       ]
     },
@@ -3090,7 +3118,7 @@
       "label": "jra_racecard_L2_0",
       "url": "https://www.jra.go.jp/JRADB/accessO.html",
       "ok": true,
-      "chars": 60623,
+      "chars": 59691,
       "title": "オッズ 開催選択 JRA",
       "doAction": [
         {
@@ -3203,15 +3231,7 @@
         },
         {
           "action": "/JRADB/accessO.html",
-          "cname": "pw151ouS3042026020607202608091/E9"
-        },
-        {
-          "action": "/JRADB/accessO.html",
           "cname": "pw151ouS307202602060720260809Z/C3"
-        },
-        {
-          "action": "/JRADB/accessO.html",
-          "cname": "pw151ouS3072026020607202608091/C7"
         }
       ]
     },
@@ -3976,7 +3996,7 @@
       "label": "jra_racecard_L3_3",
       "url": "https://www.jra.go.jp/JRADB/accessS.html",
       "ok": true,
-      "chars": 77618,
+      "chars": 78269,
       "title": "過去レース結果検索 JRA",
       "doAction": [
         {
@@ -4210,7 +4230,7 @@
       "label": "jra_racecard_L3_5",
       "url": "https://www.jra.go.jp/JRADB/access5.html",
       "ok": true,
-      "chars": 260123,
+      "chars": 264436,
       "title": "WIN5 結果一覧 JRA",
       "doAction": [
         {
@@ -4296,6 +4316,10 @@
         {
           "action": "/JRADB/access5.html",
           "cname": "pw17hli002025/97"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608091/8E"
         },
         {
           "action": "/JRADB/access5.html",
@@ -4448,10 +4472,6 @@
         {
           "action": "/JRADB/access5.html",
           "cname": "pw17hde01202603081/57"
-        },
-        {
-          "action": "/JRADB/access5.html",
-          "cname": "pw17hde01202603011/00"
         }
       ]
     },
@@ -4459,7 +4479,7 @@
       "label": "jra_results_L1",
       "url": "https://www.jra.go.jp/JRADB/accessS.html",
       "ok": true,
-      "chars": 80532,
+      "chars": 82116,
       "title": "レース結果 開催選択 JRA",
       "doAction": [
         {
@@ -4708,7 +4728,7 @@
       "label": "jra_results_L2_0",
       "url": "https://www.jra.go.jp/JRADB/accessO.html",
       "ok": true,
-      "chars": 60623,
+      "chars": 59691,
       "title": "オッズ 開催選択 JRA",
       "doAction": [
         {
@@ -4821,15 +4841,7 @@
         },
         {
           "action": "/JRADB/accessO.html",
-          "cname": "pw151ouS3042026020607202608091/E9"
-        },
-        {
-          "action": "/JRADB/accessO.html",
           "cname": "pw151ouS307202602060720260809Z/C3"
-        },
-        {
-          "action": "/JRADB/accessO.html",
-          "cname": "pw151ouS3072026020607202608091/C7"
         }
       ]
     },
@@ -5594,7 +5606,7 @@
       "label": "jra_results_L3_3",
       "url": "https://www.jra.go.jp/JRADB/accessS.html",
       "ok": true,
-      "chars": 77618,
+      "chars": 78269,
       "title": "過去レース結果検索 JRA",
       "doAction": [
         {
@@ -5828,7 +5840,7 @@
       "label": "jra_results_L3_5",
       "url": "https://www.jra.go.jp/JRADB/access5.html",
       "ok": true,
-      "chars": 260123,
+      "chars": 264436,
       "title": "WIN5 結果一覧 JRA",
       "doAction": [
         {
@@ -5914,6 +5926,10 @@
         {
           "action": "/JRADB/access5.html",
           "cname": "pw17hli002025/97"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608091/8E"
         },
         {
           "action": "/JRADB/access5.html",
@@ -6066,10 +6082,6 @@
         {
           "action": "/JRADB/access5.html",
           "cname": "pw17hde01202603081/57"
-        },
-        {
-          "action": "/JRADB/access5.html",
-          "cname": "pw17hde01202603011/00"
         }
       ]
     },
@@ -6162,7 +6174,7 @@
       "label": "jra_training_L2_0",
       "url": "https://www.jra.go.jp/JRADB/accessO.html",
       "ok": true,
-      "chars": 60623,
+      "chars": 59691,
       "title": "オッズ 開催選択 JRA",
       "doAction": [
         {
@@ -6275,15 +6287,7 @@
         },
         {
           "action": "/JRADB/accessO.html",
-          "cname": "pw151ouS3042026020607202608091/E9"
-        },
-        {
-          "action": "/JRADB/accessO.html",
           "cname": "pw151ouS307202602060720260809Z/C3"
-        },
-        {
-          "action": "/JRADB/accessO.html",
-          "cname": "pw151ouS3072026020607202608091/C7"
         }
       ]
     },
@@ -7048,7 +7052,7 @@
       "label": "jra_training_L3_3",
       "url": "https://www.jra.go.jp/JRADB/accessS.html",
       "ok": true,
-      "chars": 77618,
+      "chars": 78269,
       "title": "過去レース結果検索 JRA",
       "doAction": [
         {
@@ -7282,7 +7286,7 @@
       "label": "jra_training_L3_5",
       "url": "https://www.jra.go.jp/JRADB/access5.html",
       "ok": true,
-      "chars": 260123,
+      "chars": 264436,
       "title": "WIN5 結果一覧 JRA",
       "doAction": [
         {
@@ -7368,6 +7372,10 @@
         {
           "action": "/JRADB/access5.html",
           "cname": "pw17hli002025/97"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608091/8E"
         },
         {
           "action": "/JRADB/access5.html",
@@ -7520,10 +7528,6 @@
         {
           "action": "/JRADB/access5.html",
           "cname": "pw17hde01202603081/57"
-        },
-        {
-          "action": "/JRADB/access5.html",
-          "cname": "pw17hde01202603011/00"
         }
       ]
     },
@@ -7531,7 +7535,7 @@
       "label": "jra_info_L1",
       "url": "https://www.jra.go.jp/JRADB/accessI.html",
       "ok": true,
-      "chars": 67948,
+      "chars": 68190,
       "title": "今週の開催お知らせ JRA",
       "doAction": [
         {
@@ -7620,7 +7624,7 @@
       "label": "jra_info_L2_0",
       "url": "https://www.jra.go.jp/JRADB/accessO.html",
       "ok": true,
-      "chars": 60623,
+      "chars": 59691,
       "title": "オッズ 開催選択 JRA",
       "doAction": [
         {
@@ -7733,15 +7737,7 @@
         },
         {
           "action": "/JRADB/accessO.html",
-          "cname": "pw151ouS3042026020607202608091/E9"
-        },
-        {
-          "action": "/JRADB/accessO.html",
           "cname": "pw151ouS307202602060720260809Z/C3"
-        },
-        {
-          "action": "/JRADB/accessO.html",
-          "cname": "pw151ouS3072026020607202608091/C7"
         }
       ]
     },
@@ -8506,7 +8502,7 @@
       "label": "jra_info_L3_3",
       "url": "https://www.jra.go.jp/JRADB/accessS.html",
       "ok": true,
-      "chars": 77618,
+      "chars": 78269,
       "title": "過去レース結果検索 JRA",
       "doAction": [
         {
@@ -8740,7 +8736,7 @@
       "label": "jra_info_L3_5",
       "url": "https://www.jra.go.jp/JRADB/access5.html",
       "ok": true,
-      "chars": 260123,
+      "chars": 264436,
       "title": "WIN5 結果一覧 JRA",
       "doAction": [
         {
@@ -8826,6 +8822,10 @@
         {
           "action": "/JRADB/access5.html",
           "cname": "pw17hli002025/97"
+        },
+        {
+          "action": "/JRADB/access5.html",
+          "cname": "pw17hde01202608091/8E"
         },
         {
           "action": "/JRADB/access5.html",
@@ -8978,10 +8978,6 @@
         {
           "action": "/JRADB/access5.html",
           "cname": "pw17hde01202603081/57"
-        },
-        {
-          "action": "/JRADB/access5.html",
-          "cname": "pw17hde01202603011/00"
         }
       ]
     }
