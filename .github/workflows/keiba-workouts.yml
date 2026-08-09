@@ -9,28 +9,54 @@ name: keiba-workouts
 # ## 集めたものをリポジトリにコミットしない
 #
 # 調教タイムは netkeiba の有料コンテンツで、このリポジトリは公開されている。
-# 2.4万頭ぶんをコミットすれば、課金者向けのデータを誰でも取れる形で置くことに
-# なる。それは利用者個人の利用の範囲を明らかに超えるので、ここでは artifact に
-# 出すだけにする。学習で使うときは artifact から取る。
+# しかも Pages がルート配信なので、置けば URL を知る誰でも落とせる。2.4万頭
+# ぶんとなると個人利用の範囲を明らかに超えるため、artifact に出すだけにする。
 #
-# リポジトリを非公開にするなら普通にコミットしてよい。そのときはこのファイルの
-# コミット手順を足すこと。
+# そのぶん、学習側が artifact から取れないと集めた意味が無い。evaluate モードが
+# その手順で、収集ジョブの run ID を渡すと artifact を集めて測るところまでやる。
+#
+#   collect  … 有料ページから引いて artifact に出す（既定）
+#   evaluate … 収集済みの artifact を取り込み、調教あり／なしを並べて測る
 
 on:
   workflow_dispatch:
-  # workflow_dispatch はワークフローがデフォルトブランチに無いと API から叩けない。
-  # 開発中はこのファイルへの push で起動する。
-  push:
-    branches:
-      - "claude/keiba-auto-prediction-**"
-    paths:
-      - ".github/workflows/keiba-workouts.yml"
+    inputs:
+      mode:
+        description: "collect（収集）か evaluate（測定）"
+        required: false
+        type: choice
+        options: [collect, evaluate]
+        default: collect
+      run_id:
+        description: "evaluate 用。artifact を持っている収集ジョブの run ID"
+        required: false
+        default: ""
+      since:
+        description: "evaluate 用。測定に使う期間の開始日 YYYY-MM-DD"
+        required: false
+        default: "2026-01-01"
+      valid_from:
+        description: "evaluate 用。検証期間の開始日 YYYY-MM-DD"
+        required: false
+        default: "2026-06-01"
+  # push トリガは外した。このファイルを直すたびに収集が起動してしまい、
+  # 走行中のものと二重に netkeiba を叩くことになる（危うく踏んだ）。
+  # workflow_dispatch はデフォルトブランチに置いてから使う。
 
 permissions:
   contents: read
 
+concurrency:
+  # 収集が二重に走ると、同じ馬を二度引いてアカウントを余計に晒す。
+  # 待たせるだけにして、走っているものは殺さない（10時間かけたものを
+  # 捨てるほうが損）。
+  group: keiba-workouts
+  cancel-in-progress: false
+
 jobs:
   collect:
+    # push で起動したときは inputs が空なので、この条件で collect に入る
+    if: inputs.mode != 'evaluate'
     strategy:
       fail-fast: false
       # 並列度は上げない。ログインした状態で叩くので、止められて困るのは
@@ -72,3 +98,55 @@ jobs:
           path: keiba/raw/workouts-${{ matrix.chunk }}.jsonl.gz
           retention-days: 90
           if-no-files-found: warn
+
+  # ------------------------------------------------------------------ 測定
+  #
+  # 調教が効くかどうかをここで確かめる。効くと分かってから本番の特徴量に
+  # 入れる。10時間かけて集めたから使う、では順序が逆になる。
+  evaluate:
+    if: inputs.mode == 'evaluate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+
+      # 収集ジョブは別の run なので、run-id を指定して取りに行く。
+      # 名前で最新を拾う仕組みは download-artifact に無いため、run ID を渡す。
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: workouts-*
+          merge-multiple: true
+          path: /tmp/workouts
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # gzip は連結しても正しい1本として読めるので、そのまま繋ぐだけでよい。
+      # 中身は馬・日付・コースで一意なので、重複しても upsert で潰れる。
+      - name: Merge chunks
+        run: |
+          ls -la /tmp/workouts
+          cat /tmp/workouts/workouts-*.jsonl.gz > keiba/raw/workouts.jsonl.gz
+          python - <<'PY'
+          import gzip, json, pathlib
+          n = horses = 0
+          seen = set()
+          with gzip.open("keiba/raw/workouts.jsonl.gz", "rt", encoding="utf-8") as fh:
+              for line in fh:
+                  if line.strip():
+                      n += 1
+                      seen.add(json.loads(line)["horse_id"])
+          print(f"調教 {n:,} 本 / {len(seen):,} 頭")
+          PY
+
+      - name: Build
+        run: python -m keiba.cli build
+
+      - name: Evaluate
+        run: |
+          python -m keiba.cli -v eval-workouts \
+            --since ${{ inputs.since }} \
+            --valid-from ${{ inputs.valid_from }}
