@@ -95,3 +95,35 @@ def test_detects_argument_order_mistakes() -> None:
     fixed = "--pedigree keiba/raw/p.jsonl.gz backfill-pedigree --offset 0 --limit 7000"
     args = build_parser().parse_args(shlex.split(fixed))
     assert str(args.pedigree) == "keiba/raw/p.jsonl.gz"
+
+
+def test_every_cron_maps_to_a_job() -> None:
+    """cron を足したのに case 文へ書き忘れていないこと。
+
+    一致しない cron は default の predict に落ちる。落ちても何かは動くので
+    エラーにならず、「回顧を足したのに走らない」形で静かに壊れる。
+
+    実際に当日回顧の cron を足したときにここを間違えかけた。
+    """
+    text = (WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8")
+    crons = set(re.findall(r'- cron: "([^"]+)"', text))
+    handled = {c for c, _ in re.findall(r'"([^"]+)"\)\s+JOB=(\w+)', text)}
+
+    missing = crons - handled
+    assert not missing, f"case 文に無い cron: {sorted(missing)}（predict に落ちる）"
+
+
+def test_the_review_runs_on_the_day_of_the_races() -> None:
+    """当日中に回顧が走ること。
+
+    利用者の要望が「当日中がうれしい」なので、翌朝だけでは足りない。
+    一度は当日22時で着順が取れず翌朝に倒したが、原因は時刻ではなく
+    経路（db.netkeiba の反映待ち）だった。JRA公式を先に見る今なら回る。
+    """
+    text = (WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8")
+    same_day = re.search(r'"([^"]+)"\)\s+JOB=review;\s*SAMEDAY=1', text)
+    assert same_day, "当日ぶんを対象にする review の cron が無い"
+
+    minute, hour, _, _, dow = same_day.group(1).split()
+    assert int(hour) < 14, "JST の深夜になる。UTC 13時=JST 22時あたりに置くこと"
+    assert set(dow.split(",")) == {"6", "0"}, "土日に走らせること"
