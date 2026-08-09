@@ -261,6 +261,14 @@ def cmd_edge(args: argparse.Namespace) -> int:
     table = edge.by_edge(valid, dataset.TARGET, p_model - p_market, place, win)
     print(edge.format_table(table, "モデルと市場の乖離ごとの実回収率"))
 
+    # 全体の表は人気-穴のバイアスと混ざる。人気馬は元々回収率が高く、
+    # モデルが市場より低く見るのは主に人気馬なので、「乖離が負のほうが
+    # 儲かる」という見かけの関係が勝手に出る。オッズ帯を固定して確かめる。
+    print()
+    print(edge.format_bands(
+        edge.by_odds_band(valid, dataset.TARGET, p_model - p_market, place)
+    ))
+
     # 狙いは穴なので、人気薄に絞っても同じことを見る。全体で妙味が無くても
     # 人気薄だけにあるなら、そこが買い場になる。
     longshot = valid["market_popularity"] >= args.longshot_from

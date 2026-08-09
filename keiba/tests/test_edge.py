@@ -95,3 +95,43 @@ def test_edge_of_zero_puts_everything_in_the_middle() -> None:
         frame, "placed", np.zeros(2000), np.zeros(2000), np.zeros(2000)
     )
     assert len(table) == 1
+
+
+def test_odds_band_control_removes_the_favourite_bias() -> None:
+    """オッズ帯を固定した比較が、帯ごとに分かれていること。
+
+    全体で乖離ごとに切ると人気-穴のバイアスと混ざる。人気馬は元々回収率が
+    高く、モデルが市場より低く評価するのは主に人気馬なので、「乖離が負の
+    ほうが儲かる」という見かけの関係が勝手に出る。同じ帯の中で比べないと
+    モデルの良し悪しは分からない。
+    """
+    rng = np.random.default_rng(4)
+    n = 20000
+    frame = pd.DataFrame(
+        {
+            "market_odds": rng.uniform(1.2, 80.0, n),
+            "placed": rng.integers(0, 2, n),
+        }
+    )
+    table = edge.by_odds_band(
+        frame, "placed", rng.normal(size=n), rng.integers(0, 400, n).astype(float)
+    )
+    assert not table.empty
+    # 帯が複数に分かれ、各帯の中で乖離が3段階に割れていること
+    assert table["オッズ帯"].nunique() >= 3
+    assert set(table["乖離"]) == {"低", "中", "高"}
+
+
+def test_thin_odds_bands_are_dropped() -> None:
+    """行数の足りない帯を表に出さないこと。
+
+    100倍超のような薄い帯は、たまたま1本当たるだけで回収率が跳ねる。
+    そこを見て「妙味がある」と読むのが一番危ない。
+    """
+    frame = pd.DataFrame(
+        {"market_odds": [1.3] * 600 + [500.0] * 20, "placed": [1] * 620}
+    )
+    table = edge.by_odds_band(
+        frame, "placed", np.arange(620, dtype=float), np.zeros(620)
+    )
+    assert all("500" not in band for band in table["オッズ帯"])

@@ -157,3 +157,73 @@ def format_table(table: pd.DataFrame, title: str) -> str:
         " ここを超える区分にだけ意味がある。",
     ]
     return "\n".join(lines)
+
+
+def by_odds_band(
+    valid: pd.DataFrame,
+    target: str,
+    edge_values: np.ndarray,
+    place_return: np.ndarray,
+    splits: int = 3,
+) -> pd.DataFrame:
+    """オッズ帯を固定したうえで、乖離の大小を比べる。
+
+    全体で乖離ごとに切ると、**人気-穴のバイアスと混ざる**。人気馬は元々
+    回収率が高く（少頭数の複勝など構造的な理由がある）、モデルが市場より
+    低く評価するのは主に人気馬なので、「乖離が負のほうが儲かる」という
+    見かけの関係が勝手に出てしまう。
+
+    同じオッズ帯の中だけで比べれば、その混ざりが消える。ここで乖離の大きい
+    側が本当に良いなら、モデルには市場が取りこぼしている情報がある。
+    差が出ないなら、モデルの「市場と違う意見」には中身が無い。
+    """
+    work = valid[[target, "market_odds"]].copy()
+    work["edge"] = edge_values
+    work["place"] = place_return
+    work = work[np.isfinite(work["edge"]) & work["market_odds"].notna()]
+    work["band"] = pd.cut(work["market_odds"], ODDS_BINS)
+
+    rows = []
+    for band, group in work.groupby("band", observed=True):
+        if len(group) < 500:
+            continue
+        try:
+            group = group.assign(
+                rank=pd.qcut(group["edge"], splits, labels=False, duplicates="drop")
+            )
+        except (ValueError, IndexError):
+            continue
+        for rank, part in group.groupby("rank", observed=True):
+            rows.append(
+                {
+                    "オッズ帯": str(band),
+                    "乖離": ["低", "中", "高"][int(rank)] if splits == 3 else int(rank),
+                    "行数": len(part),
+                    "3着内率": part[target].mean(),
+                    "複勝回収率": part["place"].mean() / 100,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def format_bands(table: pd.DataFrame) -> str:
+    """オッズ帯を固定した比較を読む形にする。"""
+    lines = [
+        "=" * 78,
+        "オッズ帯を固定したうえでの、乖離の大小ごとの複勝回収率",
+        "（人気-穴のバイアスを取り除いた比較）",
+        "=" * 78,
+        f"{'オッズ帯':<24}{'乖離':>5}{'行数':>8}{'3着内率':>9}{'複勝回収':>10}",
+    ]
+    for _, row in table.iterrows():
+        mark = "  ←" if row["複勝回収率"] > 1.0 else ""
+        lines.append(
+            f"{row['オッズ帯']:<24}{row['乖離']:>5}{int(row['行数']):>8}"
+            f"{row['3着内率']:>9.1%}{row['複勝回収率']:>10.1%}{mark}"
+        )
+    lines += [
+        "-" * 78,
+        "※ 同じオッズ帯の中で「乖離 高」が「低」を上回るなら、モデルには"
+        " 市場が取りこぼしている情報がある。",
+    ]
+    return "\n".join(lines)
