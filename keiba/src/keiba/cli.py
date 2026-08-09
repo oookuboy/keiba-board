@@ -224,6 +224,26 @@ def cmd_review(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_chaos(args: argparse.Namespace) -> int:
+    """レースが荒れるかどうかを、市場の形から読めるかを測る。
+
+    いまの自信度は「自分の上位3頭の人気和」で決めており、測っているのは
+    「モデルが市場に同意しているか」であって「レースが荒れるか」ではない。
+    2026-08-09 新潟11R はモデルが人気馬を推したので見送ったが、実際は
+    三連複36,980円の波乱だった。荒れは市場の形に出ているはずで、それは
+    オッズ層で使ってよい情報。
+    """
+    from keiba import chaos
+
+    with Store(args.db) as store:
+        df = chaos.load(store)
+    if df.empty:
+        log.error("三連複の払戻を持つレースが無い。build を先に走らせること")
+        return 1
+    print(chaos.report(df))
+    return 0
+
+
 def cmd_edge(args: argparse.Namespace) -> int:
     """モデルと市場の食い違いに妙味があるかを、実払戻で測る。
 
@@ -482,6 +502,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--offset", type=int, default=0, help="対象リストの先頭から飛ばす頭数（並列分割用）"
     )
     p.set_defaults(func=cmd_backfill_workouts)
+
+    p = sub.add_parser(
+        "chaos", help="荒れやすさが市場の形から読めるかを測る"
+    )
+    p.set_defaults(func=cmd_chaos)
 
     p = sub.add_parser(
         "edge", help="モデルと市場の乖離に妙味があるかを実払戻で測る"
