@@ -31,7 +31,7 @@ PEDIGREE_PATH = RAW_DIR / "pedigree.jsonl.gz"
 WORKOUT_PATH = RAW_DIR / "workouts.jsonl.gz"
 WEIGHTS_PATH = CONFIG_DIR / "weights.yml"
 SIRE_PATH = CONFIG_DIR / "sire_aptitude.json"
-DATA_DIR = Path("docs/data")
+DATA_DIR = Path("keiba/data")
 LESSONS_PATH = Path("keiba/LESSONS.md")
 
 
