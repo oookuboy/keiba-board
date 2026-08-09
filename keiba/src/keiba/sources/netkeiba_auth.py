@@ -38,9 +38,17 @@ from keiba.sources.http import FetchError, Fetcher
 log = logging.getLogger(__name__)
 
 LOGIN_PAGE_URL = "https://regist.netkeiba.com/account/?pid=login"
-LOGIN_URL = "https://regist.netkeiba.com/account/?pid=login&action=auth"
-# ログイン済みかどうかを確かめるためのページ。会員でなければ本文が伏せられる
-VERIFY_URL = "https://regist.netkeiba.com/account/?pid=my_account"
+# 投稿先はクエリ付きのURLではなく**ルート**。pid と action は本文に入れる。
+# 実物のフォームを読んで確定させた（推測で ?pid=login&action=auth に投げて
+# いたときは、ログイン画面がそのまま返ってきて認証されなかった）。
+#   action="https://regist.netkeiba.com/" method=post
+#   inputs: pid / action / rtn_url / login_id / pswd
+LOGIN_URL = "https://regist.netkeiba.com/"
+# ログイン後の戻り先。フォームが hidden で持っているので同じ値を送る
+LOGIN_RETURN_URL = "https://www.netkeiba.com/"
+# ログイン済みかどうかを確かめるページ。
+# ?pid=my_account は空で返ったので、会員トップを見る
+VERIFY_URL = "https://regist.netkeiba.com/account/"
 
 EMAIL_ENV = "NETKEIBA_EMAIL"
 PASSWORD_ENV = "NETKEIBA_PASSWORD"
@@ -109,10 +117,11 @@ def login(fetcher: Fetcher, *, required: bool = False) -> bool:
             LOGIN_URL,
             method="POST",
             data={
-                "login_id": email,
-                "pswd": password,
                 "pid": "login",
                 "action": "auth",
+                "rtn_url": LOGIN_RETURN_URL,
+                "login_id": email,
+                "pswd": password,
             },
             force=True,
         )
