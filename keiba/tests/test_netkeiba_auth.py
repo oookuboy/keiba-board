@@ -93,9 +93,43 @@ def test_password_is_never_put_in_the_error(monkeypatch) -> None:
 
 
 def test_paywall_is_detected() -> None:
-    """有料の壁を文言で見分けられること。収集時にも使う。"""
+    """有料の壁を見分けられること。収集時にも使う。
+
+    ここを間違えると両方向に損をする。壁を見逃せば空データが静かに溜まり、
+    壁だと誤判定すれば課金したのに使わない。実際に後者を踏んだ。
+    """
     assert is_paywalled("※スーパープレミアムコースからご利用頂けます")
     assert not is_paywalled("<table><tr><td>栗東CW 82.4</td></tr></table>")
+
+
+def test_pricing_table_is_still_a_paywall() -> None:
+    """料金案内ページを「表があるから中身が取れた」と誤判定しないこと。
+
+    未ログインで有料ページを開くと「プレミアムサービス案内」へ飛ばされる。
+    このページは料金比較の表を97行持っており、表の有無だけで見ると
+    「取れている」と誤判定する。
+    """
+    html = (
+        "<html><head><title>プレミアムサービス案内 - netkeiba</title></head>"
+        "<body><table><tr><th>コース</th></tr>"
+        "<tr><td>マスター 4,980円/月</td></tr></table></body></html>"
+    )
+    assert is_paywalled(html)
+
+
+def test_member_page_keeps_its_upsell_links() -> None:
+    """会員ページに残る課金導線で壁だと誤判定しないこと。
+
+    ログイン後のページにも「プレミアム」への導線はヘッダに残る。文言だけで
+    見ていたため、調教タイムの表が出ているのに壁だと判定していた。
+    """
+    html = (
+        "<html><body><a href='/?pid=premium'>プレミアム登録</a>"
+        "<table class='nk_tb_common'>"
+        "<tr><th>日付</th><th>調教タイム</th></tr>"
+        "<tr><td>2026/08/06</td><td>82.4</td></tr></table></body></html>"
+    )
+    assert not is_paywalled(html)
 
 
 def test_member_fixtures_are_not_committable() -> None:
@@ -142,6 +176,49 @@ def test_structure_summary_hides_cell_contents() -> None:
     assert "oookuboy@example.com" not in dumped
     assert "栗東CW" not in dumped, "セルの中身を出さない"
     assert "82.4" not in dumped
+
+
+def test_extracted_tables_carry_no_account_information() -> None:
+    """会員ページから切り出す表に、アカウント情報を混ぜないこと。
+
+    パーサを手元でテストするには実物の表が要るが、ページ全体はヘッダに
+    アカウント名とメールアドレスを持つ。データ表だけを採り、レイアウト用の
+    table は落とす。
+    """
+    from keiba.probe import _extract_tables
+
+    html = """
+    <html><body>
+      <table class="header_nav">
+        <tr><th>ようこそ</th></tr>
+        <tr><td>oookuboy@example.com さん</td></tr>
+      </table>
+      <table class="nk_tb_common db_table_01">
+        <tr><th>日付</th><th>調教タイム</th></tr>
+        <tr><td>2026/08/06</td><td class="TrainingTimeData">82.4</td></tr>
+      </table>
+    </body></html>
+    """
+    out = _extract_tables(html)
+    assert "82.4" in out, "データ表は残すこと"
+    assert "oookuboy@example.com" not in out
+    assert "ようこそ" not in out, "レイアウト用の table を持ち込まない"
+
+
+def test_extraction_bails_out_when_an_address_survives() -> None:
+    """データ表の中にメールアドレスが残るなら、切り出しごと見送ること。
+
+    公開リポジトリに置くものなので、判断に迷ったら出さない側に倒す。
+    """
+    from keiba.probe import _extract_tables
+
+    html = """
+    <html><body><table class="nk_tb_common">
+      <tr><th>日付</th></tr>
+      <tr><td>連絡先 someone@example.com</td></tr>
+    </table></body></html>
+    """
+    assert _extract_tables(html) == ""
 
 
 def test_cache_namespace_changes_the_key() -> None:

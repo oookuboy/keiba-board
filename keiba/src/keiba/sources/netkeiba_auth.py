@@ -53,13 +53,13 @@ VERIFY_URL = "https://regist.netkeiba.com/account/"
 EMAIL_ENV = "NETKEIBA_EMAIL"
 PASSWORD_ENV = "NETKEIBA_PASSWORD"
 
-# 未ログイン／非会員のときに出る文言。どれか出たら「取れていない」と判断する
-PAYWALL_MARKERS = (
-    "スーパープレミアム",
-    "プレミアムコース",
-    "有料会員",
-    "ログインしてください",
-    "会員登録",
+# 「そのページが壁そのもの」であることを示す文言だけを置く。
+# 「プレミアム」単体のような広い語を入れてはいけない。会員ページにも課金導線が
+# 残っているため、実際に調教タイムの表が出ているのに壁だと誤判定していた。
+WALL_PAGE_MARKERS = (
+    "プレミアムサービス案内",          # 未ログインで有料ページを開くとここへ飛ぶ
+    "からご利用頂けます",              # 本文だけ伏せ字に差し替えられた形
+    "からご利用いただけます",
 )
 # ログイン済みのときだけ出る手がかり
 LOGGED_IN_MARKERS = ("ログアウト", "マイページ", "会員情報")
@@ -79,8 +79,28 @@ def credentials() -> tuple[str, str] | None:
 
 
 def is_paywalled(html: str) -> bool:
-    """有料の壁に当たっているか。ログイン検証と収集時の両方で使う。"""
-    return any(m in html for m in PAYWALL_MARKERS)
+    """有料の壁に当たっているか。
+
+    文言だけで判定すると誤判定する。会員ページにも「プレミアム」という語が
+    導線として残っており、実際に表が出ているのに壁だと判定していた。
+
+    見るべきは「データの表が実際にあるか」。ただし案内ページ自体が料金比較の
+    大きな表を持っている（実測: 97行）ので、表の有無だけでも判定できない。
+    そこで二段にする。
+
+      1. 案内ページそのもの／伏せ字の文言が出ていたら壁
+      2. そうでなければ、データの入った表があるかどうか
+    """
+    if any(m in html for m in WALL_PAGE_MARKERS):
+        return True
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "lxml")
+    for table in soup.select("table"):
+        # 見出しだけの空表は数えない。中身のある td があるものだけ
+        if any(td.get_text(strip=True) for td in table.select("td")):
+            return False
+    return True
 
 
 def login(fetcher: Fetcher, *, required: bool = False) -> bool:

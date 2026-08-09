@@ -53,10 +53,66 @@ RACE_LEVEL_PAGES = [
 ]
 
 # db_race の結果テーブルが指していた実URL。厩舎コメントと調教はここにある。
+# 実物のリンクから採ったもので、推測ではない（結果表の各馬から18本ずつ出ている）。
+#
+# horse_training を rid 付きと rid 無しの両方で取るのは、**バックフィルの規模が
+# ここで決まる**ため。rid が単なるアンカーで1回のリクエストに馬の全調教が載るなら
+# 約2.4万頭ぶんで済み、血統バックフィルと同じ規模（約10時間）になる。rid が
+# サーバ側で絞り込んでいるなら1出走ごとに1リクエストで約14.9万回（約62時間）。
+# 10倍以上違うので、実測してから走らせる。
 HORSE_LEVEL_PAGES = [
     ("kyusya_comment", "https://db.netkeiba.com/horse/kyusya_comment.html?id={horse_id}"),
     ("horse_training", "https://db.netkeiba.com/?pid=horse_training&id={horse_id}&rid={race_id}"),
+    ("horse_training_all", "https://db.netkeiba.com/?pid=horse_training&id={horse_id}"),
 ]
+
+
+# netkeiba がデータ表に付けるクラス。レイアウト用の table と区別するために使う。
+DATA_TABLE_CLASSES = ("nk_tb_common", "race_table", "db_table", "tb_common")
+
+
+def _extract_tables(html: str) -> str:
+    """データの表だけを切り出す。
+
+    会員ページをそのままコミットするとヘッダのアカウント名やメールアドレスが
+    漏れる。調教タイム・コメントの表そのものに個人情報は無いので、表だけ抜けば
+    公開リポジトリに置ける。こうしないとパーサをテストする材料が手元に作れず、
+    直すたびに Actions を1往復することになる。
+
+    安全側に倒すため三重にする。
+
+      1. netkeiba がデータ表に付けるクラスを持つ table だけを採る
+         （レイアウト用の table にヘッダのアカウント名が入りうるため）
+      2. 切り出したものに @ が1つでも残っていたら、伏せずに丸ごと捨てる
+
+    伏せ字に置き換えるのではなく捨てるのは、置換が効いたかどうかを後から
+    確かめられないため。公開リポジトリに置くものなので、迷ったら出さない。
+    """
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "lxml")
+    tables = []
+    for table in soup.select("table"):
+        classes = " ".join(table.get("class") or [])
+        if not any(c in classes for c in DATA_TABLE_CLASSES):
+            continue
+        if not any(td.get_text(strip=True) for td in table.select("td")):
+            continue
+        tables.append(str(table))
+    if not tables:
+        return ""
+
+    body = "\n".join(tables[:4])
+    if "@" in body:
+        # 想定外のものが混ざっている。競馬のデータ表に @ は出ないはずなので、
+        # 出たなら切り出し方が間違っている。直すまで何も置かない。
+        log.warning("表の中に @ が混ざっていたので切り出しを見送った")
+        return ""
+    return (
+        "<!-- netkeiba の会員ページからデータ表だけを切り出したもの。\n"
+        "     ヘッダ等の個人情報は含まない。パーサのテスト用。 -->\n"
+        "<html><body>\n" + body + "\n</body></html>\n"
+    )
 
 
 def _table_structure(html: str) -> list[dict]:
@@ -310,6 +366,23 @@ class Probe:
                 # 手元でパーサを書くためにファイルには残すが、gitignore 済みの
                 # member/ に置いてコミットされないようにする
                 (member_dir / f"{name}_{idx}.html").write_text(html, encoding="utf-8")
+
+                # 表だけを切り出したものは pinned/ に置いてコミットする。
+                # 個人情報はページのヘッダ側にあり、表の中身は調教タイムと
+                # コメントだけなので、これならリポジトリに入れて安全。
+                # これが無いとパーサをテストできない（会員ページは手元で
+                # 再現できず、毎回 Actions を回すことになる）。
+                if idx == 0 and not walled:
+                    fragment = _extract_tables(html)
+                    if fragment:
+                        # pinned/ は out_dir の中ではなく隣。probe は毎回 out_dir の
+                        # *.html を消すので、テストが読む固定物を中に置いてはいけない。
+                        pinned = self.out_dir.parent / "pinned"
+                        pinned.mkdir(parents=True, exist_ok=True)
+                        (pinned / f"netkeiba_{name}.html").write_text(
+                            fragment, encoding="utf-8"
+                        )
+                        log.info("  %s の表を pinned/ に切り出した", name)
 
     def probe_today_results(self, day: date) -> None:
         """当日の着順が db.netkeiba に出ているかを確かめる。
