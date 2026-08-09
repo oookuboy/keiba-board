@@ -37,6 +37,7 @@ from keiba.sources.http import FetchError, Fetcher
 
 log = logging.getLogger(__name__)
 
+LOGIN_PAGE_URL = "https://regist.netkeiba.com/account/?pid=login"
 LOGIN_URL = "https://regist.netkeiba.com/account/?pid=login&action=auth"
 # ログイン済みかどうかを確かめるためのページ。会員でなければ本文が伏せられる
 VERIFY_URL = "https://regist.netkeiba.com/account/?pid=my_account"
@@ -131,6 +132,7 @@ def login(fetcher: Fetcher, *, required: bool = False) -> bool:
         # 何が起きたかを、認証情報を出さずに分かる形で残す。
         # 当てずっぽうで直すより、手がかりを持って直すほうが早い。
         log.error("ログイン診断: %s", diagnose(response, page))
+        log.error("ログインフォーム: %s", inspect_login_form(fetcher))
         raise LoginError(
             "ログインしたつもりで未ログインのまま。"
             " 上の診断を見て、投稿先・フィールド名・判定文言のどれが違うかを絞ること"
@@ -148,6 +150,48 @@ _PROBE_WORDS = (
     "メールアドレス", "登録", "エラー", "正しく", "一致しません",
     "プレミアム", "退会", "ようこそ",
 )
+
+
+def inspect_login_form(fetcher: Fetcher) -> dict:
+    """ログイン画面のフォーム構造を読む。
+
+    投稿先とフィールド名を推測で書いたら認証されなかったので、実物から取る。
+    フォームの action と input の name は仕様であって秘密ではないため、
+    ログに出しても問題ない（value は出さない）。
+    """
+    from bs4 import BeautifulSoup, Tag
+
+    try:
+        html = fetcher.fetch(LOGIN_PAGE_URL, force=True)
+    except FetchError as exc:
+        return {"error": str(exc)}
+
+    soup = BeautifulSoup(html, "lxml")
+    forms = []
+    for form in soup.select("form"):
+        inputs = []
+        for tag in form.select("input, select"):
+            if not isinstance(tag, Tag):
+                continue
+            name = tag.get("name")
+            if name:
+                inputs.append({"name": name, "type": tag.get("type") or tag.name})
+        if inputs:
+            forms.append(
+                {
+                    "action": form.get("action"),
+                    "method": (form.get("method") or "get").lower(),
+                    "inputs": inputs[:12],
+                }
+            )
+    return {"title": _title(html), "forms": forms[:4]}
+
+
+def _title(html: str) -> str:
+    import re
+
+    m = re.search(r"<title>(.*?)</title>", html, re.S)
+    return re.sub(r"\s+", " ", m.group(1)).strip()[:60] if m else "(なし)"
 
 
 def diagnose(login_response: str, verify_page: str) -> dict:
