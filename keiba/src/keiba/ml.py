@@ -81,8 +81,20 @@ def split(df: pd.DataFrame, valid_from: date) -> tuple[pd.DataFrame, pd.DataFram
     return df[df["race_date"] < boundary], df[df["race_date"] >= boundary]
 
 
-def train(df: pd.DataFrame, valid_from: date, rounds: int = 2000) -> TrainResult:
-    """3着以内に入る確率を学習する。"""
+def train(
+    df: pd.DataFrame,
+    valid_from: date,
+    rounds: int = 2000,
+    features: list[str] | None = None,
+) -> TrainResult:
+    """3着以内に入る確率を学習する。
+
+    features を渡すと特徴量の集合を差し替えられる。既定は FEATURE_COLUMNS。
+    調教を足した／足さないを同じ分割で比べるためだけの引数で、本番の学習は
+    既定のまま使う。ここを本番で使い分けると、保存したモデルと predict の
+    列がずれる（62列のコードで56列のモデルを読む形を既に踏んでいる）。
+    """
+    features = features or FEATURE_COLUMNS
     train_df, valid_df = split(df, valid_from)
     if train_df.empty or valid_df.empty:
         raise ValueError(f"分割が空になった（境界 {valid_from}）")
@@ -94,11 +106,11 @@ def train(df: pd.DataFrame, valid_from: date, rounds: int = 2000) -> TrainResult
     )
 
     train_set = lgb.Dataset(
-        train_df[FEATURE_COLUMNS], label=train_df[TARGET],
+        train_df[features], label=train_df[TARGET],
         categorical_feature=CATEGORICAL, free_raw_data=False,
     )
     valid_set = lgb.Dataset(
-        valid_df[FEATURE_COLUMNS], label=valid_df[TARGET],
+        valid_df[features], label=valid_df[TARGET],
         categorical_feature=CATEGORICAL, reference=train_set, free_raw_data=False,
     )
 

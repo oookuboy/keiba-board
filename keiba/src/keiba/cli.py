@@ -224,6 +224,59 @@ def cmd_review(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_eval_workouts(args: argparse.Namespace) -> int:
+    """調教を足すと精度が動くかを、同じ分割で並べて測る。
+
+    本番の学習には手を入れない。効くと分かってから FEATURE_COLUMNS に
+    入れる。効かなければ入れない。10時間かけて集めたから使う、では
+    順序が逆になる。
+
+    調教が揃っているのは直近だけ（新しい馬から引いているため）なので、
+    被覆率の高い期間に絞って比べる。揃っていない期間を混ぜると、調教が
+    効かないのかデータが無いのか区別が付かなくなる。
+    """
+    from keiba import dataset, ml, workout_features
+
+    with Store(args.db) as store:
+        df = dataset.prepare(store)
+        workouts = workout_features.load_workouts(store)
+
+    if workouts.empty:
+        log.error("調教が1件も入っていない。backfill-workouts を先に走らせること")
+        return 1
+
+    df = workout_features.attach(df, workouts)
+    df = df[df["race_date"] >= str(args.since)]
+    covered = workout_features.coverage(df)
+    log.info(
+        "調教あり %.1f%%（%s 以降 %d行 / %d レース）",
+        covered * 100, args.since, len(df), df["race_id"].nunique(),
+    )
+    if covered < args.min_coverage:
+        log.error(
+            "被覆率 %.1f%% は低すぎる。この状態で測っても、効かないのか"
+            " データが足りないのか分からない。--since を新しくするか"
+            " バックフィルの続きを走らせること",
+            covered * 100,
+        )
+        return 1
+
+    valid = df[df["race_date"] >= str(args.valid_from)]
+    for label, features in (
+        ("調教なし", dataset.FEATURE_COLUMNS),
+        ("調教あり", dataset.FEATURE_COLUMNS + workout_features.WORKOUT_FEATURES),
+    ):
+        result = ml.train(df, valid_from=args.valid_from, features=features)
+        scores = result.booster.predict(
+            valid[features], num_iteration=result.booster.best_iteration
+        )
+        stats = ml.evaluate_ranking(valid, scores)
+        print()
+        print(f"【{label}】特徴量 {len(features)}個  AUC {result.auc:.5f}")
+        print(ml.format_ranking(stats))
+    return 0
+
+
 def cmd_train(args: argparse.Namespace) -> int:
     """能力モデルを学習する。
 
@@ -340,6 +393,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--offset", type=int, default=0, help="対象リストの先頭から飛ばす頭数（並列分割用）"
     )
     p.set_defaults(func=cmd_backfill_workouts)
+
+    p = sub.add_parser(
+        "eval-workouts", help="調教を足すと精度が動くかを並べて測る"
+    )
+    p.add_argument("--since", type=_date, required=True, help="測定に使う期間の開始日")
+    p.add_argument("--valid-from", type=_date, required=True)
+    p.add_argument(
+        "--min-coverage", type=float, default=0.7,
+        help="この割合まで調教が揃っていなければ測らない",
+    )
+    p.set_defaults(func=cmd_eval_workouts)
 
     p = sub.add_parser("build", help="raw から SQLite と種牡馬適性を作る")
     p.add_argument("--min-sire-runs", type=int, default=30)
