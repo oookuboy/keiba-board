@@ -17,3 +17,7 @@ keiba/*.db-wal
 node_modules/
 package-lock.json
 *.png
+
+# 会員ログイン後に採取したHTML。ヘッダにアカウント名やメールが載るので
+# 公開リポジトリに絶対にコミットしない。パーサを書くための手元専用。
+keiba/tests/fixtures/member/

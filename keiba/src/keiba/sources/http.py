@@ -63,6 +63,8 @@ class Fetcher:
     max_retries: int = 4
     timeout: float = 30.0
     session: requests.Session = field(default_factory=requests.Session)
+    # キャッシュを分ける識別子。ログイン後は "auth" を入れて未ログインぶんと隔離する
+    cache_namespace: str = ""
     _last_request: dict[str, float] = field(default_factory=dict, init=False)
     stats: dict[str, int] = field(
         default_factory=lambda: {"hit": 0, "miss": 0, "error": 0}, init=False
@@ -80,7 +82,11 @@ class Fetcher:
     # ------------------------------------------------------------------ cache
 
     def _cache_path(self, url: str, method: str, body: str) -> Path:
-        key = hashlib.sha256(f"{method} {url} {body}".encode()).hexdigest()
+        # 名前空間をキーに含める。同じURLでも未ログインと会員では中身が違い、
+        # 混ざると「ログインしたのに伏せ字のページを読み続ける」ことになる。
+        key = hashlib.sha256(
+            f"{self.cache_namespace}|{method} {url} {body}".encode()
+        ).hexdigest()
         host = urlparse(url).netloc or "unknown"
         # 2階層に切っておかないと1ディレクトリに数万ファイルが並ぶ
         return self.cache_dir / host / key[:2] / f"{key}.html"

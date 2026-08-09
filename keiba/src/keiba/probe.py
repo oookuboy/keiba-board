@@ -59,6 +59,37 @@ HORSE_LEVEL_PAGES = [
 ]
 
 
+def _table_structure(html: str) -> list[dict]:
+    """表の骨格だけを抜く。
+
+    会員ページの本文をそのままログに出すとアカウント名が漏れる（Actions の
+    ログは公開リポジトリでは誰でも読める）。パーサを書くのに要るのは
+    クラス名・列見出し・行数なので、そこだけを取る。セルの中身は出さない。
+    """
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "lxml")
+    out: list[dict] = []
+    for table in soup.select("table"):
+        rows = table.find_all("tr")
+        if len(rows) < 2:
+            continue
+        headers = [
+            re.sub(r"\s+", " ", c.get_text(" ", strip=True))[:20]
+            for c in rows[0].find_all(["th", "td"])
+        ]
+        cells = rows[1].find_all(["th", "td"]) if len(rows) > 1 else []
+        out.append(
+            {
+                "class": table.get("class"),
+                "rows": len(rows),
+                "headers": headers[:16],
+                "cell_classes": [c.get("class") for c in cells][:16],
+            }
+        )
+    return out[:8]
+
+
 def last_sunday(today: date) -> date:
     offset = (today.weekday() + 1) % 7 or 7
     return today - timedelta(days=offset)
@@ -192,6 +223,70 @@ class Probe:
                 f"{JRA_BASE}{action3}", f"card_L3_race{idx}",
                 method="POST", data={"cname": cname3},
             )
+
+    def probe_member_pages(self, race_id: str, horse_ids: list[str]) -> None:
+        """会員ログイン後に、有料ページが実際に開くかを確かめる。
+
+        未ログインでは本文が「スーパープレミアムコースからご利用頂けます」に
+        差し替わることを実測済み。ログイン後に同じURLで中身が出るなら、
+        調教タイムと厩舎コメントが特徴量に使える。
+
+        取れなければ取れないと記録する。ここを曖昧にすると「有料にしたのに
+        効いていない」状態に気づけない。
+        """
+        from keiba.sources import netkeiba_auth
+
+        if netkeiba_auth.credentials() is None:
+            log.info("netkeiba の認証情報なし。会員ページの採取は飛ばす")
+            return
+
+        try:
+            netkeiba_auth.login(self.fetcher)
+        except netkeiba_auth.LoginError as exc:
+            log.error("ログインできない: %s", exc)
+            self.manifest.append(
+                {"label": "member_login", "url": netkeiba_auth.LOGIN_URL,
+                 "ok": False, "error": str(exc)}
+            )
+            return
+
+        self.manifest.append(
+            {"label": "member_login", "url": netkeiba_auth.LOGIN_URL, "ok": True}
+        )
+
+        # 会員ページのヘッダにはアカウント名やメールアドレスが載る。
+        # このリポジトリは公開なので、HTML をそのままコミットすると漏れる。
+        # Actions のログも公開なので、本文を出すのも同じく危険。
+        # よって「保存しない・構造だけ出す」で扱う。
+        member_dir = self.out_dir / "member"
+        member_dir.mkdir(parents=True, exist_ok=True)
+
+        for idx, horse_id in enumerate(horse_ids[:2]):
+            for name, tmpl in HORSE_LEVEL_PAGES:
+                url = tmpl.format(horse_id=horse_id, race_id=race_id)
+                try:
+                    html = self.fetcher.fetch(url)
+                except FetchError as exc:
+                    log.warning("MISS member_%s: %s", name, exc)
+                    continue
+
+                walled = netkeiba_auth.is_paywalled(html)
+                log.info(
+                    "  %s: %s", name,
+                    "まだ有料の壁" if walled else "**中身が出た**",
+                )
+                self.manifest.append(
+                    {
+                        "label": f"member_{name}_{idx}",
+                        "url": url,
+                        "ok": True,
+                        "paywalled": walled,
+                        "structure": _table_structure(html),
+                    }
+                )
+                # 手元でパーサを書くためにファイルには残すが、gitignore 済みの
+                # member/ に置いてコミットされないようにする
+                (member_dir / f"{name}_{idx}.html").write_text(html, encoding="utf-8")
 
     def probe_today_results(self, day: date) -> None:
         """当日の着順が db.netkeiba に出ているかを確かめる。
@@ -364,6 +459,11 @@ class Probe:
         for horse_id in sorted(set(horse_ids))[:2]:
             self.grab(f"https://db.netkeiba.com/horse/{horse_id}/", f"horse_{horse_id}")
             self.grab(f"https://db.netkeiba.com/horse/ped/{horse_id}/", f"ped_{horse_id}")
+
+        # 会員ページは最後に見る。ログインするとキャッシュ名前空間が変わるので、
+        # 未ログインで採るぶんを先に済ませておく
+        if targets:
+            self.probe_member_pages(targets[0], sorted(set(horse_ids)))
 
         self.probe_today_results(date.today())
         self.probe_future(start)

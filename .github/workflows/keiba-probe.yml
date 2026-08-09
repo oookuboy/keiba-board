@@ -39,7 +39,12 @@ jobs:
       - name: Install
         run: pip install -e .
 
+      # 認証情報は Secrets からここで env に渡すだけ。値はリポジトリに存在せず、
+      # ログにも GitHub が自動でマスクをかける。未設定なら未ログインで動く。
       - name: Fetch fixtures
+        env:
+          NETKEIBA_EMAIL: ${{ secrets.NETKEIBA_EMAIL }}
+          NETKEIBA_PASSWORD: ${{ secrets.NETKEIBA_PASSWORD }}
         run: |
           if [ -n "${{ inputs.date }}" ]; then
             python -m keiba.probe --date "${{ inputs.date }}"
