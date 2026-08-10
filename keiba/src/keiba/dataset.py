@@ -106,8 +106,15 @@ def _prior_roll(df: pd.DataFrame, keys: list[str], column: str, window: int) -> 
     )
 
 
-def build_features(df: pd.DataFrame) -> pd.DataFrame:
-    """先読みなしの特徴量を組み立てる。"""
+def build_features(df: pd.DataFrame, speed_before=None) -> pd.DataFrame:
+    """先読みなしの特徴量を組み立てる。
+
+    FEATURE_COLUMNS に載っているものは、この関数を通せば全部そろう。
+    タイム指数もここで作る（別の場所で作ると、呼び出し側によって列が
+    あったり無かったりする）。
+    """
+    from keiba import speed
+
     out = df.copy()
 
     # --- 馬の履歴 ------------------------------------------------------
@@ -187,8 +194,15 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
             "std"
         ).replace(0, np.nan)
 
+    # --- 走破時計 ------------------------------------------------------
+    out = speed.attach_figures(out, before=speed_before)
+    out = speed.build_features(out)
+
     return out
 
+
+# 走破時計の特徴量。定義は speed.py 側に置いてある（作り方が長いため）。
+from keiba.speed import SPEED_FEATURES  # noqa: E402
 
 FEATURE_COLUMNS = [
     # 馬の履歴
@@ -215,6 +229,9 @@ FEATURE_COLUMNS = [
     "h_finish_ratio_r3_rank", "h_finish_ratio_r3_z",
     "j_place_rate_rank", "j_place_rate_z",
     "ssb_place_rate_rank", "ssb_place_rate_z",
+    # 走破時計（馬場差で補正した指数）。着順だけでは「強い相手に速い時計で
+    # 勝った」と「低調な組をゆっくり勝った」を区別できない。
+    *SPEED_FEATURES,
     # カテゴリ
     *CATEGORICAL,
 ]
@@ -233,14 +250,19 @@ def assert_no_market_leakage(columns: list[str]) -> None:
         raise AssertionError(f"オッズ由来の特徴量が混入している: {leaked}")
 
 
-def prepare(store: Store) -> pd.DataFrame:
-    """DB から学習可能な表を作る。"""
+def prepare(store: Store, speed_before=None) -> pd.DataFrame:
+    """DB から学習可能な表を作る。
+
+    speed_before を渡すと、タイム指数の基準（基準タイム・馬場差）をその日より
+    前のデータだけで作る。バックテストで未来の時計を混ぜないため。本番の
+    学習・予想では未来のデータが存在しないので None でよい。
+    """
     log.info("DB を読み込み中…")
     df = load_frame(store)
     log.info("  %d 行 / %d レース", len(df), df["race_id"].nunique())
 
     log.info("特徴量を構築中（先読みなし）…")
-    df = build_features(df)
+    df = build_features(df, speed_before=speed_before)
 
     assert_no_market_leakage(FEATURE_COLUMNS)
     for column in CATEGORICAL:

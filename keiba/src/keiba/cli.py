@@ -257,10 +257,7 @@ def cmd_eval_speed(args: argparse.Namespace) -> int:
     from keiba import dataset, ml, speed, workout_slices
 
     with Store(args.db) as store:
-        df = dataset.prepare(store)
-
-    df = speed.attach_figures(df, before=pd.Timestamp(str(args.valid_from)))
-    df = speed.build_features(df)
+        df = dataset.prepare(store, speed_before=pd.Timestamp(str(args.valid_from)))
     covered = speed.coverage(df[df["race_date"] >= str(args.valid_from)])
     log.info("指数あり %.1f%%（検証期間）", covered * 100)
 
@@ -268,8 +265,9 @@ def cmd_eval_speed(args: argparse.Namespace) -> int:
     scores: dict[str, object] = {}
     importance: list[tuple[str, int]] = []
     for label, features in (
-        ("時計なし", dataset.FEATURE_COLUMNS),
-        ("時計あり", dataset.FEATURE_COLUMNS + speed.SPEED_FEATURES),
+        ("時計なし", [c for c in dataset.FEATURE_COLUMNS
+                    if c not in speed.SPEED_FEATURES]),
+        ("時計あり", dataset.FEATURE_COLUMNS),
     ):
         result = ml.train(df, valid_from=args.valid_from, features=features)
         scores[label] = result.booster.predict(
@@ -309,11 +307,12 @@ def cmd_edge(args: argparse.Namespace) -> int:
     変わらない可能性が高い。次に何をするかがこの測定で決まる。
     """
     import numpy as np
+    import pandas as pd
 
     from keiba import dataset, edge, ml
 
     with Store(args.db) as store:
-        df = dataset.prepare(store)
+        df = dataset.prepare(store, speed_before=pd.Timestamp(str(args.valid_from)))
         train = df[df["race_date"] < str(args.valid_from)]
         valid = df[df["race_date"] >= str(args.valid_from)].copy()
         if train.empty or valid.empty:
@@ -471,8 +470,12 @@ def cmd_train(args: argparse.Namespace) -> int:
     if meta_path.exists():
         previous = json.loads(meta_path.read_text(encoding="utf-8")).get("auc")
 
+    import pandas as pd
+
     with Store(args.db) as store:
-        df = dataset.prepare(store)
+        # 検証期間より前だけで指数の基準を作る。ここを全期間にすると、
+        # 報告する AUC が本番より良く出てしまう。
+        df = dataset.prepare(store, speed_before=pd.Timestamp(str(args.valid_from)))
         result = ml.train(df, valid_from=args.valid_from)
         print(result.report())
 
@@ -503,10 +506,14 @@ def _ml_scores(store, config_dir, start, end) -> dict | None:
     """期間内の全レースぶんの ML スコアを作る。モデルが無ければ None。"""
     from keiba import dataset, ml
 
+    import pandas as pd
+
     booster = ml.load(config_dir / "model.txt")
     if booster is None:
         return None
-    df = dataset.prepare(store)
+    # 指数の基準も期間開始より前だけで作る。種牡馬適性表と同じ理屈で、
+    # 全期間から作ると「未来のコース水準を知って過去を予想する」ことになる。
+    df = dataset.prepare(store, speed_before=pd.Timestamp(str(start)))
     window = df[(df["race_date"] >= str(start)) & (df["race_date"] <= str(end))].copy()
     if window.empty:
         return None
