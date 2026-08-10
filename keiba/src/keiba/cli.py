@@ -230,6 +230,7 @@ def cmd_strategy(args: argparse.Namespace) -> int:
     人気での足切りはしない。16番人気でもモデルが上位に置いたなら買う。
     穴を狙うのではなく、良いと思った馬を買った結果として穴が混ざる形。
     """
+    import numpy as np
     import pandas as pd
 
     from keiba import dataset, edge, ml, strategy
@@ -268,6 +269,36 @@ def cmd_strategy(args: argparse.Namespace) -> int:
     )
     print()
     print(strategy.format_results(rows))
+
+    # ここからが本題。別々の測定で「市場が緩んでいるかもしれない」と出た
+    # 2つを掛け合わせる。荒れ型のレース × モデルが市場より高く評価した馬。
+    # 人気では一切切らない。
+    curve = edge.market_curve(df[df["race_date"] < str(args.valid_from)], dataset.TARGET)
+    gap = scores - edge.apply_curve(valid, curve).to_numpy()
+    shape = edge.race_shape(valid).to_numpy()
+
+    focused = []
+    for name in ("荒れ型", "堅型", "その他"):
+        in_shape = shape == name
+        if in_shape.sum() < 500:
+            continue
+        # そのレース形の中で、乖離の上位1/3を買う
+        threshold = pd.Series(gap[in_shape]).quantile(2 / 3)
+        picked = in_shape & (gap >= threshold) & np.isfinite(gap)
+        if picked.sum() < 200:
+            continue
+        focused.append(
+            strategy.evaluate(
+                valid[picked], place, f"{name}・乖離上位1/3", "複勝"
+            )
+        )
+        # 比べる相手として、同じレース形の全馬も出す
+        focused.append(
+            strategy.evaluate(valid[in_shape], place, f"{name}・全馬", "複勝")
+        )
+    if focused:
+        print()
+        print(strategy.format_results(focused))
     return 0
 
 
