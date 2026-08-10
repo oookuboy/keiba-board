@@ -244,6 +244,62 @@ def cmd_chaos(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_eval_speed(args: argparse.Namespace) -> int:
+    """タイム指数を足すと精度が動くかを、同じ分割で並べて測る。
+
+    調教のときと同じ扱い。効くと分かってから本番の特徴量に入れる。
+    基準タイムと馬場差は検証期間より前のデータだけで作る（種牡馬適性表と
+    同じ）。ここに未来を混ぜると、そのコースの基準を未来から知っている
+    ことになる。
+    """
+    import pandas as pd
+
+    from keiba import dataset, ml, speed, workout_slices
+
+    with Store(args.db) as store:
+        df = dataset.prepare(store)
+
+    df = speed.attach_figures(df, before=pd.Timestamp(str(args.valid_from)))
+    df = speed.build_features(df)
+    covered = speed.coverage(df[df["race_date"] >= str(args.valid_from)])
+    log.info("指数あり %.1f%%（検証期間）", covered * 100)
+
+    valid = df[df["race_date"] >= str(args.valid_from)]
+    scores: dict[str, object] = {}
+    importance: list[tuple[str, int]] = []
+    for label, features in (
+        ("時計なし", dataset.FEATURE_COLUMNS),
+        ("時計あり", dataset.FEATURE_COLUMNS + speed.SPEED_FEATURES),
+    ):
+        result = ml.train(df, valid_from=args.valid_from, features=features)
+        scores[label] = result.booster.predict(
+            valid[features], num_iteration=result.booster.best_iteration
+        )
+        print()
+        print(f"【{label}】特徴量 {len(features)}個  AUC {result.auc:.5f}")
+        print(ml.format_ranking(ml.evaluate_ranking(valid, scores[label])))
+        if label == "時計あり":
+            importance = result.importance
+
+    print()
+    print(workout_slices.format_slices(
+        workout_slices.compare(
+            valid, dataset.TARGET, scores["時計なし"], scores["時計あり"]
+        ),
+        subject="時計",
+    ))
+
+    used = [(n, g) for n, g in importance if n in speed.SPEED_FEATURES]
+    total = sum(g for _, g in importance) or 1
+    print()
+    print("時計の特徴量の寄与（gain・全体に占める割合）")
+    for name, gain in used:
+        print(f"  {name:<18}{gain:>12,}{gain / total:>8.2%}")
+    print(f"  {'合計':<18}{sum(g for _, g in used):>12,}"
+          f"{sum(g for _, g in used) / total:>8.2%}")
+    return 0
+
+
 def cmd_edge(args: argparse.Namespace) -> int:
     """モデルと市場の食い違いに妙味があるかを、実払戻で測る。
 
@@ -518,6 +574,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--offset", type=int, default=0, help="対象リストの先頭から飛ばす頭数（並列分割用）"
     )
     p.set_defaults(func=cmd_backfill_workouts)
+
+    p = sub.add_parser(
+        "eval-speed", help="タイム指数を足すと精度が動くかを並べて測る"
+    )
+    p.add_argument("--valid-from", type=_date, required=True)
+    p.set_defaults(func=cmd_eval_speed)
 
     p = sub.add_parser(
         "chaos", help="荒れやすさが市場の形から読めるかを測る"
