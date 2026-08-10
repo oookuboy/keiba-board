@@ -224,6 +224,53 @@ def cmd_review(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_strategy(args: argparse.Namespace) -> int:
+    """「勝ちそうな馬を買う」を素直にやったら、いくらになるかを測る。
+
+    人気での足切りはしない。16番人気でもモデルが上位に置いたなら買う。
+    穴を狙うのではなく、良いと思った馬を買った結果として穴が混ざる形。
+    """
+    import pandas as pd
+
+    from keiba import dataset, edge, ml, strategy
+
+    with Store(args.db) as store:
+        df = dataset.prepare(store, speed_before=pd.Timestamp(str(args.valid_from)))
+        result = ml.train(df, valid_from=args.valid_from)
+        valid = df[df["race_date"] >= str(args.valid_from)].copy()
+        scores = ml.predict(result.booster, valid)
+
+        place = edge.payout_map(store, "複勝")
+        win = edge.payout_map(store, "単勝")
+
+    log.info("検証 %d レース / AUC %.5f", valid["race_id"].nunique(), result.auc)
+
+    rows = []
+    for n in (1, 2, 3):
+        picks = strategy.top_n_by_race(valid, scores, n)
+        rows.append(strategy.evaluate(picks, place, f"モデル上位{n}頭", "複勝"))
+    rows.append(
+        strategy.evaluate(
+            strategy.top_n_by_race(valid, scores, 1), win, "モデル1位", "単勝"
+        )
+    )
+
+    # 比較のため、市場のとおりに買った場合も出す。モデルがこれを下回るなら
+    # 「モデルを使う意味が無い」ということになる。
+    market = -valid["market_popularity"].to_numpy(dtype=float)
+    for n in (1, 3):
+        picks = strategy.top_n_by_race(valid, market, n)
+        rows.append(strategy.evaluate(picks, place, f"人気上位{n}頭", "複勝"))
+    rows.append(
+        strategy.evaluate(
+            strategy.top_n_by_race(valid, market, 1), win, "1番人気", "単勝"
+        )
+    )
+    print()
+    print(strategy.format_results(rows))
+    return 0
+
+
 def cmd_chaos(args: argparse.Namespace) -> int:
     """レースが荒れるかどうかを、市場の形から読めるかを測る。
 
@@ -587,6 +634,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--valid-from", type=_date, required=True)
     p.set_defaults(func=cmd_eval_speed)
+
+    p = sub.add_parser(
+        "strategy", help="勝ちそうな馬を素直に買った場合の実回収率を測る"
+    )
+    p.add_argument("--valid-from", type=_date, required=True)
+    p.set_defaults(func=cmd_strategy)
 
     p = sub.add_parser(
         "chaos", help="荒れやすさが市場の形から読めるかを測る"
