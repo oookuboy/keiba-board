@@ -14,7 +14,10 @@ from pathlib import Path
 
 from keiba import betting, confidence, engine
 from keiba.features import build_features
-from keiba.store import Store
+from dataclasses import replace
+
+from keiba.models import RaceCard
+from keiba.store import Store, read_jsonl
 
 log = logging.getLogger(__name__)
 
@@ -26,24 +29,44 @@ def predict_race(race_id: str, store: Store, weights: dict, sire_table: dict) ->
     card = store.load_card(race_id)
     if card is None:
         return None
+    return predict_card(card, store, weights, sire_table)
 
+
+def predict_card(
+    card: RaceCard, store: Store, weights: dict, sire_table: dict
+) -> dict | None:
+    """出馬表そのものから予想する。
+
+    木曜の JRA 出馬表は枠順確定前で、馬番が空のまま返る。以前はそこで予想ごと
+    捨てていたが、馬名も血統も騎手も揃っているので能力評価はできる。
+    捨てていたのは「買い目を偽の馬番で組まないため」であって、印まで出せない
+    理由は無い。
+
+    枠順が未確定のときは、内部の突き合わせにだけ仮の通し番号を使い、
+    **出力には馬番を載せず、買い目も組まない**。仮番号が券に化けないよう、
+    ここで断ち切る。
+    """
     race = card.race
     entries = card.live_entries()
     if len(entries) < 6:
         return None
 
-    # 木曜の出馬表は枠順確定前で馬番が空。買い目は馬番で組むので、
-    # ここを通すと偽の並びで券を作ることになる。取得失敗とは区別して落とす。
-    if any(e.umaban is None for e in entries):
-        log.info("%s: 枠順未確定のため予想しない（金曜確定）", race.race_id)
-        return None
+    unconfirmed = any(e.umaban is None for e in entries)
+    if unconfirmed:
+        # 仮番号は engine と features の突き合わせにしか使わない。
+        # 出馬表に並んでいる順（＝JRA の表示順）をそのまま振る。
+        entries = [
+            replace(e, umaban=i) if e.umaban is None else e
+            for i, e in enumerate(entries, 1)
+        ]
+        log.info("%s: 枠順未確定。印だけ出して買い目は組まない", race.race_id)
 
     features = build_features(
         race, entries, store, sire_table, weights, as_of=race.race_date
     )
     horses = engine.run(features, {e.umaban: e for e in entries}, weights)
     grade = confidence.grade(horses, weights)
-    tickets = betting.build(horses, grade, weights)
+    tickets = [] if unconfirmed else betting.build(horses, grade, weights)
 
     # 展開は全頭共通の判断なので、1頭ぶんの理由から取り出して見出しにする
     pace_note = next(
@@ -64,6 +87,7 @@ def predict_race(race_id: str, store: Store, weights: dict, sire_table: dict) ->
         "weather": race.weather,
         "post_time": race.post_time,
         "field_size": race.field_size,
+        "post_positions_confirmed": not unconfirmed,
         "confidence": grade.grade,
         "confidence_reason": grade.reason,
         "popularity_sum": grade.popularity_sum,
@@ -72,7 +96,8 @@ def predict_race(race_id: str, store: Store, weights: dict, sire_table: dict) ->
         "pace": pace_note.split("・")[0].replace("想定", "") if pace_note else None,
         "horses": [
             {
-                "umaban": h.umaban,
+                # 仮番号を本物として出さない。枠順が決まるまで馬番は無い。
+                "umaban": None if unconfirmed else h.umaban,
                 "name": h.horse_name,
                 "mark": h.mark,
                 "score": h.score,
@@ -199,6 +224,7 @@ def predict_day(
     day: date,
     *,
     provisional: bool = False,
+    raw_dir: Path | None = None,
 ) -> dict:
     """その日の中央全レースを予想する。
 
@@ -207,19 +233,35 @@ def predict_day(
     たまたま一部レースだけオッズが出ていると「一部だけ買い目が付く」という
     中途半端な出方をするため、金額に関わる部分は当日の本予想に一本化する。
     """
-    race_ids = [
-        r[0]
-        for r in store.conn.execute(
-            "SELECT race_id FROM races WHERE race_date = ? ORDER BY race_id",
-            (day.isoformat(),),
-        )
-    ]
-    log.info("%s: %d レース", day, len(race_ids))
+    # 枠順確定前の馬は DB に入れられない（馬番が entries の主キーなので）。
+    # 暫定運用ではその馬こそ見たいので、生データから直に読む。ここを DB 経由に
+    # したままだと、木曜は毎回「0レース」で終わる（実際そうなっていた）。
+    cards: list[RaceCard] = []
+    if provisional and raw_dir is not None:
+        path = Path(raw_dir) / str(day.year) / f"{day.isoformat()}.jsonl.gz"
+        if path.exists():
+            cards = [c for c in read_jsonl(path) if c.race.race_date == day]
+            log.info("%s: 生データから %d レース", day, len(cards))
+
+    if not cards:
+        cards = [
+            card
+            for card in (
+                store.load_card(r[0])
+                for r in store.conn.execute(
+                    "SELECT race_id FROM races WHERE race_date = ? ORDER BY race_id",
+                    (day.isoformat(),),
+                )
+            )
+            if card is not None
+        ]
+        log.info("%s: %d レース", day, len(cards))
 
     races: list[dict] = []
-    for race_id in race_ids:
+    for card in cards:
+        race_id = card.race.race_id
         try:
-            payload = predict_race(race_id, store, weights, sire_table)
+            payload = predict_card(card, store, weights, sire_table)
         except (AssertionError, KeyError, ValueError) as exc:
             log.warning("%s の予想に失敗: %s", race_id, exc)
             continue

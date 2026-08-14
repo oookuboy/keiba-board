@@ -177,7 +177,8 @@ def cmd_predict(args: argparse.Namespace) -> int:
     weights, sire_table = _load_config(args)
     with Store(args.db) as store:
         payload = predict.predict_day(
-            store, weights, sire_table, args.day, provisional=args.provisional
+            store, weights, sire_table, args.day,
+            provisional=args.provisional, raw_dir=args.raw_dir,
         )
         predict.save_predictions(store, payload)
     out = predict.write_day(payload, args.data_dir)
