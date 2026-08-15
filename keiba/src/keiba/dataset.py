@@ -14,6 +14,7 @@ SKILL.md の絶対ルールをここでも守る。人気を使うのは confide
 
 from __future__ import annotations
 
+import json
 import logging
 
 import numpy as np
@@ -51,9 +52,21 @@ def _class_rank(race_class: pd.Series, grade: pd.Series) -> pd.Series:
     return rank
 
 
-def load_frame(store: Store) -> pd.DataFrame:
-    """races × entries × results を1枚の表にする。"""
-    sql = """
+def load_frame(store: Store, include_unfinished: bool = False) -> pd.DataFrame:
+    """races × entries × results を1枚の表にする。
+
+    既定では結果のある出走だけを返す。学習はこれでよい。
+
+    include_unfinished を立てると、まだ走っていないレースも含める（結果列は
+    欠損になる）。**これから予想するレースを特徴量に載せるために要る**。
+    内側 JOIN のままだと、出馬表は取れているのに results がまだ無いという
+    理由だけで今週のレースが1行も出てこない。
+
+    先読みにはならない。特徴量はすべて groupby().shift(1) で「その行より前」
+    だけから作るので、結果の無い行は自分の欠損値を誰にも渡さない。
+    """
+    join = "LEFT JOIN" if include_unfinished else "JOIN"
+    sql = f"""
     SELECT r.race_id, r.race_date, r.venue, r.surface, r.distance, r.direction,
            r.going, r.grade, r.race_class, r.field_size, r.race_no,
            e.umaban, e.waku, e.horse_id, e.horse_name, e.sex, e.age,
@@ -63,19 +76,32 @@ def load_frame(store: Store) -> pd.DataFrame:
            res.finish_pos, res.time_sec, res.corners, res.last3f
     FROM entries e
     JOIN races r     ON r.race_id = e.race_id
-    JOIN results res ON res.race_id = e.race_id AND res.umaban = e.umaban
+    {join} results res ON res.race_id = e.race_id AND res.umaban = e.umaban
     WHERE e.scratched = 0
     """
     df = pd.read_sql_query(sql, store.conn)
     df["race_date"] = pd.to_datetime(df["race_date"])
     df = df.sort_values(["race_date", "race_id", "umaban"]).reset_index(drop=True)
 
-    # 通過順は JSON 文字列。1コーナーの位置取りだけ使う
-    first_corner = df["corners"].apply(
-        lambda s: (lambda v: v[0] if v else np.nan)(__import__("json").loads(s or "[]"))
-    )
+    # 通過順は JSON 文字列。1コーナーの位置取りだけ使う。
+    # まだ走っていない行では NaN で来る。NaN は真なので `s or "[]"` を
+    # すり抜けて json.loads に渡ってしまう（実際そこで落ちた）。
+    def _first_corner(raw) -> float:
+        if not isinstance(raw, str) or not raw:
+            return np.nan
+        try:
+            values = json.loads(raw)
+        except ValueError:
+            return np.nan
+        return values[0] if values else np.nan
+
+    first_corner = df["corners"].apply(_first_corner)
     df["corner_ratio"] = first_corner / df["field_size"]
     df["finish_ratio"] = df["finish_pos"] / df["field_size"]
+    # 走り終わったか。TARGET は欠損を False に潰すので、これが無いと
+    # 「まだ走っていない」と「3着以内に入らなかった」が同じ 0 になる。
+    # 学習側はこの列で落とす。
+    df["finished"] = df["finish_pos"].notna()
     df[TARGET] = (df["finish_pos"] <= 3).astype("int8")
     df["won"] = (df["finish_pos"] == 1).astype("int8")
     df["placed"] = df[TARGET]
@@ -250,16 +276,24 @@ def assert_no_market_leakage(columns: list[str]) -> None:
         raise AssertionError(f"オッズ由来の特徴量が混入している: {leaked}")
 
 
-def prepare(store: Store, speed_before=None) -> pd.DataFrame:
+def prepare(
+    store: Store, speed_before=None, include_unfinished: bool = False
+) -> pd.DataFrame:
     """DB から学習可能な表を作る。
 
     speed_before を渡すと、タイム指数の基準（基準タイム・馬場差）をその日より
     前のデータだけで作る。バックテストで未来の時計を混ぜないため。本番の
     学習・予想では未来のデータが存在しないので None でよい。
+
+    include_unfinished は、これから走るレースにもモデルのスコアを付けるため
+    のもの。学習には使わない（ml.train が finished で落とす）。
     """
     log.info("DB を読み込み中…")
-    df = load_frame(store)
+    df = load_frame(store, include_unfinished=include_unfinished)
     log.info("  %d 行 / %d レース", len(df), df["race_id"].nunique())
+    if include_unfinished:
+        pending = int((~df["finished"]).sum())
+        log.info("  うち未走 %d 行（予想対象。学習には使わない）", pending)
 
     log.info("特徴量を構築中（先読みなし）…")
     df = build_features(df, speed_before=speed_before)

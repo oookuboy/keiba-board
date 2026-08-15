@@ -13,7 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import yaml
@@ -73,12 +73,30 @@ def cmd_backfill_workouts(args: argparse.Namespace) -> int:
     with Store(args.db) as store:
         rebuild(store, args.raw_dir)
         backfill.load_workout_file(store, args.workouts)
+
+        targets = None
+        if args.upcoming:
+            # 今週の出走馬だけを引き直す。過去の一括収集と違い、一度引いた馬も
+            # 対象に入れる。調教は毎週更新されるうえ、特徴量は21日より古い
+            # ものを捨てるので、8月に引いた履歴は10月には1本も残らない。
+            today = date.today()
+            fresh_since = today - timedelta(days=args.fresh_days)
+            targets = store.horse_ids_with_stale_workouts(
+                today.isoformat(), fresh_since.isoformat()
+            )
+            log.info(
+                "今週の出走馬のうち %s 以降の調教が無い: %d頭",
+                fresh_since, len(targets),
+            )
+
         fetched = backfill.collect_workouts(
             Fetcher(cache_dir=args.cache),
             store,
             args.workouts,
             args.limit,
             args.offset,
+            targets=targets,
+            refresh=args.upcoming,
         )
         remaining = len(store.horse_ids_without_workouts())
     log.info("調教 %d本を取得。未取得の残り %d頭", fetched, remaining)
@@ -179,6 +197,7 @@ def cmd_predict(args: argparse.Namespace) -> int:
         payload = predict.predict_day(
             store, weights, sire_table, args.day,
             provisional=args.provisional, raw_dir=args.raw_dir,
+            config_dir=args.config_dir,
         )
         predict.save_predictions(store, payload)
     out = predict.write_day(payload, args.data_dir)
@@ -658,6 +677,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--limit", type=int, default=None, help="1回で引く頭数の上限")
     p.add_argument(
         "--offset", type=int, default=0, help="対象リストの先頭から飛ばす頭数（並列分割用）"
+    )
+    p.add_argument(
+        "--upcoming",
+        action="store_true",
+        help="今週の出走馬だけを引き直す（毎週の運用）。過去の一括収集と違い、"
+        " 一度引いた馬も対象にする。調教は毎週更新され、21日より古いものは"
+        " 特徴量として使われないため",
+    )
+    p.add_argument(
+        "--fresh-days", type=int, default=10,
+        help="--upcoming のとき、この日数以内の調教があれば引き直さない（既定 10）",
     )
     p.set_defaults(func=cmd_backfill_workouts)
 

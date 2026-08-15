@@ -95,6 +95,12 @@ def train(
     列がずれる（62列のコードで56列のモデルを読む形を既に踏んでいる）。
     """
     features = features or FEATURE_COLUMNS
+    if "finished" in df.columns and not df["finished"].all():
+        # まだ走っていない行は目的変数が 0 に潰れている（着順が無いため）。
+        # 混ぜると「今週の全馬は3着以内に入らなかった」を学習する。
+        dropped = int((~df["finished"]).sum())
+        log.info("未走 %d 行を学習から外す", dropped)
+        df = df[df["finished"]]
     train_df, valid_df = split(df, valid_from)
     if train_df.empty or valid_df.empty:
         raise ValueError(f"分割が空になった（境界 {valid_from}）")

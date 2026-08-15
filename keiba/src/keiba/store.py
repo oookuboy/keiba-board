@@ -254,6 +254,40 @@ class Store:
             )
         ]
 
+    def horse_ids_with_stale_workouts(
+        self, race_from: str, fresh_since: str
+    ) -> list[str]:
+        """race_from 以降に走る馬のうち、fresh_since 以降の調教を持たないもの。
+
+        過去の一括収集とは目的が違う。あちらは「まだ一度も引いていない馬」を
+        埋める作業だが、こちらは**毎週引き直す**ためのもの。
+
+        調教特徴量は `RECENT_DAYS`（21日）より古いものを欠損として捨てる。
+        つまり8月に引いた履歴は10月のレースでは1本も残らない。一度引いた馬を
+        「取得済み」として飛ばすと、本番では全馬が欠損のまま動くことになる。
+
+        並びは出走の早い順。時間切れで途中までしか引けなくても、先に始まる
+        開催から埋まる。
+        """
+        return [
+            r[0]
+            for r in self.conn.execute(
+                """
+                SELECT e.horse_id, MIN(r.race_date) AS next_run
+                FROM entries e
+                JOIN races r ON r.race_id = e.race_id
+                WHERE e.horse_id <> '' AND r.race_date >= ?
+                GROUP BY e.horse_id
+                HAVING COALESCE((
+                    SELECT MAX(w.workout_date) FROM horse_workouts w
+                    WHERE w.horse_id = e.horse_id
+                ), '') < ?
+                ORDER BY next_run, e.horse_id
+                """,
+                (race_from, fresh_since),
+            )
+        ]
+
     def workouts_before(self, horse_id: str, before: date) -> list[dict]:
         """そのレースより前の調教だけ。先読みを構造で防ぐ。
 

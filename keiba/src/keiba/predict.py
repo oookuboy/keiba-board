@@ -32,8 +32,56 @@ def predict_race(race_id: str, store: Store, weights: dict, sire_table: dict) ->
     return predict_card(card, store, weights, sire_table)
 
 
+def model_scores(store: Store, day: date, config_dir: Path) -> dict[str, dict[int, float]]:
+    """その日の全出走馬に、学習モデルの3着以内確率を付ける。
+
+    ## なぜ要るのか
+
+    バックテストは `--no-model` を付けない限り学習モデルで採点している。
+    一方、実際にボードへ出していた予想は `weights.yml` の手置きスコアだけで
+    動いていた。**測っているものと出しているものが別だった**。
+
+    タイム指数を足して AUC が上がったのも、調教を測っていたのも、すべて
+    モデル側の話で、ボードには一度も届いていない。ここを繋いで初めて、
+    集めたデータが予想に効く。
+
+    モデルが無い・今日のレースが表に出ない場合は空を返す。呼び出し側は
+    手置きスコアにそのまま落ちる。
+    """
+    from keiba import dataset, ml
+
+    booster = ml.load(config_dir / "model.txt")
+    if booster is None:
+        log.warning(
+            "%s が無い。手置きの重みで採点する（順位付けの精度は落ちる）",
+            config_dir / "model.txt",
+        )
+        return {}
+
+    # まだ結果の無いレースを含めて読む。内側 JOIN のままだと、これから走る
+    # レースは results が無いという理由だけで1行も出てこない。
+    df = dataset.prepare(store, include_unfinished=True)
+    today = df[df["race_date"] == str(day)]
+    if today.empty:
+        log.warning("%s の行が特徴量の表に無い。手置きの重みで採点する", day)
+        return {}
+
+    today = today.copy()
+    today["p"] = ml.predict(booster, today)
+    scores = {
+        race_id: dict(zip(group["umaban"], group["p"]))
+        for race_id, group in today.groupby("race_id", observed=True)
+    }
+    log.info("学習モデルで採点: %d レース / %d頭", len(scores), len(today))
+    return scores
+
+
 def predict_card(
-    card: RaceCard, store: Store, weights: dict, sire_table: dict
+    card: RaceCard,
+    store: Store,
+    weights: dict,
+    sire_table: dict,
+    ml_scores: dict[int, float] | None = None,
 ) -> dict | None:
     """出馬表そのものから予想する。
 
@@ -60,11 +108,16 @@ def predict_card(
             for i, e in enumerate(entries, 1)
         ]
         log.info("%s: 枠順未確定。印だけ出して買い目は組まない", race.race_id)
+        # 仮番号はこの関数の中だけの通し番号で、モデル側の馬番とは無関係。
+        # 突き合わせると別の馬のスコアを付けることになるので捨てる。
+        ml_scores = None
 
     features = build_features(
         race, entries, store, sire_table, weights, as_of=race.race_date
     )
-    horses = engine.run(features, {e.umaban: e for e in entries}, weights)
+    horses = engine.run(
+        features, {e.umaban: e for e in entries}, weights, ml_scores
+    )
     grade = confidence.grade(horses, weights)
     tickets = [] if unconfirmed else betting.build(horses, grade, weights)
 
@@ -225,6 +278,7 @@ def predict_day(
     *,
     provisional: bool = False,
     raw_dir: Path | None = None,
+    config_dir: Path | None = None,
 ) -> dict:
     """その日の中央全レースを予想する。
 
@@ -257,11 +311,24 @@ def predict_day(
         ]
         log.info("%s: %d レース", day, len(cards))
 
+    # 学習モデルで能力を採点する。ここが無いと、バックテストで測っている
+    # ものとボードに出るものが別になる。
+    scores: dict[str, dict[int, float]] = {}
+    if config_dir is not None and cards:
+        try:
+            scores = model_scores(store, day, config_dir)
+        except (KeyError, ValueError) as exc:
+            # 採点できなくても手置きの重みで予想自体は出せる。ただし黙って
+            # 落ちると「モデルを繋いだつもりで繋がっていない」に戻るので残す。
+            log.warning("モデルでの採点に失敗: %s（手置きの重みで続ける）", exc)
+
     races: list[dict] = []
     for card in cards:
         race_id = card.race.race_id
         try:
-            payload = predict_card(card, store, weights, sire_table)
+            payload = predict_card(
+                card, store, weights, sire_table, scores.get(race_id)
+            )
         except (AssertionError, KeyError, ValueError) as exc:
             log.warning("%s の予想に失敗: %s", race_id, exc)
             continue
@@ -287,6 +354,9 @@ def predict_day(
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "engine_version": weights["engine_version"],
         "provisional": provisional,
+        # 何で採点したか。手置きと学習モデルでは順位付けの精度が違うので、
+        # 後から回顧するときにこれが分からないと成績を比べられない。
+        "scored_by": "model" if scores else "weights",
         "summary": {
             "races": len(races),
             "bet": len(bet_races),

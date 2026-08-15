@@ -206,14 +206,25 @@ def collect_workouts(
     out_path: Path,
     limit: int | None = None,
     offset: int = 0,
+    targets: list[str] | None = None,
+    refresh: bool = False,
 ) -> int:
     """netkeiba 有料プランの調教タイムを馬単位で引く。
 
     rid を付けなければ1リクエストでその馬の全履歴が返るので、出走ごとでは
     なく馬ごとに引く（実測。約14.9万回が約2.4万回になる）。
 
-    対象は最終出走日の新しい順。途中で止めても「直近◯ヶ月は揃っている」
-    状態になり、その期間だけで調教あり／なしを比べられる。
+    targets を渡さなければ、対象は「まだ一度も引いていない馬」を最終出走日の
+    新しい順に並べたもの。途中で止めても「直近◯ヶ月は揃っている」状態になり、
+    その期間だけで調教あり／なしを比べられる。
+
+    毎週の運用では呼び出し側が targets を作って渡す。今週の出走馬だけを、
+    しかも**一度引いた馬も含めて**引き直す必要があるため（調教は毎週更新され、
+    3週間より古いものは特徴量として使われない）。
+
+    refresh を立てるとディスクキャッシュを無視して取り直す。同じ URL でも
+    中身が毎週変わるページなので、引き直しのつもりでキャッシュを読んでいたら
+    先週の追い切りを今週の状態として使うことになる。
     """
     from keiba.sources import netkeiba_auth
 
@@ -221,7 +232,9 @@ def collect_workouts(
     # ここは認証情報が無い時点で落とす。
     netkeiba_auth.login(fetcher, required=True)
 
-    targets = store.horse_ids_without_workouts()[offset:]
+    if targets is None:
+        targets = store.horse_ids_without_workouts()
+    targets = targets[offset:]
     if limit:
         targets = targets[:limit]
     if not targets:
@@ -233,7 +246,9 @@ def collect_workouts(
     empty = 0
     for i, horse_id in enumerate(targets, 1):
         try:
-            html = fetcher.fetch(TRAINING_URL.format(horse_id=horse_id))
+            html = fetcher.fetch(
+                TRAINING_URL.format(horse_id=horse_id), force=refresh
+            )
         except FetchError as exc:
             log.warning("調教を取得できない %s: %s", horse_id, exc)
             continue
