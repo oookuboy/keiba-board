@@ -173,8 +173,25 @@ def load(model_path: Path = MODEL_PATH) -> lgb.Booster | None:
 
 
 def predict(booster: lgb.Booster, df: pd.DataFrame) -> np.ndarray:
-    """3着以内に入る確率を返す。0〜100 のスコアに写して使う。"""
-    return booster.predict(df[FEATURE_COLUMNS], num_iteration=booster.best_iteration)
+    """3着以内に入る確率を返す。0〜100 のスコアに写して使う。
+
+    列は **モデル自身が持っている名前** で選ぶ。FEATURE_COLUMNS で選ぶと、
+    特徴量を足した直後に「74列のコードで65列のモデルを読む」形になって落ちる。
+    再学習は月1なので、足してから差し替わるまでの間が必ず存在する。
+
+    足りない列があるときだけ落とす。そちらは黙って進むと、モデルが見て
+    いるはずの情報が欠けたまま予想が出てしまう。
+    """
+    names = booster.feature_name()
+    missing = [c for c in names if c not in df.columns]
+    if missing:
+        raise ValueError(f"モデルが要求する列が表に無い: {missing}")
+
+    extra = [c for c in FEATURE_COLUMNS if c not in names]
+    if extra:
+        # 特徴量を足したがモデルがまだ古い状態。予想は出せるので止めない。
+        log.info("モデルがまだ使っていない特徴量: %s（再学習で入る）", extra)
+    return booster.predict(df[names], num_iteration=booster.best_iteration)
 
 
 def evaluate_ranking(df: pd.DataFrame, scores: np.ndarray) -> dict:
