@@ -43,6 +43,8 @@ on:
 
 permissions:
   contents: write
+  # 調教は artifact で持ち回っている。名前で最新を拾うのに API を引く。
+  actions: read
 
 concurrency:
   # 予想と回顧が同時に走ると raw/ と data/ の取り合いになる
@@ -139,12 +141,51 @@ jobs:
             exit 1
           fi
 
+      # 調教（netkeiba 有料）を手元に戻す。予想する側でも学習した側と同じ列が
+      # 埋まっていないと、モデルが使っている特徴量が本番だけ欠損になる。
+      - name: 調教を artifact から戻す
+        if: steps.plan.outputs.job != 'review'
+        uses: ./.github/actions/workouts
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       # 金曜。枠順が確定するので、ここで初めて馬番の入った出馬表が取れる
       - name: Collect
         if: steps.plan.outputs.job == 'collect'
         run: |
           python -m keiba.cli collect --upcoming
           python -m keiba.cli build
+
+      # 今週の出走馬の調教を引き直す。約500頭・1.5秒ウェイトで約12分。
+      #
+      # 一度引いた馬も対象にする。調教は毎週更新され、特徴量は21日より古い
+      # ものを捨てるので、8月に引いた履歴は10月のレースでは1本も残らない。
+      # ここが無いと、本番だけ調教が全馬欠損のまま動くことになる。
+      #
+      # 落ちても予想は続ける。調教が無ければ欠損として扱われるだけで、
+      # 有料データの不調で週末の運用ごと止めるほうが害が大きい。
+      - name: 今週の調教を引く
+        if: steps.plan.outputs.job == 'collect'
+        continue-on-error: true
+        env:
+          NETKEIBA_EMAIL: ${{ secrets.NETKEIBA_EMAIL }}
+          NETKEIBA_PASSWORD: ${{ secrets.NETKEIBA_PASSWORD }}
+        run: |
+          python -m keiba.cli -v \
+            --workouts keiba/raw/workouts.jsonl.gz \
+            backfill-workouts --upcoming
+
+      # 期限を更新して上げ直す。これで90日の時計が毎週リセットされ、
+      # 週次で回っている限り消えない。
+      - name: 調教を artifact へ戻す
+        if: steps.plan.outputs.job == 'collect'
+        uses: actions/upload-artifact@v4
+        with:
+          name: workouts
+          path: keiba/raw/workouts.jsonl.gz
+          retention-days: 90
+          overwrite: true
+          if-no-files-found: warn
 
       - name: Predict
         if: steps.plan.outputs.job == 'predict'

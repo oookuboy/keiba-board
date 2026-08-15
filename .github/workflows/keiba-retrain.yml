@@ -30,6 +30,8 @@ on:
 
 permissions:
   contents: write
+  # 調教は artifact で持ち回っている。名前で最新を拾うのに API を引く。
+  actions: read
 
 concurrency:
   group: keiba-retrain
@@ -52,6 +54,14 @@ jobs:
           path: keiba/keiba.db
           key: keiba-db-${{ hashFiles('keiba/raw/**/*.jsonl.gz') }}
           restore-keys: keiba-db-
+
+      # 調教（netkeiba 有料）はコミットできないので artifact から戻す。
+      # ここが無いと、調教の列が全行欠損のモデルが出来上がり、予想側だけ
+      # 値が入っている状態になる（学習と本番で特徴量の中身がずれる）。
+      - name: 調教を artifact から戻す
+        uses: ./.github/actions/workouts
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build
         run: python -m keiba.cli build

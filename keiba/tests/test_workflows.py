@@ -132,6 +132,49 @@ def test_the_review_runs_on_the_day_of_the_races() -> None:
     assert set(dow.split(",")) == {"6", "0"}, "土日に走らせること"
 
 
+def test_the_workout_artifact_chain_renews_itself() -> None:
+    """調教を取り込むワークフローが、上げ直しもすること。
+
+    調教は netkeiba の有料データで、公開リポジトリにはコミットできない。
+    かわりに artifact で持ち回っているが、artifact は90日で消える。
+
+    取り込むだけで上げ直さないと、90日後に静かに消えて「有料データを使って
+    いるつもりで使っていない」状態に戻る。しかも予想も学習もそのまま動くので
+    （欠損として扱われるだけ）、気づく手がかりが無い。
+
+    そこで、週次で回るワークフローには取り込みと上げ直しの両方を求める。
+    """
+    import yaml
+
+    weekend = (WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8")
+    assert "./.github/actions/workouts" in weekend, "調教を取り込んでいない"
+    assert "name: workouts" in weekend, (
+        "取り込むだけで上げ直していない。90日で消えて静かに調教なしに戻る"
+    )
+
+    # API を引くので actions:read が要る。無いと 403 で毎回「artifact が無い」
+    # 扱いになり、これも静かに調教なしへ落ちる。
+    for name in ("keiba-weekend.yml", "keiba-retrain.yml"):
+        text = (WORKFLOWS / name).read_text(encoding="utf-8")
+        if "./.github/actions/workouts" not in text:
+            continue
+        permissions = yaml.safe_load(text).get("permissions") or {}
+        assert permissions.get("actions") == "read", f"{name}: actions:read が無い"
+
+
+def test_training_and_prediction_see_the_same_workouts() -> None:
+    """学習する側も予想する側も調教を戻していること。
+
+    片方だけだと、モデルが使っている列が本番で全行欠損になる（またはその逆）。
+    学習と本番で特徴量の中身がずれるのは、精度が落ちるだけでなく、
+    バックテストの数字が本番を説明しなくなるという意味で質が悪い。
+    """
+    retrain = (WORKFLOWS / "keiba-retrain.yml").read_text(encoding="utf-8")
+    weekend = (WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8")
+    assert "./.github/actions/workouts" in retrain, "学習側が調教を戻していない"
+    assert "./.github/actions/workouts" in weekend, "予想側が調教を戻していない"
+
+
 def test_data_committing_workflows_can_trigger_a_redeploy() -> None:
     """結果を push するワークフローが、配信を起こせること。
 

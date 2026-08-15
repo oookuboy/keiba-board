@@ -142,6 +142,17 @@ jobs:
           print(f"調教 {n:,} 本 / {len(seen):,} 頭")
           PY
 
+      # ここで初めて chunk が1本にまとまる。以後の運用はこの `workouts` を
+      # 週次で取り込み直して上げ直す形で持ち回るので、その起点を作っておく。
+      # 収集ジョブの chunk artifact は90日で消えるが、こちらは毎週更新される。
+      - name: 持ち回り用に1本で上げ直す
+        uses: actions/upload-artifact@v4
+        with:
+          name: workouts
+          path: keiba/raw/workouts.jsonl.gz
+          retention-days: 90
+          overwrite: true
+
       - name: Build
         run: python -m keiba.cli build
 

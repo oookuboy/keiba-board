@@ -498,7 +498,7 @@ def cmd_eval_workouts(args: argparse.Namespace) -> int:
         log.error("調教が1件も入っていない。backfill-workouts を先に走らせること")
         return 1
 
-    df = workout_features.attach(df, workouts)
+    # 貼り付けは dataset.prepare が済ませている（本番の特徴量に入ったため）
     df = df[df["race_date"] >= str(args.since)]
     covered = workout_features.coverage(df)
     log.info(
@@ -518,9 +518,15 @@ def cmd_eval_workouts(args: argparse.Namespace) -> int:
     scores: dict[str, "np.ndarray"] = {}
     importance: list[tuple[str, int]] = []
 
+    # 調教は本番の FEATURE_COLUMNS に入れたので、「なし」は引き算で作る。
+    # 足し算のままだと、同じ列を二度渡して「なし」と「あり」が同じものになる。
+    without = [
+        c for c in dataset.FEATURE_COLUMNS
+        if c not in workout_features.WORKOUT_FEATURES
+    ]
     for label, features in (
-        ("調教なし", dataset.FEATURE_COLUMNS),
-        ("調教あり", dataset.FEATURE_COLUMNS + workout_features.WORKOUT_FEATURES),
+        ("調教なし", without),
+        ("調教あり", dataset.FEATURE_COLUMNS),
     ):
         result = ml.train(df, valid_from=args.valid_from, features=features)
         scores[label] = result.booster.predict(

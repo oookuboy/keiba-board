@@ -132,14 +132,20 @@ def _prior_roll(df: pd.DataFrame, keys: list[str], column: str, window: int) -> 
     )
 
 
-def build_features(df: pd.DataFrame, speed_before=None) -> pd.DataFrame:
+def build_features(
+    df: pd.DataFrame, speed_before=None, workouts: pd.DataFrame | None = None
+) -> pd.DataFrame:
     """先読みなしの特徴量を組み立てる。
 
     FEATURE_COLUMNS に載っているものは、この関数を通せば全部そろう。
     タイム指数もここで作る（別の場所で作ると、呼び出し側によって列が
     あったり無かったりする）。
+
+    workouts を渡さなければ調教の列は欠損のまま作る。調教は netkeiba の
+    有料データで、手元に無い環境（テストなど）でも同じ列がそろっていないと
+    「呼び出し側によって列が違う」に逆戻りする。
     """
-    from keiba import speed
+    from keiba import speed, workout_features
 
     out = df.copy()
 
@@ -224,11 +230,20 @@ def build_features(df: pd.DataFrame, speed_before=None) -> pd.DataFrame:
     out = speed.attach_figures(out, before=speed_before)
     out = speed.build_features(out)
 
+    # --- 調教（netkeiba 有料） -------------------------------------------
+    # attach は先に全列を欠損で作ってから埋めるので、渡すものが空でも
+    # 列はそろう。先読みは merge_asof(allow_exact_matches=False) で断つ。
+    out = workout_features.attach(
+        out, pd.DataFrame() if workouts is None else workouts
+    )
+
     return out
 
 
-# 走破時計の特徴量。定義は speed.py 側に置いてある（作り方が長いため）。
+# 走破時計と調教の特徴量。定義はそれぞれのモジュール側に置いてある
+# （作り方の説明が長いため）。
 from keiba.speed import SPEED_FEATURES  # noqa: E402
+from keiba.workout_features import WORKOUT_FEATURES  # noqa: E402
 
 FEATURE_COLUMNS = [
     # 馬の履歴
@@ -258,6 +273,10 @@ FEATURE_COLUMNS = [
     # 走破時計（馬場差で補正した指数）。着順だけでは「強い相手に速い時計で
     # 勝った」と「低調な組をゆっくり勝った」を区別できない。
     *SPEED_FEATURES,
+    # 調教（netkeiba 有料）。指数を入れたうえで測って AUC 0.75422 → 0.75717。
+    # 効き幅は小さいが、狙っている人気薄（6番人気以下・5,658行）では
+    # +0.0083 と、決めておいた閾値（2,000行・0.005）を両方超えた。
+    *WORKOUT_FEATURES,
     # カテゴリ
     *CATEGORICAL,
 ]
@@ -295,8 +314,22 @@ def prepare(
         pending = int((~df["finished"]).sum())
         log.info("  うち未走 %d 行（予想対象。学習には使わない）", pending)
 
+    from keiba import workout_features
+
+    workouts = workout_features.load_workouts(store)
+    if workouts.empty:
+        # 有料データが手元に無いだけで学習も予想も動く（列は欠損で作られる）。
+        # ただし黙って欠損のまま動くと「集めたのに使われていない」に戻るので、
+        # 分かる形で残す。
+        log.warning(
+            "調教が1件も入っていない。調教の特徴量は欠損のまま学習する"
+            "（artifact から raw/workouts.jsonl.gz を戻すこと）"
+        )
+    else:
+        log.info("調教 %d本を読み込み", len(workouts))
+
     log.info("特徴量を構築中（先読みなし）…")
-    df = build_features(df, speed_before=speed_before)
+    df = build_features(df, speed_before=speed_before, workouts=workouts)
 
     assert_no_market_leakage(FEATURE_COLUMNS)
     for column in CATEGORICAL:

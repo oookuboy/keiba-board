@@ -1,0 +1,81 @@
+name: 調教データの持ち回り
+description: >
+  netkeiba 有料プランの調教タイムを、リポジトリではなく artifact で持ち回る。
+
+  公開リポジトリなのでコミットできない（課金者向けのデータを誰でも取れる形で
+  再配布することになる）。一方 artifact は90日で消える。そこで毎週の収集が
+  「前回ぶんを取り込む → 今週ぶんを足す → 上げ直す」を行い、期限を更新し続ける。
+  週次で回っている限り消えない。
+
+  名前で最新を拾う仕組みが actions/download-artifact に無いため、API を直接
+  引いて run ID を得る。
+
+inputs:
+  name:
+    description: artifact の名前
+    required: false
+    default: workouts
+  path:
+    description: 展開先のファイルパス
+    required: false
+    default: keiba/raw/workouts.jsonl.gz
+  token:
+    description: actions:read 権限のあるトークン
+    required: true
+
+outputs:
+  found:
+    description: 取り込めたら "true"
+    value: ${{ steps.restore.outputs.found }}
+
+runs:
+  using: composite
+  steps:
+    - id: restore
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        NAME: ${{ inputs.name }}
+        DEST: ${{ inputs.path }}
+      run: |
+        set -o pipefail
+        mkdir -p "$(dirname "$DEST")"
+
+        ID=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" \
+          -H "Accept: application/vnd.github+json" \
+          "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts?name=$NAME&per_page=1" \
+          | python3 -c "
+        import json, sys
+        items = [a for a in json.load(sys.stdin).get('artifacts', []) if not a['expired']]
+        print(items[0]['id'] if items else '')
+        ")
+
+        if [ -z "$ID" ]; then
+          # 初回、または90日途切れた場合。落とさない。調教が無くても学習も
+          # 予想も動く（特徴量は欠損になる）ので、止めるほうが害が大きい。
+          echo "::warning::$NAME の artifact が無い。調教なしで進む"
+          echo "found=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        curl -sSL -H "Authorization: Bearer $GH_TOKEN" \
+          -o /tmp/workouts.zip \
+          "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/$ID/zip"
+        unzip -o -q /tmp/workouts.zip -d /tmp/workouts-extract
+
+        # 収集ジョブは chunk ごとに分かれている。gzip は連結しても正しい1本
+        # として読めるので、そのまま繋ぐ。中身は馬・日付・コースで一意なので
+        # 重複しても upsert で潰れる。
+        cat /tmp/workouts-extract/*.jsonl.gz > "$DEST"
+        python3 - "$DEST" <<'PY'
+        import gzip, json, sys
+        rows = horses = 0
+        seen = set()
+        with gzip.open(sys.argv[1], "rt", encoding="utf-8") as fh:
+            for line in fh:
+                if line.strip():
+                    rows += 1
+                    seen.add(json.loads(line)["horse_id"])
+        print(f"調教 {rows:,} 本 / {len(seen):,} 頭を取り込んだ")
+        PY
+        echo "found=true" >> "$GITHUB_OUTPUT"
