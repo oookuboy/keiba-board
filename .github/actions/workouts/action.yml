@@ -66,7 +66,17 @@ runs:
         # 収集ジョブは chunk ごとに分かれている。gzip は連結しても正しい1本
         # として読めるので、そのまま繋ぐ。中身は馬・日付・コースで一意なので
         # 重複しても upsert で潰れる。
-        cat /tmp/workouts-extract/*.jsonl.gz > "$DEST"
+        #
+        # glob が1件も当たらないと bash -e でジョブごと落ちる。調教が無くても
+        # 予想は出せるので、ここで週末の運用を止めるのは割に合わない。
+        shopt -s nullglob
+        FILES=(/tmp/workouts-extract/*.jsonl.gz)
+        if [ ${#FILES[@]} -eq 0 ]; then
+          echo "::warning::artifact の中身が空。調教なしで進む"
+          echo "found=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        cat "${FILES[@]}" > "$DEST"
         python3 - "$DEST" <<'PY'
         import gzip, json, sys
         rows = horses = 0
