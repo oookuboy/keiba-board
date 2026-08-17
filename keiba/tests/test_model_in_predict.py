@@ -125,6 +125,10 @@ def test_an_empty_day_never_overwrites_a_good_prediction(tmp_path) -> None:
     すれば、前夜に出した買い目がボードから消える形だった（手元で踏んだ）。
 
     しかも exit 0 で返していたので、ワークフローも成功扱いになる。
+
+    index.json も同じ経路（write_day）で書き換わる。実際に races 24 → 0 に
+    潰れて、ボードの一覧から当日が消えた。日別ファイルだけ見ていると
+    見落とすので、両方を確かめる。
     """
     import shlex
 
@@ -134,6 +138,8 @@ def test_an_empty_day_never_overwrites_a_good_prediction(tmp_path) -> None:
     data_dir.mkdir()
     good = data_dir / "2026-08-16.json"
     good.write_text('{"date": "2026-08-16", "races": ["前回の予想"]}', encoding="utf-8")
+    index = data_dir / "index.json"
+    index.write_text('{"days":[{"date":"2026-08-16","races":24}]}', encoding="utf-8")
 
     args = build_parser().parse_args(
         shlex.split(
@@ -145,3 +151,4 @@ def test_an_empty_day_never_overwrites_a_good_prediction(tmp_path) -> None:
     # 空のDBなので1レースも出てこない
     assert cmd_predict(args) == 1, "空の日を成功として返している"
     assert "前回の予想" in good.read_text(encoding="utf-8"), "前回の予想を潰した"
+    assert '"races":24' in index.read_text(encoding="utf-8"), "index.json を潰した"
