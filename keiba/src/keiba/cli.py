@@ -200,17 +200,23 @@ def cmd_predict(args: argparse.Namespace) -> int:
             config_dir=args.config_dir,
         )
         predict.save_predictions(store, payload)
-    out = predict.write_day(payload, args.data_dir)
+
     s = payload["summary"]
     if not s["races"]:
-        # 収集が空だと予想も空になる。静かに0件で終わると「動いたのに中身が無い」
-        # ことに気づけないので、ここで明示的に警告する。
-        log.warning(
+        # 収集が空だと予想も空になる。**空の予想を書き出してはいけない。**
+        # 書き出しが先だったせいで、収集に失敗しただけで前回の正しい予想を
+        # 空ファイルで潰していた（実際に手元で踏んだ）。当日朝の再生成が
+        # 一度でも空振りすれば、前夜に出した買い目がボードから消える。
+        existing = args.data_dir / f"{args.day.isoformat()}.json"
+        log.error(
             "%s のレースが1件も無い。収集できていない可能性が高い"
-            "（発走前の出馬表が取れているか確認すること）",
+            "（発走前の出馬表が取れているか確認すること）。%s",
             args.day,
+            "既存の予想は残した" if existing.exists() else "書き出すものが無い",
         )
-        return 0
+        return 1
+
+    out = predict.write_day(payload, args.data_dir)
     log.info(
         "%s: %d R（買い %d / 見送り %d）投資 %d円 → %s",
         args.day, s["races"], s["bet"], s["skipped"], s["spend"], out,

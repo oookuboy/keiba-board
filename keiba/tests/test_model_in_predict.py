@@ -115,3 +115,33 @@ def test_predict_day_records_what_scored_it(store: Store) -> None:
     """
     payload = predict.predict_day(store, WEIGHTS, {}, TODAY)
     assert payload["scored_by"] == "weights"
+
+
+def test_an_empty_day_never_overwrites_a_good_prediction(tmp_path) -> None:
+    """収集に失敗した日が、前回の予想を空ファイルで潰さないこと。
+
+    書き出しが先で判定が後だったため、レースを1件も取れなかったときに
+    空の payload をそのまま上書きしていた。当日朝の再生成が一度でも空振り
+    すれば、前夜に出した買い目がボードから消える形だった（手元で踏んだ）。
+
+    しかも exit 0 で返していたので、ワークフローも成功扱いになる。
+    """
+    import shlex
+
+    from keiba.cli import build_parser, cmd_predict
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    good = data_dir / "2026-08-16.json"
+    good.write_text('{"date": "2026-08-16", "races": ["前回の予想"]}', encoding="utf-8")
+
+    args = build_parser().parse_args(
+        shlex.split(
+            f"--db {tmp_path / 'empty.db'} --raw-dir {tmp_path / 'raw'}"
+            f" --data-dir {data_dir} --config-dir keiba/config"
+            " predict --date 2026-08-16"
+        )
+    )
+    # 空のDBなので1レースも出てこない
+    assert cmd_predict(args) == 1, "空の日を成功として返している"
+    assert "前回の予想" in good.read_text(encoding="utf-8"), "前回の予想を潰した"
