@@ -652,6 +652,10 @@ def _ml_scores(store, config_dir, start, end) -> dict | None:
 def cmd_backtest(args: argparse.Namespace) -> int:
     """過去データに対してエンジンを回し、的中率と回収率を出す。"""
     weights = yaml.safe_load((args.config_dir / "weights.yml").read_text())
+    if args.trio_shape:
+        # 買い目の組み方を測るための上書き。weights.yml は触らない。
+        weights["betting"]["trio_shape"] = args.trio_shape
+        log.info("三連複の組み方: %s", args.trio_shape)
     with Store(args.db) as store:
         scores = None if args.no_model else _ml_scores(
             store, args.config_dir, args.start, args.end
@@ -812,6 +816,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("backtest", help="過去データで的中率・回収率を出す")
     p.add_argument(
         "--no-model", action="store_true", help="学習モデルを使わずルールベースで測る"
+    )
+    p.add_argument(
+        "--trio-shape", choices=["axis", "box"], default=None,
+        help="三連複の組み方を上書きして測る（既定は weights.yml）",
     )
     p.add_argument("--from", dest="start", type=_date, required=True)
     p.add_argument("--to", dest="end", type=_date, required=True)

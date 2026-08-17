@@ -77,20 +77,10 @@ def build(
         seen.add(key)
         tickets.append(Ticket(bet_type, combo, amount, why))
 
-    # --- 本線: ◎軸の総当たり（教訓10） ---------------------------------
-    # 相手が5頭以上でも組み合わせを選別しない。C(5,2)=10点を100円ずつ
-    # 敷いても予算内に収まるので、選別して取りこぼすほうが高くつく。
-    top_two = {h.umaban for h in partners[:2]}
-    for a, b in itertools.combinations(partners, 2):
-        combo = _trio((axis.umaban, a.umaban, b.umaban))
-        # ◎と上位2頭で決まる並びを本線として厚くする（教訓13）
-        is_main = {a.umaban, b.umaban} <= top_two
-        add(
-            TRIO,
-            combo,
-            unit if is_main else cfg["unit"],
-            "本線（◎×上位印）" if is_main else f"◎軸流し {a.mark}{b.mark}",
-        )
+    if cfg.get("trio_shape", "axis") == "box":
+        _add_box(add, marked, unit, cfg)
+    else:
+        _add_axis_flow(add, axis, partners, unit, cfg)
 
     # --- 教訓8: 確逃げ馬を3着欄に必ず1点 --------------------------------
     front = next((h for h in horses if h.is_lone_front_runner), None)
@@ -135,6 +125,54 @@ def build(
     tickets = _fit_budget(tickets, stake["race_cap"], cfg["unit"])
     _assert_all_marks_covered(marked, tickets)
     return tickets
+
+
+def _add_axis_flow(add, axis, partners, unit: int, cfg: dict) -> None:
+    """◎を軸に、相手の総当たりを敷く（従来の組み方）。
+
+    **全ての点に◎が入る。** ◎が3着以内を外した時点で、他の印が1〜3着を
+    独占していても0点になる。
+    """
+    top_two = {h.umaban for h in partners[:2]}
+    for a, b in itertools.combinations(partners, 2):
+        # ◎と上位2頭で決まる並びを本線として厚くする（教訓13）
+        is_main = {a.umaban, b.umaban} <= top_two
+        add(
+            TRIO,
+            _trio((axis.umaban, a.umaban, b.umaban)),
+            unit if is_main else cfg["unit"],
+            "本線（◎×上位印）" if is_main else f"◎軸流し {a.mark}{b.mark}",
+        )
+
+
+def _add_box(add, marked: list[ScoredHorse], unit: int, cfg: dict) -> None:
+    """印を打った馬のボックス。軸を固定しない。
+
+    ## なぜ軸を外すか
+
+    モデルが出しているのは「その馬が3着以内に入る確率」で、印はその上位N頭。
+    つまり印を打った5頭は**どれも3着以内に来そうな馬**であって、1位の馬だけが
+    特別なわけではない。スコア差は 62.1 対 57.9 対 56.3 という程度しかない。
+
+    それを◎1頭に軸を固定して流すと、「1位が確実に来る」という、モデルが
+    一度も主張していない前提を買い目に持ち込むことになる。実際 8/16 札幌1R では
+    ○☆▲で決着したのに、8点すべてに◎が入っていて0点だった。
+
+    ボックスなら、印5頭のうちどの3頭で決まっても当たる。点数は C(5,3)=10点で、
+    ◎軸流しの8点から2点増えるだけ。
+
+    上位3頭の組だけは本線として厚くする（そこが最も確率が高いのは変わらない）。
+    """
+    umabans = [h.umaban for h in marked]
+    main = set(umabans[:3])
+    for combo in itertools.combinations(umabans, 3):
+        is_main = set(combo) == main
+        add(
+            TRIO,
+            _trio(combo),
+            unit if is_main else cfg["unit"],
+            "本線（上位3頭）" if is_main else "印ボックス",
+        )
 
 
 def _trim_longshot(
