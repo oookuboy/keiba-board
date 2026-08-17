@@ -570,9 +570,16 @@ def cmd_train(args: argparse.Namespace) -> int:
     from keiba import dataset, ml
 
     meta_path = args.config_dir / "model.json"
-    previous = None
-    if meta_path.exists():
-        previous = json.loads(meta_path.read_text(encoding="utf-8")).get("auc")
+    # 前回の AUC を model.json から読んで比べる形にしていたが、**あれは別の
+    # 期間で測った数字**だった。検証窓は毎回ずらすので、比べているのは
+    # 「モデルの良し悪し」ではなく「その期間の当てやすさ」になる。
+    #
+    # 実際に踏んだ。調教を入れた再学習が 0.78502 → 0.77478 で弾かれたが、
+    # 旧モデルの検証は 25,895行、新しいほうは 11,240行と 2.3倍違っていて、
+    # そもそも比較になっていなかった。
+    #
+    # 前のモデルを**今回と同じ検証行**で採点し直して比べる。
+    previous_booster = ml.load(args.config_dir / "model.txt")
 
     import pandas as pd
 
@@ -590,16 +597,30 @@ def cmd_train(args: argparse.Namespace) -> int:
 
         # 定期再学習で黙って悪いモデルに差し替わらないようにする。
         # 月1で自動実行する以上、誰も数字を見ないまま入れ替わる回が必ず来る。
-        if previous is not None and not args.force:
-            drop = previous - result.auc
-            if drop > args.max_auc_drop:
-                log.error(
-                    "AUC が %.5f → %.5f（%.5f 低下）。%.5f を超える低下なので"
-                    "差し替えない。意図的に入れ替えるなら --force",
-                    previous, result.auc, drop, args.max_auc_drop,
+        #
+        # 比較は同じ検証行の上で行う。前のモデルにも今回の valid を採点させ、
+        # そこで負けているときだけ止める。列は ml.predict がモデル自身の
+        # feature_name() で選ぶので、特徴量を足した直後でもそのまま通る。
+        if previous_booster is not None and not args.force:
+            previous = ml.roc_auc(
+                valid[dataset.TARGET].to_numpy(),
+                ml.predict(previous_booster, valid),
+            )
+            if previous is None:
+                log.warning("前のモデルを採点できなかった。比較を飛ばす")
+            else:
+                drop = previous - result.auc
+                if drop > args.max_auc_drop:
+                    log.error(
+                        "同じ検証行で AUC %.5f（前）→ %.5f（新）。%.5f を超える"
+                        "低下なので差し替えない。意図的に入れ替えるなら --force",
+                        previous, result.auc, drop, args.max_auc_drop,
+                    )
+                    return 1
+                log.info(
+                    "同じ検証行で AUC %.5f（前）→ %.5f（新）／%+.5f",
+                    previous, result.auc, -drop,
                 )
-                return 1
-            log.info("AUC %.5f → %.5f（前回比 %+.5f）", previous, result.auc, -drop)
 
         ml.save(result, args.config_dir / "model.txt", meta_path)
         log.info("モデルを差し替えた: %s", args.config_dir / "model.txt")

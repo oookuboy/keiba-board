@@ -73,18 +73,10 @@ MIN_DELTA = 0.005
 
 
 def auc(labels: np.ndarray, scores: np.ndarray) -> float | None:
-    """ROC-AUC。片方のクラスしか無ければ None。
+    """ROC-AUC。実体は ml.roc_auc（同じ計算を2箇所に置かない）。"""
+    from keiba.ml import roc_auc
 
-    sklearn を入れずに順位から計算する（Mann-Whitney U と同じもの）。
-    依存を1つ増やすほどの処理ではない。
-    """
-    positives = labels.sum()
-    negatives = len(labels) - positives
-    if positives == 0 or negatives == 0:
-        return None
-    order = pd.Series(scores).rank(method="average").to_numpy()
-    return float((order[labels == 1].sum() - positives * (positives + 1) / 2)
-                 / (positives * negatives))
+    return roc_auc(labels, scores)
 
 
 def compare(

@@ -67,6 +67,7 @@ class TrainResult:
     train_rows: int
     valid_rows: int
     importance: list[tuple[str, int]]
+    valid_from: date | None = None
 
     def report(self) -> str:
         lines = [
@@ -154,6 +155,7 @@ def train(
         train_rows=len(train_df),
         valid_rows=len(valid_df),
         importance=importance,
+        valid_from=valid_from,
     )
 
 
@@ -167,6 +169,9 @@ def save(result: TrainResult, model_path: Path = MODEL_PATH, meta_path: Path = M
                 "best_iteration": result.best_iteration,
                 "train_rows": result.train_rows,
                 "valid_rows": result.valid_rows,
+                # どの期間で測った AUC かを残す。これが無いと、別の窓で
+                # 測った数字どうしを比べてしまう（実際にそれで弾いた）。
+                "valid_from": str(result.valid_from) if result.valid_from else None,
                 "features": FEATURE_COLUMNS,
                 "importance": dict(result.importance[:40]),
             },
@@ -205,6 +210,23 @@ def predict(booster: lgb.Booster, df: pd.DataFrame) -> np.ndarray:
         # 特徴量を足したがモデルがまだ古い状態。予想は出せるので止めない。
         log.info("モデルがまだ使っていない特徴量: %s（再学習で入る）", extra)
     return booster.predict(df[names], num_iteration=booster.best_iteration)
+
+
+def roc_auc(labels: np.ndarray, scores: np.ndarray) -> float | None:
+    """ROC-AUC。片方のクラスしか無ければ None。
+
+    sklearn を入れずに順位から出す（Mann-Whitney U と同じもの）。
+    依存を1つ増やすほどの処理ではない。
+    """
+    positives = int(labels.sum())
+    negatives = len(labels) - positives
+    if positives == 0 or negatives == 0:
+        return None
+    order = pd.Series(scores).rank(method="average").to_numpy()
+    return float(
+        (order[labels == 1].sum() - positives * (positives + 1) / 2)
+        / (positives * negatives)
+    )
 
 
 def evaluate_ranking(df: pd.DataFrame, scores: np.ndarray) -> dict:
