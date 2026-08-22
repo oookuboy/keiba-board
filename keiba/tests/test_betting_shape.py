@@ -144,3 +144,59 @@ def test_no_duplicate_combinations(shape: str) -> None:
     tickets = betting.build(horses(), grade(), weights_with(shape))
     keys = [(t.bet_type, t.combination) for t in tickets]
     assert len(keys) == len(set(keys))
+
+
+def test_shape_can_differ_by_confidence() -> None:
+    """自信度ごとに組み方を変えられること。
+
+    勝負どころ（◎）は軸を立てて厚く、自信の落ちるところは広く、という
+    持ち方を設定で表せるようにしてある。
+    """
+    cfg = copy.deepcopy(WEIGHTS)
+    cfg["betting"]["trio_shape"] = {"◎": "axis", "○": "box", "△": "box"}
+
+    honmei = betting.build(horses(), grade(), cfg)
+    assert all(13 in c for c in combos(honmei)), "◎ が axis になっていない"
+
+    taikou = Confidence(
+        grade="○", popularity_sum=11, separation=2.0, expected_odds=80.0, reason=""
+    )
+    assert frozenset({3, 14, 5}) in combos(betting.build(horses(), taikou, cfg)), (
+        "○ が box になっていない"
+    )
+
+
+def test_an_unlisted_confidence_falls_back_to_axis() -> None:
+    """書き忘れた自信度は axis に落ちること。
+
+    既定を box にすると、書き忘れただけで点数と金額が黙って増える。
+    増えるほうを既定にしない。
+    """
+    cfg = copy.deepcopy(WEIGHTS)
+    cfg["betting"]["trio_shape"] = {"○": "box"}
+    assert all(13 in c for c in combos(betting.build(horses(), grade(), cfg)))
+
+
+def test_the_longshot_cap_makes_box_a_no_op_for_the_longshot_grade() -> None:
+    """△ は box にしても axis と同じ点になること。
+
+    これは望ましい挙動ではなく、**現状の記録**。longshot_max_points の
+    絞り込みがボックスより後に効いて3点へ戻すため、△ を box に変えても
+    買い目が1点も動かない（実測でも 143R・的中4件・88.4% が完全一致）。
+
+    実際 2026-08-22 中京4R では、印5頭のうち3頭が1〜3着（三連複 28,630円）
+    だったのに、残った3点が全て ☆ を通る形になっていて外れた。◎軸をやめたのに
+    穴枠だけ☆軸になっている。
+
+    _trim_longshot を直したらこのテストは落ちる。**落ちたら直った合図**なので、
+    そのときはここを書き換えること。
+    """
+    longshot = Confidence(
+        grade="△", popularity_sum=16, separation=2.0, expected_odds=200.0, reason=""
+    )
+    axis = betting.build(horses(), longshot, weights_with("axis"))
+    box = betting.build(horses(), longshot, weights_with("box"))
+    assert combos(axis) == combos(box), (
+        "△ で box が効くようになった。_trim_longshot を直したなら"
+        " このテストの前提を書き換えること"
+    )

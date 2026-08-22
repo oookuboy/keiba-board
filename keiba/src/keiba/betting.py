@@ -77,7 +77,7 @@ def build(
         seen.add(key)
         tickets.append(Ticket(bet_type, combo, amount, why))
 
-    if cfg.get("trio_shape", "axis") == "box":
+    if _shape_for(cfg, confidence.grade) == "box":
         _add_box(add, marked, unit, cfg)
     else:
         _add_axis_flow(add, axis, partners, unit, cfg)
@@ -125,6 +125,29 @@ def build(
     tickets = _fit_budget(tickets, stake["race_cap"], cfg["unit"])
     _assert_all_marks_covered(marked, tickets)
     return tickets
+
+
+def _shape_for(cfg: dict, grade: str) -> str:
+    """その自信度で三連複をどう組むか。
+
+    trio_shape は2つの書き方を受ける。
+
+        trio_shape: box            … 全部同じ
+        trio_shape:                … 自信度ごとに変える
+          "◎": axis
+          "○": box
+
+    自信度で分けられるようにしたのは、勝負どころ（◎）は軸を立てて厚く、
+    自信の落ちるところは広く、という持ち方があるため。実測とは別に、
+    どう賭けたいかは買う側が決めてよい部分。
+
+    書き忘れた自信度は axis に落とす。黙って広げると点数と金額が増えるので、
+    増えるほうを既定にしない。
+    """
+    shape = cfg.get("trio_shape", "axis")
+    if isinstance(shape, dict):
+        return shape.get(grade, "axis")
+    return shape
 
 
 def _add_axis_flow(add, axis, partners, unit: int, cfg: dict) -> None:
