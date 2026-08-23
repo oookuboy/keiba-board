@@ -175,6 +175,42 @@ jobs:
             --workouts keiba/raw/workouts.jsonl.gz \
             backfill-workouts --upcoming
 
+      # 収集が失敗しても週末は続ける（continue-on-error）が、そのぶん
+      # **黙って調教なしに戻る**。課金切れ・ログイン失敗・仕様変更のどれも
+      # ジョブは緑のままなので、中身を数えて見えるようにする。
+      #
+      # 「収集は成功・中身は空」はこの開発で何度も踏んでいる形。
+      - name: 今週の調教が入ったか確かめる
+        if: steps.plan.outputs.job == 'collect'
+        run: |
+          python - <<'PY'
+          import datetime as dt, sqlite3, sys
+          conn = sqlite3.connect("keiba/keiba.db")
+          today = dt.date.today()
+          # 特徴量は21日より古い調教を捨てる。その窓に入るものを数える
+          since = (today - dt.timedelta(days=21)).isoformat()
+          runners, fresh = conn.execute(
+              """
+              SELECT COUNT(DISTINCT e.horse_id),
+                     COUNT(DISTINCT CASE WHEN w.horse_id IS NOT NULL
+                                         THEN e.horse_id END)
+              FROM entries e
+              JOIN races r ON r.race_id = e.race_id
+              LEFT JOIN horse_workouts w
+                     ON w.horse_id = e.horse_id AND w.workout_date >= ?
+              WHERE r.race_date >= ?
+              """,
+              (since, today.isoformat()),
+          ).fetchone()
+          rate = fresh / runners if runners else 0.0
+          print(f"今週の出走馬 {runners:,}頭 / 直近21日の調教あり {fresh:,}頭 ({rate:.1%})")
+          if rate < 0.5:
+              print(
+                  "::warning::今週の調教が半分も入っていない"
+                  f"（{rate:.1%}）。課金状態と Secrets を確認すること"
+              )
+          PY
+
       # 期限を更新して上げ直す。これで90日の時計が毎週リセットされ、
       # 週次で回っている限り消えない。
       - name: 調教を artifact へ戻す
