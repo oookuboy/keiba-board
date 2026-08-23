@@ -16,7 +16,10 @@ from keiba.predict import apply_daily_cap
 WEIGHTS = yaml.safe_load(
     (pathlib.Path(__file__).parents[1] / "config/weights.yml").read_text()
 )
-CFG = WEIGHTS["betting"]
+# 上限そのものは運用では外してある（daily_cap: null）。ただし削る仕組みは
+# 残してあり、また使う可能性がある。設定から読むと null になって検証が
+# 素通りするので、ここでは検証用の上限を明示的に置く。
+CFG = {**WEIGHTS["betting"], "daily_cap": 20000}
 
 
 def race(grade: str, points: int, per_point: int, pop_sum: int = 20) -> dict:
