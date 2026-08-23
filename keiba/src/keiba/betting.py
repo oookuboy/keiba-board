@@ -58,14 +58,30 @@ def build(
     cfg = weights["betting"]
     stake = cfg["stake"][confidence.grade]
     unit = stake["per_point"]
-    # 穴枠は実測回収率が本線より明確に低い。組み合わせを広げず少点数に絞る
-    max_points = cfg["longshot_max_points"] if confidence.is_longshot else None
 
     marked = [h for h in horses if h.mark]
     axis = next((h for h in marked if h.mark == "◎"), None)
     if axis is None or len(marked) < 3:
         return []
     partners = [h for h in marked if h is not axis]
+
+    # 箱に入れる頭数。**絞り込みはここでやる。**
+    #
+    # 「自信があるから絞る」を◎軸流しで表していたが、あれは絞り込みではなく
+    # 「この1頭は必ず来る」という別の賭けだった。◎が3着以内を外せば、他の印が
+    # 1〜3着を独占していても0点になる。実際に3週続けてその形で落としている。
+    #
+    # 絞るなら頭数を減らす。箱のまま濃くなる。
+    #   5頭 → C(5,3) = 10点
+    #   4頭 → C(4,3) =  4点
+    #   3頭 → C(3,3) =  1点
+    box = marked[: _box_marks(cfg, confidence.grade, len(marked))]
+    if len(box) < len(marked):
+        log.info(
+            "%s: 印%d頭のうち上位%d頭で箱を組む（%s）",
+            confidence.grade, len(marked), len(box),
+            "・".join(h.horse_name for h in marked[len(box):]),
+        )
 
     tickets: list[Ticket] = []
     seen: set[tuple[str, str]] = set()
@@ -78,7 +94,7 @@ def build(
         tickets.append(Ticket(bet_type, combo, amount, why))
 
     if _shape_for(cfg, confidence.grade) == "box":
-        _add_box(add, marked, unit, cfg)
+        _add_box(add, box, unit, cfg)
     else:
         _add_axis_flow(add, axis, partners, unit, cfg)
 
@@ -117,14 +133,26 @@ def build(
                 "◎1着固定の3連単",
             )
 
-    if max_points is not None and len(tickets) > max_points:
-        # 穴枠を絞るときは ◎ と ☆ を含む点を優先して残す。
-        # 印を打った馬が全部落ちないよう、covered を見ながら削る。
-        tickets = _trim_longshot(tickets, marked, axis, longshot, max_points)
-
     tickets = _fit_budget(tickets, stake["race_cap"], cfg["unit"])
-    _assert_all_marks_covered(marked, tickets)
+    # 箱に入れた馬は必ず1点以上で買われていること。箱から外した馬は対象外
+    # （買わないと決めた馬なので、覆われていなくて当たり前）。
+    _assert_all_marks_covered(box, tickets)
     return tickets
+
+
+def _box_marks(cfg: dict, grade: str, available: int) -> int:
+    """その自信度で、箱に何頭入れるか。
+
+        box_marks:
+          "◎": 5     # C(5,3) = 10点
+          "○": 5
+          "△": 5
+
+    書いていない自信度は印の全頭。**減らすほうを既定にしない**（黙って
+    印を落とすと「印は当てたのに買っていない」を設定で再現することになる）。
+    """
+    limits = cfg.get("box_marks") or {}
+    return max(3, min(int(limits.get(grade, available)), available))
 
 
 def _shape_for(cfg: dict, grade: str) -> str:
@@ -196,37 +224,6 @@ def _add_box(add, marked: list[ScoredHorse], unit: int, cfg: dict) -> None:
             unit if is_main else cfg["unit"],
             "本線（上位3頭）" if is_main else "印ボックス",
         )
-
-
-def _trim_longshot(
-    tickets: list[Ticket],
-    marked: list[ScoredHorse],
-    axis: ScoredHorse,
-    longshot: ScoredHorse | None,
-    max_points: int,
-) -> list[Ticket]:
-    """穴枠の点数を絞る。
-
-    ただし「印を打ったのに買い目に無い馬」を作らない（教訓10 で最も高くついた
-    失敗）。全印を覆うのに必要な点は max_points を超えても残す。
-    """
-    def priority(t: Ticket) -> tuple[int, int]:
-        # ☆ を含む点を先に残し、次に本線、最後に流し
-        has_longshot = longshot is not None and longshot.umaban in t.umabans
-        return (0 if has_longshot else 1, 0 if "本線" in t.rationale else 1)
-
-    ordered = sorted(tickets, key=priority)
-    kept: list[Ticket] = []
-    covered: set[int] = set()
-    needed = {h.umaban for h in marked}
-
-    for ticket in ordered:
-        if len(kept) < max_points or not needed <= covered:
-            kept.append(ticket)
-            covered |= ticket.umabans
-        if len(kept) >= max_points and needed <= covered:
-            break
-    return kept
 
 
 def _fit_budget(tickets: list[Ticket], cap: int, unit: int) -> list[Ticket]:

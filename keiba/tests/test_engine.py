@@ -6,6 +6,7 @@ SKILL.md の教訓が「書いてあるだけ」でなく実際に効いてい�
 
 from __future__ import annotations
 
+import itertools
 import pathlib
 from datetime import date, timedelta
 
@@ -214,11 +215,17 @@ def test_all_axis_combinations_are_covered_on_main_line(store: Store) -> None:
         assert combo in trio, f"◎軸の組み合わせ {combo} が買い目に無い"
 
 
-def test_longshot_allocation_is_thin_but_covers_every_mark(store: Store) -> None:
-    """穴枠は点数を絞る。ただし印を打った馬は必ず1点以上に含める。
+def test_longshot_covers_every_combination_of_its_marks(store: Store) -> None:
+    """穴枠でも、印どうしのどの組み合わせでも当たること。
 
-    絞る動機は実測（この帯の回収率は本線より低い）。それでも
-    「印は当てたのに買い目で外す」だけは起こさない。
+    以前は「☆を含む点を優先して3点だけ残す」で絞っていた。◎軸をやめたのに
+    穴枠だけ☆軸にする形で、☆が飛べば印を当てても0点になる。
+
+    2026-08-22 中京4R がそれで、印5頭のうち ◎▲▲ が1〜3着（三連複 28,630円・
+    その日の最高配当）だったのに、残った3点が全て ☆8 経由で外れた。☆8 は4着以下。
+
+    絞るなら点数ではなく箱に入れる頭数を減らす（box_marks）。そうすれば
+    どの馬を買わないのかが設定から読めるし、残った馬の組は必ず買える。
     """
     race = make_race(field_size=14)
     entries = make_entries([14, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 11, 13])
@@ -229,16 +236,11 @@ def test_longshot_allocation_is_thin_but_covers_every_mark(store: Store) -> None
     if not grade.is_longshot:
         pytest.skip(f"穴枠シナリオにならなかった: {grade.grade}")
 
-    cap = WEIGHTS["betting"]["longshot_max_points"]
-    marked = [h for h in horses if h.mark]
-    covered = set().union(*(t.umabans for t in tickets))
+    marked = [h.umaban for h in horses if h.mark]
+    trio = {frozenset(t.umabans) for t in tickets if t.bet_type == "三連複"}
+    for combo in itertools.combinations(marked, 3):
+        assert frozenset(combo) in trio, f"穴枠で {combo} が買えていない"
 
-    for h in marked:
-        assert h.umaban in covered, f"{h.mark}{h.umaban} が買い目に無い"
-    # 印を覆うのに要る点は残すが、それを超えて広げてはいない
-    assert len(tickets) <= max(cap, len(marked)), (
-        f"穴枠が {len(tickets)} 点まで広がっている（上限 {cap}）"
-    )
     assert sum(t.amount for t in tickets) <= WEIGHTS["betting"]["stake"]["△"]["race_cap"]
 
 

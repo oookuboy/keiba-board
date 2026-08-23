@@ -177,26 +177,54 @@ def test_an_unlisted_confidence_falls_back_to_axis() -> None:
     assert all(13 in c for c in combos(betting.build(horses(), grade(), cfg)))
 
 
-def test_the_longshot_cap_makes_box_a_no_op_for_the_longshot_grade() -> None:
-    """△ は box にしても axis と同じ点になること。
+def test_the_longshot_grade_now_gets_a_real_box() -> None:
+    """△ でも本物のボックスになること。
 
-    これは望ましい挙動ではなく、**現状の記録**。longshot_max_points の
-    絞り込みがボックスより後に効いて3点へ戻すため、△ を box に変えても
-    買い目が1点も動かない（実測でも 143R・的中4件・88.4% が完全一致）。
+    以前はここが「axis と box が完全一致する」ことを確かめるテストだった。
+    longshot_max_points（☆を含む点を優先して3点残す）がボックスより後に
+    効いて元に戻していたため。◎軸をやめたのに穴枠だけ☆軸だった。
 
-    実際 2026-08-22 中京4R では、印5頭のうち3頭が1〜3着（三連複 28,630円）
-    だったのに、残った3点が全て ☆ を通る形になっていて外れた。◎軸をやめたのに
-    穴枠だけ☆軸になっている。
+    2026-08-22 中京4R でその形が出た。印5頭のうち ◎9・▲12・▲3 が1〜3着
+    （三連複 28,630円・その日の最高配当）なのに、残った3点は 8-9-18 /
+    3-8-9 / 8-9-12 で全て ☆8 経由。☆8 は4着以下だった。
 
-    _trim_longshot を直したらこのテストは落ちる。**落ちたら直った合図**なので、
-    そのときはここを書き換えること。
+    絞り込みは box_marks（箱に入れる頭数）へ移した。
     """
     longshot = Confidence(
         grade="△", popularity_sum=16, separation=2.0, expected_odds=200.0, reason=""
     )
-    axis = betting.build(horses(), longshot, weights_with("axis"))
-    box = betting.build(horses(), longshot, weights_with("box"))
-    assert combos(axis) == combos(box), (
-        "△ で box が効くようになった。_trim_longshot を直したなら"
-        " このテストの前提を書き換えること"
-    )
+    tickets = betting.build(horses(), longshot, weights_with("box"))
+    trio = combos(tickets)
+
+    import itertools
+
+    for combo in itertools.combinations([13, 3, 5, 14, 10], 3):
+        assert frozenset(combo) in trio, f"△ で {combo} が買えていない"
+    assert sum(t.amount for t in tickets) <= WEIGHTS["betting"]["stake"]["△"]["race_cap"]
+
+
+def test_narrowing_shrinks_the_box_instead_of_planting_an_axis() -> None:
+    """絞り込みは頭数を減らす形であること。軸を立てる形ではない。
+
+    「自信があるから絞る」を◎軸流しで表していたが、あれは絞り込みではなく
+    「この1頭は必ず来る」という別の賭けだった。◎が3着以内を外せば、他の印が
+    1〜3着を独占していても0点になる。
+
+    頭数を減らせば点数は落ちるが、残った馬どうしの組は全部買えている。
+    """
+    cfg = copy.deepcopy(WEIGHTS)
+    cfg["betting"]["box_marks"] = {"◎": 4}
+
+    tickets = betting.build(horses(), grade(), cfg)
+    trio = combos(tickets)
+    assert len(trio) == 4, f"C(4,3)=4点のはずが {len(trio)}点"
+
+    import itertools
+
+    # 上位4頭（13/3/5/14）の総当たり。5頭目の 10 は買わないと決めた馬
+    for combo in itertools.combinations([13, 3, 5, 14], 3):
+        assert frozenset(combo) in trio
+    assert not any(10 in c for c in trio), "箱から外した馬が買い目に残っている"
+
+    # 軸は立っていない。◎13 を含まない点が必ずある
+    assert any(13 not in c for c in trio), "絞った結果◎軸になっている"
