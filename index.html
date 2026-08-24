@@ -347,15 +347,27 @@ function raceCard(r){
   return card;
 }
 
+// 人気は画面に出さない。見えると引きずられるため、利用者の指示で消した。
+// **記録（JSON）には残している。** 回顧と検証には人気が要るし、消すと
+// 「なぜその自信度になったか」を後から辿れなくなる。ここは表示だけの話。
+function hidePopularity(text){
+  return (text||"")
+    .replace(/能力上位3頭の人気和\d+/g, "能力評価の上位3頭")
+    .replace(/（本線の帯\s*[\d\-]+）/g, "")
+    .replace(/上位人気で堅く収まる形/g, "堅く収まる形")
+    .replace(/。+/g, "。")
+    .replace(/^[。・]\s*/, "")
+    .trim();
+}
+
 function raceBody(r){
   const body=el("div","rbody");
-  body.appendChild(el("div","reason",r.confidence_reason||""));
+  body.appendChild(el("div","reason",hidePopularity(r.confidence_reason)));
 
   const placed=new Set((r.result&&r.result.top3)||[]);
   const tbl=el("table");
   tbl.innerHTML="<thead><tr><th>印</th><th>馬番</th><th>馬名 / 根拠</th>"+
-                "<th class='num'>スコア</th><th class='num'>脚質</th>"+
-                "<th class='num'>人気</th></tr></thead>";
+                "<th class='num'>スコア</th><th class='num'>脚質</th></tr></thead>";
   const tb=el("tbody");
   r.horses.forEach(h=>{
     const tr=el("tr",(h.mark?"marked ":"")+(placed.has(h.umaban)?"placed":""));
@@ -366,7 +378,6 @@ function raceBody(r){
       `<div class="hname">${h.name}</div><div class="why">${why}</div>`));
     tr.appendChild(el("td","num",h.score.toFixed(1)));
     tr.appendChild(el("td","num",h.style+(h.lone_front_runner?" 単騎":"")));
-    tr.appendChild(el("td","num",h.popularity?h.popularity+"人":"—"));
     tb.appendChild(tr);
   });
   tbl.appendChild(tb);
