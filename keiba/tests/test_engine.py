@@ -263,8 +263,12 @@ def test_every_marked_horse_appears_in_a_ticket(store: Store) -> None:
 
 # ------------------------------- 「固い予想はいらない」= × で買わない
 
-def test_chalk_race_is_skipped(store: Store) -> None:
-    """能力上位3頭がそのまま上位人気なら × を付けて1点も買わない。"""
+def test_chalk_race_still_gets_a_buy_list(store: Store) -> None:
+    """能力上位3頭がそのまま上位人気でも、買い目を出すこと。
+
+    以前は × にして1点も買わなかった。判断根拠が人気だったため外した。
+    買うかどうかは人が決める。
+    """
     race = make_race(field_size=10)
     # 能力順＝人気順になるよう、上位馬ほど強い戦績を与える
     entries = make_entries([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
@@ -275,9 +279,8 @@ def test_chalk_race_is_skipped(store: Store) -> None:
     top3_pops = sorted(h.market_popularity for h in horses[:3] if h.market_popularity)
 
     if sum(top3_pops) < WEIGHTS["confidence"]["main_band"][0]:
-        assert grade.grade == "×", f"堅い決着なのに {grade.grade} を付けている"
-        assert tickets == [], "× のレースで買い目を出している"
-        assert not grade.should_bet
+        assert grade.grade != "×", "上位人気というだけで見送っている"
+        assert tickets, "買い目が1点も出ていない"
 
 
 def test_longshot_race_is_backed(store: Store) -> None:

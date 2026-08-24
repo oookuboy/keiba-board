@@ -41,11 +41,31 @@ def test_no_odds_is_pending_not_skip() -> None:
     assert "オッズ未確定" in c.reason
 
 
-def test_chalk_race_is_skip_not_pending() -> None:
-    """上位人気で堅い形は × 。判断した結果であって保留ではない。"""
+def test_chalk_race_still_gets_a_buy_list() -> None:
+    """上位人気で収まりそうな形でも、買い目は出すこと。
+
+    以前はここを × にして1点も買わなかった。**自分が高く評価した3頭が
+    たまたま人気だった**という理由でレースごと捨てる形で、「人気上位だから
+    3着以内に入るは違う」という方針の逆をやっていた。
+
+    買うかどうかは人が決める。自信度は判断材料として添えるだけにする。
+    """
     c = grade(horses([1, 2, 3, 4, 5, 6, 7, 8]), WEIGHTS)
-    assert c.grade == SKIP
+    assert c.grade != SKIP, "上位人気というだけで見送っている"
+    assert c.should_bet
     assert not c.is_pending
+    # 形自体は判断材料として残す
+    assert "上位人気" in c.reason
+
+
+def test_skipping_can_be_switched_back_on() -> None:
+    """見送りの仕組みは残してある（confidence.skip: true で戻る）。
+
+    外したのは既定値であって、機能ではない。戻したくなったら設定1行。
+    """
+    cfg = {**WEIGHTS, "confidence": {**WEIGHTS["confidence"], "skip": True}}
+    c = grade(horses([1, 2, 3, 4, 5, 6, 7, 8]), cfg)
+    assert c.grade == SKIP
     assert not c.should_bet
 
 
@@ -80,12 +100,21 @@ def test_flat_scores_demote_from_anchor() -> None:
     assert "スコア差" in c.reason
 
 
-def test_thin_expected_payout_is_skipped() -> None:
-    """本線の帯でも想定配当が薄いなら買わない。"""
+def test_thin_expected_payout_is_noted_not_skipped() -> None:
+    """想定配当が薄くても買い目は出し、薄いことだけ書き添えること。
+
+    「配当が大きい組を探す」形は、勝つ馬を買うという目的と順序が逆になる。
+    strategy.py に自分でそう書いておきながら、本番の設定には残っていた。
+    """
     cfg = {**WEIGHTS, "confidence": {**WEIGHTS["confidence"], "min_expected_odds": 1e9}}
     c = grade(horses([5, 4, 3, 1, 2, 6, 7, 8]), cfg)
-    assert c.grade == SKIP
-    assert "妙味不足" in c.reason
+    assert c.grade != SKIP
+    assert c.should_bet
+    assert "配当は小さめ" in c.reason
+
+    # 戻したいときは skip: true
+    on = {**cfg, "confidence": {**cfg["confidence"], "skip": True}}
+    assert grade(horses([5, 4, 3, 1, 2, 6, 7, 8]), on).grade == SKIP
 
 
 @pytest.mark.parametrize(

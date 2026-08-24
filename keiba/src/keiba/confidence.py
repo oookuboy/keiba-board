@@ -98,31 +98,47 @@ def grade(horses: list[ScoredHorse], weights: dict) -> Confidence:
     separation = round(ranked[0].score - ranked[3].score, 2) if len(ranked) > 3 else 0.0
     expected = estimate_trio_odds(top3)
     low, high = cfg["main_band"]
+    # 見送りの判定をするか。既定は「しない」。
+    #
+    # 見送りの条件は2つとも人気・オッズ由来だった。
+    #   ① 能力上位3頭の人気和 < 9  → 「上位人気で堅く収まる形」
+    #   ② 想定3連複配当 < 50倍     → 「妙味不足」
+    #
+    # ①は**自分が高く評価した3頭がたまたま人気だった**という理由でレースごと
+    # 捨てる形で、「人気上位だから3着以内に入るは違う」という方針の逆をやって
+    # いた。②は「配当が大きい組を探す」形で、勝つ馬を買うという目的と順序が
+    # 逆になっている（strategy.py に自分でそう書いておきながら残っていた）。
+    #
+    # 買うかどうかは人が決める。ここは全レースに買い目を出し、自信度は
+    # 判断材料として添えるだけにする。
+    skipping = cfg.get("skip", False)
 
-    # --- 堅すぎる。実測でも本線の帯に劣る ---------------------------------
+    # --- 上位人気で収まりそうな形 -----------------------------------------
     if pop_sum < low:
-        return Confidence(
-            SKIP, pop_sum, separation, expected,
-            f"能力上位3頭の人気和{pop_sum}。上位人気で堅く収まる形のため見送る",
-        )
-
+        if skipping:
+            return Confidence(
+                SKIP, pop_sum, separation, expected,
+                f"能力上位3頭の人気和{pop_sum}。上位人気で堅く収まる形のため見送る",
+            )
+        reason = f"能力上位3頭の人気和{pop_sum}。上位人気で収まりそうな形"
     # --- 穴枠。当たれば大きいが期待値は本線に劣ると測定済み ---------------
-    if pop_sum >= cfg["longshot_min"]:
+    elif pop_sum >= cfg["longshot_min"]:
         return Confidence(
             LONGSHOT, pop_sum, separation, expected,
-            f"能力上位3頭の人気和{pop_sum}。穴枠として別予算で薄く買う"
-            f"（この帯の実測回収率は本線より低い）",
+            f"能力上位3頭の人気和{pop_sum}。穴枠（この帯の実測回収率は本線より低い）",
         )
-
     # --- 本線。実測で最も回収率の高い帯 -----------------------------------
-    reason = f"能力上位3頭の人気和{pop_sum}（本線の帯 {low}-{high}）"
+    else:
+        reason = f"能力上位3頭の人気和{pop_sum}（本線の帯 {low}-{high}）"
 
     if expected is not None and expected < cfg["min_expected_odds"]:
-        return Confidence(
-            SKIP, pop_sum, separation, expected,
-            f"{reason}だが想定3連複配当{expected}倍は妙味不足のため見送る",
-        )
-    if expected is not None:
+        if skipping:
+            return Confidence(
+                SKIP, pop_sum, separation, expected,
+                f"{reason}だが想定3連複配当{expected}倍は妙味不足のため見送る",
+            )
+        reason += f"・想定3連複{expected}倍（配当は小さめ）"
+    elif expected is not None:
         reason += f"・想定3連複{expected}倍"
 
     # ◎ には能力の分離も要る。上位が横並びなら軸を立てられない
