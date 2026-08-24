@@ -628,9 +628,58 @@ def cmd_train(args: argparse.Namespace) -> int:
                     previous, result.auc, -drop,
                 )
 
+        _check_score_separation(valid, scores, args.config_dir)
         ml.save(result, args.config_dir / "model.txt", meta_path)
         log.info("モデルを差し替えた: %s", args.config_dir / "model.txt")
     return 0
+
+
+def _check_score_separation(valid, scores, config_dir) -> None:
+    """◎ の閾値がモデルのスケールに合っているかを確かめる。
+
+    ## なぜ要るか
+
+    min_score_separation は「スコア1位と4位の差」で、**モデルのスコアの
+    スケールに依存する**。手置きスコア（中央値50前後）から学習モデルの
+    確率×100（中央値20前後）へ切り替えたとき、この値だけ 6.0 のまま残り、
+    **97%のレースが ◎** になっていた。その1位の勝率は全体平均と同じ。
+
+    型でも例外でも捕まらず、予想は普通に出るので誰も気づかない。モデルを
+    入れ替えるたびに起こりうるので、再学習のたびに機械で見張る。
+
+    狙いは「◎ は4レースに1つくらい」。実測の75%点から外れていたら鳴らす。
+    """
+    import numpy as np
+    import yaml
+
+    work = valid[["race_id"]].copy()
+    work["score"] = scores * 100
+    seps = [
+        s.iloc[0] - s.iloc[3]
+        for _, g in work.groupby("race_id", observed=True)
+        if len(s := g["score"].sort_values(ascending=False)) >= 4
+    ]
+    if not seps:
+        return
+
+    fitted = float(np.quantile(seps, 0.75))
+    cfg = yaml.safe_load((config_dir / "weights.yml").read_text())
+    current = float(cfg["confidence"]["min_score_separation"])
+    share = float(np.mean(np.array(seps) >= current))
+
+    log.info(
+        "◎ の閾値: 設定 %.2f → ◎になる割合 %.0f%%（実測の75%%点は %.2f）",
+        current, share * 100, fitted,
+    )
+    # 4レースに1つのつもりが半分以上、あるいは1割未満なら、もう区別として
+    # 機能していない。数字を出すだけでは見落とすので警告にする。
+    if not 0.10 <= share <= 0.50:
+        log.warning(
+            "::warning::◎ が %.0f%% のレースに付いている。モデルのスケールと"
+            " 合っていない可能性が高い。weights.yml の min_score_separation を"
+            " %.1f 付近へ直すこと",
+            share * 100, fitted,
+        )
 
 
 def _ml_scores(store, config_dir, start, end) -> dict | None:
