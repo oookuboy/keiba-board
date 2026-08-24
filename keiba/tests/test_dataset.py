@@ -25,7 +25,10 @@ def frame() -> pd.DataFrame:
                 "horse_id": "H1", "horse_name": "テスト", "sex": "牡", "age": 4,
                 "weight_carried": 57.0, "jockey_id": "J1", "trainer_id": "T1",
                 "body_weight": 480, "body_weight_diff": 0,
-                "sire": "S1", "damsire": "D1",
+                "sire": "S1", "damsire": "D1", "affiliation": "美浦",
+                # load_frame が作る派生列。build_features はこれらを前提にする
+                "weather": "晴", "kai": 1, "nichi": i + 1, "post_hour": 15,
+                "margin_len": 0.0 if finish == 1 else 1.5,
                 "market_popularity": 1, "market_odds": 2.0,
                 "finish_pos": finish, "time_sec": 95.0, "last3f": 34.0,
                 "corner_ratio": 0.3, "finish_ratio": finish / size,

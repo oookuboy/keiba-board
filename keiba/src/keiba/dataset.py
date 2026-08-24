@@ -28,7 +28,11 @@ log = logging.getLogger(__name__)
 # 目的変数。3連複を狙うので「3着以内」を当てにいく。
 TARGET = "top3"
 
-CATEGORICAL = ["surface", "venue", "going", "sex", "direction"]
+# weather は going と別物。稍重の芝でも、降っている最中かどうかで
+# 前が止まるかが変わる。affiliation は輸送の有無（栗東→東京など）。
+CATEGORICAL = [
+    "surface", "venue", "going", "sex", "direction", "weather", "affiliation",
+]
 
 # オッズ由来の列がうっかり紛れ込んでいないかを確かめるための番人
 FORBIDDEN = ("odds", "popularity", "market", "ninki")
@@ -69,11 +73,12 @@ def load_frame(store: Store, include_unfinished: bool = False) -> pd.DataFrame:
     sql = f"""
     SELECT r.race_id, r.race_date, r.venue, r.surface, r.distance, r.direction,
            r.going, r.grade, r.race_class, r.field_size, r.race_no,
+           r.weather, r.kai, r.nichi, r.post_time,
            e.umaban, e.waku, e.horse_id, e.horse_name, e.sex, e.age,
            e.weight_carried, e.jockey_id, e.trainer_id, e.body_weight,
-           e.body_weight_diff, e.sire, e.damsire,
+           e.body_weight_diff, e.sire, e.damsire, e.affiliation,
            e.market_popularity, e.market_odds,
-           res.finish_pos, res.time_sec, res.corners, res.last3f
+           res.finish_pos, res.time_sec, res.corners, res.last3f, res.margin
     FROM entries e
     JOIN races r     ON r.race_id = e.race_id
     {join} results res ON res.race_id = e.race_id AND res.umaban = e.umaban
@@ -107,7 +112,46 @@ def load_frame(store: Store, include_unfinished: bool = False) -> pd.DataFrame:
     df["placed"] = df[TARGET]
     df["band"] = _band(df["distance"])
     df["class_rank"] = _class_rank(df["race_class"], df["grade"])
+    df["margin_len"] = _margin_lengths(df["margin"])
+    # 発走時刻は「何時台か」だけ取る。最終レースや薄暮は馬場も展開も違う。
+    df["post_hour"] = pd.to_numeric(
+        df["post_time"].astype("string").str.slice(0, 2), errors="coerce"
+    )
     return df
+
+
+# 着差の表記 → 馬身。JRA の書き方をそのまま受ける。
+# 「2.1/2」は 2馬身半で、小数点ではない。ここを float() に渡すと 2.1 になる。
+MARGIN_WORDS = {
+    "同着": 0.0, "ハナ": 0.05, "アタマ": 0.1, "クビ": 0.2,
+    "大差": 10.0,
+}
+
+
+def _margin_lengths(raw: pd.Series) -> pd.Series:
+    """着差を馬身の数値にする。読めないものは欠損のまま。"""
+    def one(value) -> float:
+        if not isinstance(value, str):
+            return np.nan
+        text = value.strip()
+        if not text:
+            return np.nan
+        if text in MARGIN_WORDS:
+            return MARGIN_WORDS[text]
+        # 「1.3/4」= 1 と 3/4。「3/4」= 0.75。「5」= 5。
+        whole, _, fraction = text.partition(".")
+        if "/" in whole and not fraction:
+            whole, fraction = "0", whole
+        try:
+            total = float(whole) if whole else 0.0
+            if fraction:
+                num, _, den = fraction.partition("/")
+                total += float(num) / float(den)
+        except (TypeError, ValueError, ZeroDivisionError):
+            return np.nan
+        return total
+
+    return raw.apply(one)
 
 
 def _prior_mean(df: pd.DataFrame, keys: list[str], column: str) -> pd.Series:
@@ -213,6 +257,18 @@ def build_features(
     # 教訓1: 馬場替わり × 父が今走の馬場で走る、を掛け合わせた項
     out["c_switch_x_sire"] = out["c_surface_switch"] * out["ss_place_rate"].fillna(0)
 
+    # --- 着差（勝ち方・負け方の余裕） -----------------------------------
+    # 着順だけだと「ハナ差の2着」と「10馬身離された2着」が同じ扱いになる。
+    # 自分の着差は結果そのものなので、必ず shift してから使う。
+    out["h_margin_r3"] = _prior_roll(out, horse, "margin_len", 3)
+    out["h_margin_prev"] = out.groupby(horse, observed=True)["margin_len"].shift(1)
+
+    # --- 開催の進み具合 --------------------------------------------------
+    # 何回目の開催の何日目か。開催が進むほど内が荒れて外差しが決まりやすい、
+    # という馬場の消耗を表す代理変数。going だけでは拾えない。
+    out["kai"] = pd.to_numeric(out["kai"], errors="coerce")
+    out["nichi"] = pd.to_numeric(out["nichi"], errors="coerce")
+
     # --- 当日の状態 ----------------------------------------------------
     out["body_weight_abs_diff"] = out["body_weight_diff"].abs()
     out["draw_ratio"] = out["umaban"] / out["field_size"]
@@ -265,6 +321,10 @@ FEATURE_COLUMNS = [
     "body_weight_abs_diff", "waku", "umaban", "draw_ratio",
     # レース条件
     "distance", "field_size", "class_rank", "race_no",
+    # 開催の進み具合（馬場の消耗）と発走時刻。going だけでは拾えない
+    "kai", "nichi", "post_hour",
+    # 着差。着順だけだと「ハナ差の2着」と「10馬身離された2着」が同じになる
+    "h_margin_r3", "h_margin_prev",
     # レース内相対
     "h_place_rate_rank", "h_place_rate_z",
     "h_finish_ratio_r3_rank", "h_finish_ratio_r3_z",
