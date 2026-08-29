@@ -231,13 +231,31 @@ async function boot(){
 }
 
 function renderTotals(){
-  const t=INDEX.days.reduce((a,d)=>({
-    spend:a.spend+(d.spend||0), ret:a.ret+(d.returned||0), hits:a.hits+(d.hits||0)
+  /* 回顧の済んだ日だけを数える。以前は returned が null の日（＝まだ結果を
+     突き合わせていない日）を「投資あり・払戻0円」として足していたので、
+     レース当日は夜の回顧が終わるまで通算回収率が実際より低く出ていた。 */
+  const done=INDEX.days.filter(d=>d.returned!==null&&d.returned!==undefined&&d.spend);
+  if(!done.length)return;
+  const t=done.reduce((a,d)=>({
+    spend:a.spend+d.spend, ret:a.ret+d.returned, hits:a.hits+(d.hits||0)
   }),{spend:0,ret:0,hits:0});
-  if(!t.spend)return;
   const roi=t.ret/t.spend*100;
+
+  /* 目標: まず1日でも回収100%、次に2日連続。日付の新しい順に並んでいるので
+     古い順に直してから数える。 */
+  const chrono=[...done].sort((a,b)=>a.date<b.date?-1:1);
+  let best=0, run=0, over=0;
+  for(const d of chrono){
+    if(d.returned/d.spend>=1){ over++; run++; best=Math.max(best,run); }
+    else run=0;
+  }
+  const goal = best>=2 ? `<span class="good">2日連続 達成（最長${best}日）</span>`
+             : over>0  ? `100%超え ${over}日 / <span class="bad">連続は未達</span>`
+             :           `<span class="bad">100%超えの日はまだ無い</span>`;
+
   document.getElementById("totals").innerHTML=
-    `通算 ${t.hits}的中 / <span class="${roi>=100?'good':'bad'}">回収率 ${roi.toFixed(1)}%</span>`;
+    `通算 ${t.hits}的中 / <span class="${roi>=100?'good':'bad'}">回収率 `+
+    `${roi.toFixed(1)}%</span> ・ ${goal}`;
 }
 
 function renderDays(){
