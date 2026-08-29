@@ -96,11 +96,13 @@ def make_entries(popularities: list[int], sire: str = "テスト種牡馬") -> l
     ]
 
 
-def score(store: Store, race: Race, entries: list[Entry], sire_table: dict | None = None):
-    features = build_features(race, entries, store, sire_table or {}, WEIGHTS)
-    horses = engine.run(features, {e.umaban: e for e in entries}, WEIGHTS)
-    grade = confidence.grade(horses, WEIGHTS)
-    return horses, grade, betting.build(horses, grade, WEIGHTS)
+def score(store: Store, race: Race, entries: list[Entry],
+          sire_table: dict | None = None, weights: dict | None = None):
+    w = weights or WEIGHTS
+    features = build_features(race, entries, store, sire_table or {}, w)
+    horses = engine.run(features, {e.umaban: e for e in entries}, w)
+    grade = confidence.grade(horses, w)
+    return horses, grade, betting.build(horses, grade, w)
 
 
 # ------------------------------------------------------ 教訓1: 血統で拾う
@@ -275,7 +277,9 @@ def test_chalk_race_still_gets_a_buy_list(store: Store) -> None:
     for i, e in enumerate(entries):
         add_history(store, e.horse_id, finish=1 if i < 3 else 10)
 
-    horses, grade, tickets = score(store, race, entries)
+    # 見送るかどうかは運用の選択なので、設定から読まずに明示する
+    off = {**WEIGHTS, "confidence": {**WEIGHTS["confidence"], "skip": False}}
+    horses, grade, tickets = score(store, race, entries, weights=off)
     top3_pops = sorted(h.market_popularity for h in horses[:3] if h.market_popularity)
 
     if sum(top3_pops) < WEIGHTS["confidence"]["main_band"][0]:

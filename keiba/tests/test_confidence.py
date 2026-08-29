@@ -50,7 +50,8 @@ def test_chalk_race_still_gets_a_buy_list() -> None:
 
     買うかどうかは人が決める。自信度は判断材料として添えるだけにする。
     """
-    c = grade(horses([1, 2, 3, 4, 5, 6, 7, 8]), WEIGHTS)
+    off = {**WEIGHTS, "confidence": {**WEIGHTS["confidence"], "skip": False}}
+    c = grade(horses([1, 2, 3, 4, 5, 6, 7, 8]), off)
     assert c.grade != SKIP, "上位人気というだけで見送っている"
     assert c.should_bet
     assert not c.is_pending
@@ -58,13 +59,15 @@ def test_chalk_race_still_gets_a_buy_list() -> None:
     assert "上位人気" in c.reason
 
 
-def test_skipping_can_be_switched_back_on() -> None:
-    """見送りの仕組みは残してある（confidence.skip: true で戻る）。
+def test_skipping_can_be_switched_on() -> None:
+    """confidence.skip: true なら見送ること。
 
-    外したのは既定値であって、機能ではない。戻したくなったら設定1行。
+    **設定から読まずに明示する。** 運用の選択（いま見送るかどうか）を
+    テストに焼き込むと、方針を変えただけでテストが落ちる。実際に落ちた。
+    ここで見たいのはスイッチが効くことであって、いまどちら側にあるかではない。
     """
-    cfg = {**WEIGHTS, "confidence": {**WEIGHTS["confidence"], "skip": True}}
-    c = grade(horses([1, 2, 3, 4, 5, 6, 7, 8]), cfg)
+    on = {**WEIGHTS, "confidence": {**WEIGHTS["confidence"], "skip": True}}
+    c = grade(horses([1, 2, 3, 4, 5, 6, 7, 8]), on)
     assert c.grade == SKIP
     assert not c.should_bet
 
@@ -131,7 +134,8 @@ def test_thin_expected_payout_is_noted_not_skipped() -> None:
     「配当が大きい組を探す」形は、勝つ馬を買うという目的と順序が逆になる。
     strategy.py に自分でそう書いておきながら、本番の設定には残っていた。
     """
-    cfg = {**WEIGHTS, "confidence": {**WEIGHTS["confidence"], "min_expected_odds": 1e9}}
+    cfg = {**WEIGHTS, "confidence": {**WEIGHTS["confidence"],
+                                     "min_expected_odds": 1e9, "skip": False}}
     c = grade(horses([5, 4, 3, 1, 2, 6, 7, 8]), cfg)
     assert c.grade != SKIP
     assert c.should_bet
