@@ -161,6 +161,7 @@ tr.placed td{background:#121e16}
   <div id="filters">
     <button data-f="all" class="on">ALL</button>
     <button data-f="bet">買い目あり</button>
+    <button data-f="hit">的中</button>
     <button data-f="◎">◎ 勝負</button>
     <button data-f="○">○</button>
     <button data-f="△">△</button>
@@ -292,6 +293,8 @@ document.getElementById("filters").onclick=e=>{
 function visible(r){
   if(FILTER==="all")return true;
   if(FILTER==="bet")return r.bets.length>0;
+  // 当たったレースだけ。回顧が済んでいない日は result がまだ無い
+  if(FILTER==="hit")return !!(r.result && r.result.hit);
   return r.confidence===FILTER;
 }
 
@@ -299,7 +302,12 @@ function renderRaces(){
   const box=document.getElementById("races");
   box.innerHTML="";
   const list=DAY.races.filter(visible);
-  if(!list.length){box.appendChild(el("p","empty","該当するレースがない。"));return}
+  if(!list.length){
+    box.appendChild(el("p","empty", FILTER==="hit"
+      ? "的中したレースはまだない。（回顧前の日は結果が入っていない）"
+      : "該当するレースがない。"));
+    return;
+  }
   list.forEach(r=>box.appendChild(raceCard(r)));
 }
 
