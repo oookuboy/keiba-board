@@ -401,7 +401,7 @@ def build_ledger(data_dir: Path) -> list[str]:
         "## 通算",
         "",
         f"回顧済み {len(days)}日（{days[0][0]} 〜 {days[-1][0]}）。"
-        f"100%超えの日 {len(over)}日" + (f"（{', '.join(over)}）" if over else ""),
+        + (f"100%超えの日 {len(over)}日（{', '.join(over)}）" if over else ""),
         "",
         "```",
         f"{'買い方':<{width}}      投資          払戻     回収率  最高配当を除くと",

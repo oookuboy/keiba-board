@@ -249,13 +249,15 @@ function renderTotals(){
     if(d.returned/d.spend>=1){ over++; run++; best=Math.max(best,run); }
     else run=0;
   }
-  const goal = best>=2 ? `<span class="good">2日連続 達成（最長${best}日）</span>`
-             : over>0  ? `100%超え ${over}日 / <span class="bad">連続は未達</span>`
-             :           `<span class="bad">100%超えの日はまだ無い</span>`;
+  /* 達成したぶんだけ出す。未達を書き足しても情報が増えないし、毎回
+     「まだ無い」と言われるボードは見たくない。 */
+  const goal = best>=2 ? ` ・ <span class="good">2日連続 達成（最長${best}日）</span>`
+             : over>0  ? ` ・ <span class="good">100%超え ${over}日</span>`
+             :           "";
 
   document.getElementById("totals").innerHTML=
     `通算 ${t.hits}的中 / <span class="${roi>=100?'good':'bad'}">回収率 `+
-    `${roi.toFixed(1)}%</span> ・ ${goal}`;
+    `${roi.toFixed(1)}%</span>${goal}`;
 }
 
 function renderDays(){
