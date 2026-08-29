@@ -132,6 +132,45 @@ def test_the_review_runs_on_the_day_of_the_races() -> None:
     assert set(dow.split(",")) == {"6", "0"}, "土日に走らせること"
 
 
+def test_the_review_target_day_survives_a_late_cron() -> None:
+    """回顧の対象日を JST の実行時刻で決めていないこと。
+
+    GitHub Actions の cron は遅れて発火する。当日回顧は 13:00 UTC（＝22:00 JST）
+    に置いてあり、JST の日付が変わるまで2時間しか余裕が無い。
+
+    2026-08-29 に実際そうなった。cron が4時間遅れて 16:55 UTC（＝翌 01:55 JST）
+    に発火し、`TZ=Asia/Tokyo date +%F` が 8/30 を返した。まだ1レースも走って
+    いない 8/30 に対して回顧が走り、「対象36R・買い0R・結果未照合」という、
+    成績に見えるが成績ではない記録が実戦ログとボードに残った。
+
+    UTC で決めれば 00:00 UTC まで11時間の余裕がある。
+    """
+    text = (WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8")
+    block = text.split("DATE=\"${{ inputs.date }}\"", 1)[1].split("preview は木曜")[0]
+
+    review_lines = [
+        line for line in block.splitlines() if "DATE=$(" in line
+    ]
+    assert review_lines, "対象日を決めている行が見つからない"
+    # review の分岐（前半2つ）は UTC で決める
+    for line in review_lines[:2]:
+        assert "date -u" in line, f"回顧の対象日を JST で決めている: {line.strip()}"
+
+
+def test_the_review_picks_up_days_it_could_not_grade() -> None:
+    """回顧が取りこぼしを自分で拾い直すこと。
+
+    db.netkeiba への着順の反映は遅れる。当日夜の回顧は0件で終わることがあり、
+    以前は実戦ログに「翌日に再実行すること」と書いて人に投げていた。人が
+    忘れればその日の成績は永久に残らない。--catch-up が無ければ元に戻る。
+    """
+    text = (WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8")
+    assert "review --date" in text
+    assert "--catch-up" in text, (
+        "着順を取れなかった日を拾い直さない。成績が永久に欠けたままになる"
+    )
+
+
 def test_the_workout_artifact_chain_renews_itself() -> None:
     """調教を取り込むワークフローが、上げ直しもすること。
 

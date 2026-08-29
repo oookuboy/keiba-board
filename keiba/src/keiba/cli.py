@@ -227,26 +227,74 @@ def cmd_predict(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_review(args: argparse.Namespace) -> int:
-    """指定日の予想に実結果を突き合わせ、成績と教訓ログを更新する。"""
-    path = args.data_dir / f"{args.day.isoformat()}.json"
+def _review_one(store: Store, day: str, args: argparse.Namespace) -> int | None:
+    """1日ぶんの回顧。照合できたレース数を返す。対象外なら None。"""
+    path = args.data_dir / f"{day}.json"
     if not path.exists():
         log.error("予想ファイルが無い: %s（先に predict を実行すること）", path)
-        return 1
+        return None
 
     payload = json.loads(path.read_text(encoding="utf-8"))
-    with Store(args.db) as store:
-        payload = review.review_day(store, payload)
-        overall = review.totals(store)
+    # 暫定予想は買い目を組んでいない（発走前に出す印だけの版）。これを回顧すると
+    # 「対象36R・買い0R・見送り36R・結果未照合」という、成績に見えるが成績では
+    # ない記録が残る。2026-08-29 に、当日回顧の cron が4時間遅れて JST の日付が
+    # 翌日へ回り、まだ走っていない 8/30 に対してこれが起きた。
+    if payload.get("provisional"):
+        log.error("%s は暫定予想（買い目なし）。回顧の対象ではない", day)
+        return None
 
+    payload = review.review_day(store, payload)
     predict.write_day(payload, args.data_dir)
     review.append_lessons(payload, args.lessons)
     s = payload["summary"]
     log.info(
-        "%s: 的中 %s R / 投資 %s円 → 払戻 %s円（回収率 %s%%）",
-        args.day, s.get("hits"), s["spend"], s.get("returned"), s.get("roi"),
+        "%s: 照合 %s/%sR・的中 %s R / 投資 %s円 → 払戻 %s円（回収率 %s%%）",
+        day, s.get("graded"), s["races"], s.get("hits"),
+        s["spend"], s.get("returned"), s.get("roi"),
     )
+    return s.get("graded", 0)
+
+
+def _unreviewed_days(data_dir: Path, before: str) -> list[str]:
+    """まだ全レースを照合できていない過去の開催日。
+
+    db.netkeiba への着順の反映は遅れる。当日夜に走らせると0件のことがあり、
+    これまでは実戦ログに「翌日に再実行すること」と書いて人に投げていた。
+    書いた本人が忘れれば、その日の成績は永久に残らない。機械が拾い直す。
+    """
+    days = []
+    for path in sorted(data_dir.glob("[0-9]*.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if data["date"] >= before or data.get("provisional"):
+            continue
+        summary = data.get("summary") or {}
+        if summary.get("graded", 0) < summary.get("races", 0):
+            days.append(data["date"])
+    return days
+
+
+def cmd_review(args: argparse.Namespace) -> int:
+    """指定日の予想に実結果を突き合わせ、成績と教訓ログを更新する。"""
+    day = args.day.isoformat()
+    with Store(args.db) as store:
+        graded = _review_one(store, day, args)
+        if graded is None:
+            return 1
+
+        # 取りこぼした過去日を拾い直す。着順が既に取れていれば埋まる。
+        if args.catch_up:
+            for missed in _unreviewed_days(args.data_dir, before=day):
+                log.info("%s は未照合のぶんが残っている。拾い直す", missed)
+                _review_one(store, missed, args)
+
+        overall = review.totals(store)
+
+    review.write_ledger(args.data_dir, args.lessons)
     log.info("通算: %s", overall)
+    if graded == 0:
+        log.warning(
+            "%s は着順を1件も取得できていない。次回の回顧で拾い直す", day
+        )
     return 0
 
 
@@ -851,6 +899,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("review", help="指定日の予想に実結果を突き合わせる")
     p.add_argument("--date", dest="day", type=_date, required=True)
+    p.add_argument(
+        "--catch-up", action="store_true",
+        help="照合しきれていない過去の開催日も拾い直す",
+    )
     p.set_defaults(func=cmd_review)
 
     p = sub.add_parser("train", help="能力モデルを学習する")

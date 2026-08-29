@@ -89,8 +89,19 @@ jobs:
           DATE="${{ inputs.date }}"
           if [ -z "$DATE" ]; then
             # 翌朝の回顧は前日の開催が対象。当日22時の回顧は今日が対象。
+            #
+            # 回顧の対象日は **UTC** で決める。JST で決めると、cron の遅れが
+            # JST の日付を跨いだ瞬間に対象が1日ずれる。当日回顧の cron は
+            # 13:00 UTC（＝22:00 JST）で、JST の日付が変わるまで2時間しか
+            # 余裕が無い。2026-08-29 に実際そうなった: cron が4時間遅れて
+            # 16:55 UTC（＝翌 01:55 JST）に発火し、まだ1レースも走っていない
+            # 8/30 を回顧して「対象36R・買い0R・結果未照合」という、成績に
+            # 見えるが成績ではない記録を残した。UTC なら 00:00 UTC まで
+            # 11時間の余裕がある。
             if [ "$JOB" = "review" ] && [ -z "$SAMEDAY" ]; then
-              DATE=$(TZ=Asia/Tokyo date -d "yesterday" +%F)
+              DATE=$(date -u -d "yesterday" +%F)
+            elif [ "$JOB" = "review" ]; then
+              DATE=$(date -u +%F)
             else
               DATE=$(TZ=Asia/Tokyo date +%F)
             fi
@@ -241,7 +252,7 @@ jobs:
           python -m keiba.cli collect --date "$DATE" --results --from-jra \
             || python -m keiba.cli collect --date "$DATE" --days-ahead 0 --results
           python -m keiba.cli build
-          python -m keiba.cli review --date "${{ steps.plan.outputs.date }}"
+          python -m keiba.cli review --date "$DATE" --catch-up
 
       # 収集は済んだのに予想で落ちた、という形でも生データは残す。
       # 取り直しには1.5秒ウェイトぶんの時間がかかるので捨てたくない。
