@@ -70,12 +70,37 @@ def test_skipping_can_be_switched_back_on() -> None:
 
 
 def test_main_band_is_backed_as_anchor() -> None:
-    """本線の帯（人気和 9-13）で能力が分離していれば ◎。"""
-    c = grade(horses([5, 4, 3, 1, 2, 6, 7, 8]), WEIGHTS)
+    """本線の帯（人気和 9-13）で能力が分離していれば ◎。
+
+    閾値そのものはモデルのスコアのスケールに合わせて動く値なので、ここでは
+    設定から読まずに明示する。**較正の値をテストに焼き込むと、モデルを
+    入れ替えて閾値が動いたときにテストが落ちる**（実際に落ちた）。
+    ここで見たいのは「分離していれば ◎ になる」という筋であって、
+    いま何点で切っているかではない。
+    """
+    cfg = {**WEIGHTS, "confidence": {**WEIGHTS["confidence"],
+                                      "min_score_separation": 10.0}}
+    c = grade(horses([5, 4, 3, 1, 2, 6, 7, 8]), cfg)  # スコア差 30
     assert c.popularity_sum == 12
     assert c.grade == "◎"
     assert c.should_bet
     assert not c.is_longshot
+
+
+def test_the_separation_threshold_is_what_decides() -> None:
+    """同じ出走表でも、閾値を上げれば ○ に落ちること。
+
+    ◎ が効くのは三連単（◎1着固定）を買うかどうかだけなので、この閾値は
+    「1位に置いた馬が実際に勝ちそうか」を表している必要がある。値の較正は
+    retrain が実測でやる（cli._check_score_separation）。
+    """
+    entries = horses([5, 4, 3, 1, 2, 6, 7, 8])  # スコア差 30
+    loose = {**WEIGHTS, "confidence": {**WEIGHTS["confidence"],
+                                       "min_score_separation": 10.0}}
+    tight = {**WEIGHTS, "confidence": {**WEIGHTS["confidence"],
+                                       "min_score_separation": 50.0}}
+    assert grade(entries, loose).grade == "◎"
+    assert grade(entries, tight).grade == "○"
 
 
 def test_longshot_band_is_separate_bucket() -> None:
