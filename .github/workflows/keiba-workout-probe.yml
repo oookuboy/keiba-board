@@ -19,6 +19,10 @@ on:
         description: "調べる頭数"
         required: false
         default: "5"
+      race_id:
+        description: "レース単位の調教ページも見る（race_id）"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -46,4 +50,6 @@ jobs:
           NETKEIBA_EMAIL: ${{ secrets.NETKEIBA_EMAIL }}
           NETKEIBA_PASSWORD: ${{ secrets.NETKEIBA_PASSWORD }}
         run: |
-          python -m keiba.cli -v probe-workouts --limit ${{ inputs.limit }}
+          RACE=""
+          [ -n "${{ inputs.race_id }}" ] && RACE="--race-id ${{ inputs.race_id }}"
+          python -m keiba.cli -v probe-workouts --limit ${{ inputs.limit }} $RACE

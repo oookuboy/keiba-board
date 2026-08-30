@@ -320,6 +320,39 @@ def cmd_probe_workouts(args: argparse.Namespace) -> int:
         log.info("パーサが読んでいない表の見出し（行数の多い順）:")
         for headers, n in sorted(unknown_headers.items(), key=lambda kv: -kv[1])[:10]:
             log.info("  %4d行  %s", n, headers)
+
+    # 馬ごとのページに今週ぶんが無いなら、レース単位のページを見るしかない。
+    # 中身は出さず、サーバ側で描かれているか（＝requests で取れるか）だけを見る。
+    if not args.race_id:
+        return 0
+    log.info("=" * 60)
+    log.info("レース単位のページを見る: %s", args.race_id)
+    for url in (
+        f"https://race.netkeiba.com/race/oikiri.html?race_id={args.race_id}",
+        f"https://race.netkeiba.com/race/newspaper.html?race_id={args.race_id}",
+    ):
+        try:
+            html = fetcher.fetch(url, force=True)
+        except Exception as exc:  # noqa: BLE001 — 切り分けなので種類を問わず出す
+            log.info("  %s → 取得できない: %s", url.split("/")[-1], exc)
+            continue
+        soup = BeautifulSoup(html, "lxml")
+        title = (soup.title.get_text(strip=True) if soup.title else "")[:80]
+        tables = soup.select("table")
+        log.info("  %s", url.split("/")[-1])
+        log.info("    %d bytes / title=%s / 表 %d個", len(html), title, len(tables))
+        for table in tables[:6]:
+            rows = table.find_all("tr")
+            headers = (
+                [netkeiba._text(c) for c in rows[0].find_all(["th", "td"])]
+                if rows else []
+            )
+            log.info(
+                "      class=%s 行=%d 見出し=%s",
+                ".".join(table.get("class") or []) or "-",
+                max(len(rows) - 1, 0),
+                "|".join(headers)[:160],
+            )
     return 0
 
 
@@ -908,6 +941,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="今週の追い切りが取れない原因を切り分ける（表の見出しと件数だけを出す）",
     )
     p.add_argument("--limit", type=int, default=5, help="調べる頭数（既定 5）")
+    p.add_argument(
+        "--race-id", default=None,
+        help="このレースの調教ページも見る（レース単位のページに今週ぶんが"
+        " 載っているかの確認）",
+    )
     p.set_defaults(func=cmd_probe_workouts)
 
     p = sub.add_parser("backfill-workouts", help="調教タイムを収集する（要 netkeiba 有料）")
