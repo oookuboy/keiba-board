@@ -1,0 +1,49 @@
+name: keiba-workout-probe
+
+# 今週の追い切りが取れない原因の切り分け。手で回す用。
+#
+# 2026-08-28 の収集で、今週の出走馬514頭ぶんのページを引いて 10,981本の
+# 調教レコードは取れたのに、直近21日の調教を持つ馬は93頭（18.1%）だった。
+# 量は取れていて、新しいぶんだけ来ていない。
+#
+# このセッションから netkeiba へ到達できないので、実ページの構造を見るには
+# Actions を通すしかない。
+#
+# **ログには表の見出しと件数しか出さない。** 調教は有料データで、このログは
+# 公開される。日付・タイム・評価などのセルの中身は出さない。
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "調べる頭数"
+        required: false
+        default: "5"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+
+      # 既に取ってある調教。ここでは読むだけで、上げ直しはしない
+      - name: 調教を artifact から戻す
+        uses: ./.github/actions/workouts
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Probe
+        env:
+          NETKEIBA_EMAIL: ${{ secrets.NETKEIBA_EMAIL }}
+          NETKEIBA_PASSWORD: ${{ secrets.NETKEIBA_PASSWORD }}
+        run: |
+          python -m keiba.cli -v probe-workouts --limit ${{ inputs.limit }}

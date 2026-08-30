@@ -227,6 +227,102 @@ def cmd_predict(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_probe_workouts(args: argparse.Namespace) -> int:
+    """今週の追い切りが取れない原因を切り分ける。
+
+    2026-08-28 の収集で、今週の出走馬514頭ぶんのページを引いて 10,981本の
+    調教レコードは取れたのに、**直近21日の調教を持つ馬は93頭（18.1%）**しか
+    いなかった。量は取れていて新しいぶんだけ来ていない、という形。
+
+    有力な仮説は「最新の追い切りが別の表に載っていて、パーサが弾いている」。
+    parse_horse_training は見出しに「調教タイム」を含む表しか読まないので、
+    見出しの違う表があれば、そこに何行あっても静かに落ちる。
+
+    ## ログに何を出すか
+
+    Actions のログは公開される。調教は有料データなので、**日付・タイム・
+    評価などのセルの中身は一切出さない**。出すのは表の見出しと件数、そして
+    そこから計算した「最新が何日前か」だけにする。見出しはページの構造で
+    あってデータではないため、これは出してよい（他の切り分けでも同じ線を
+    引いてきた）。
+    """
+    import datetime as dt
+
+    from bs4 import BeautifulSoup
+
+    from keiba import backfill
+    from keiba.sources import netkeiba, netkeiba_auth
+
+    fetcher = Fetcher(cache_dir=args.cache)
+    netkeiba_auth.login(fetcher, required=True)
+
+    with Store(args.db) as store:
+        rebuild(store, args.raw_dir)
+        today = dt.date.today()
+        horses = [
+            r[0]
+            for r in store.conn.execute(
+                "SELECT DISTINCT e.horse_id FROM entries e"
+                " JOIN races r ON r.race_id = e.race_id"
+                " WHERE r.race_date >= ? AND e.horse_id <> ''"
+                " ORDER BY e.horse_id LIMIT ?",
+                (today.isoformat(), args.limit),
+            )
+        ]
+
+    log.info("対象 %d頭（今週の出走馬から）", len(horses))
+    accepted_total = ignored_total = 0
+    unknown_headers: dict[str, int] = {}
+    fresh = 0
+
+    for i, horse_id in enumerate(horses, 1):
+        html = fetcher.fetch(
+            backfill.TRAINING_URL.format(horse_id=horse_id), force=True
+        )
+        soup = BeautifulSoup(html, "lxml")
+        log.info("--- %d/%d  html %d bytes", i, len(horses), len(html))
+
+        for table in soup.select("table"):
+            rows = table.find_all("tr")
+            if not rows:
+                continue
+            headers = [
+                netkeiba._text(c) for c in rows[0].find_all(["th", "td"])
+            ]
+            body = len(rows) - 1
+            ok = "調教タイム" in headers
+            accepted_total += body if ok else 0
+            if not ok:
+                ignored_total += body
+                key = "|".join(headers)[:120]
+                unknown_headers[key] = unknown_headers.get(key, 0) + body
+            log.info(
+                "    表 class=%s 行=%d 採用=%s 見出し=%s",
+                ".".join(table.get("class") or []) or "-", body, ok,
+                "|".join(headers)[:160],
+            )
+
+        parsed = netkeiba.parse_horse_training(html, horse_id)
+        if parsed:
+            newest = max(w.workout_date for w in parsed)
+            age = (today - newest).days
+            recent = sum(1 for w in parsed if (today - w.workout_date).days <= 21)
+            fresh += int(age <= 21)
+            log.info("    解析 %d本 / 最新は %d日前 / 直近21日 %d本",
+                     len(parsed), age, recent)
+        else:
+            log.info("    解析 0本")
+
+    log.info("=" * 60)
+    log.info("採用された行 %d / 弾いた行 %d", accepted_total, ignored_total)
+    log.info("直近21日の調教を持つ馬 %d/%d", fresh, len(horses))
+    if unknown_headers:
+        log.info("パーサが読んでいない表の見出し（行数の多い順）:")
+        for headers, n in sorted(unknown_headers.items(), key=lambda kv: -kv[1])[:10]:
+            log.info("  %4d行  %s", n, headers)
+    return 0
+
+
 def _review_one(store: Store, day: str, args: argparse.Namespace) -> int | None:
     """1日ぶんの回顧。照合できたレース数を返す。対象外なら None。"""
     path = args.data_dir / f"{day}.json"
@@ -806,6 +902,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--offset", type=int, default=0, help="対象リストの先頭から飛ばす頭数（並列分割用）"
     )
     p.set_defaults(func=cmd_backfill_pedigree)
+
+    p = sub.add_parser(
+        "probe-workouts",
+        help="今週の追い切りが取れない原因を切り分ける（表の見出しと件数だけを出す）",
+    )
+    p.add_argument("--limit", type=int, default=5, help="調べる頭数（既定 5）")
+    p.set_defaults(func=cmd_probe_workouts)
 
     p = sub.add_parser("backfill-workouts", help="調教タイムを収集する（要 netkeiba 有料）")
     p.add_argument("--limit", type=int, default=None, help="1回で引く頭数の上限")

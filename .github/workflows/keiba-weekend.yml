@@ -191,11 +191,14 @@ jobs:
       # ジョブは緑のままなので、中身を数えて見えるようにする。
       #
       # 「収集は成功・中身は空」はこの開発で何度も踏んでいる形。
+      # `::warning::` はログの中に埋もれる。実際 2026-08-28 に 18.1% で鳴って
+      # いたのに、ジョブが緑だったので数日気づかなかった。
+      # 数字をファイルに残してコミットし、ボードの見出しにも出す。
       - name: 今週の調教が入ったか確かめる
         if: steps.plan.outputs.job == 'collect'
         run: |
           python - <<'PY'
-          import datetime as dt, sqlite3, sys
+          import datetime as dt, json, pathlib, sqlite3
           conn = sqlite3.connect("keiba/keiba.db")
           today = dt.date.today()
           # 特徴量は21日より古い調教を捨てる。その窓に入るものを数える
@@ -215,6 +218,18 @@ jobs:
           ).fetchone()
           rate = fresh / runners if runners else 0.0
           print(f"今週の出走馬 {runners:,}頭 / 直近21日の調教あり {fresh:,}頭 ({rate:.1%})")
+
+          out = pathlib.Path("keiba/data/health.json")
+          out.parent.mkdir(parents=True, exist_ok=True)
+          health = json.loads(out.read_text()) if out.exists() else {}
+          health["workouts"] = {
+              "checked": today.isoformat(),
+              "runners": runners,
+              "fresh": fresh,
+              "rate": round(rate, 3),
+          }
+          out.write_text(json.dumps(health, ensure_ascii=False), encoding="utf-8")
+
           if rate < 0.5:
               print(
                   "::warning::今週の調教が半分も入っていない"

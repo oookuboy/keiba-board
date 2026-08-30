@@ -29,6 +29,9 @@ h1{font-size:15px;letter-spacing:.22em;font-weight:700}
 .brandrow .jp{font-size:11px;color:var(--dim)}
 .totals{margin-left:auto;font-family:"SF Mono",Menlo,monospace;font-size:12px;color:var(--amber)}
 .totals .bad{color:var(--red)} .totals .good{color:var(--green)}
+/* 有料データの欠損など、予想の前提が崩れているときだけ出る帯 */
+#health.warn{margin-top:8px;padding:6px 9px;font-size:11px;line-height:1.5;
+  color:var(--red);border:1px solid var(--red);border-radius:3px}
 
 /* 開催日タブ */
 #days{display:flex;gap:6px;overflow-x:auto;margin-top:9px;padding-bottom:2px;scrollbar-width:none}
@@ -153,6 +156,7 @@ tr.placed td{background:#121e16}
     <span class="jp">中央競馬 自動予想</span>
     <span class="totals" id="totals"></span>
   </div>
+  <div id="health" hidden></div>
   <div id="days"></div>
 </header>
 
@@ -226,8 +230,31 @@ async function boot(){
     return;
   }
   renderTotals();
+  await renderHealth();
   renderDays();
   await load(INDEX.days[0].date);
+}
+
+/* 有料データが入っているかをボードに出す。
+   収集ステップは continue-on-error なので、課金切れ・ログイン失敗・仕様変更の
+   どれが起きてもジョブは緑のまま通り、黙って調教なしに戻る。`::warning::` は
+   入れてあったが、ログの中に埋もれて実際に数日見落とした（2026-08-28 に
+   18.1% で鳴っていた）。見えるところに出す。 */
+async function renderHealth(){
+  const box=document.getElementById("health");
+  if(!box)return;
+  let h;
+  try{ h=await (await fetch("keiba/data/health.json",{cache:"no-cache"})).json(); }
+  catch(e){ return; }
+  const w=h&&h.workouts;
+  if(!w||!w.runners)return;
+  const pct=(w.rate*100).toFixed(1);
+  if(w.rate>=0.5){ box.hidden=true; return; }
+  box.hidden=false;
+  box.className="warn";
+  box.textContent=
+    `調教データが ${pct}%（今週の出走馬 ${w.runners}頭のうち ${w.fresh}頭・`+
+    `${w.checked} 時点）。予想はこの欠損を含んだ状態で出ている。`;
 }
 
 function renderTotals(){
