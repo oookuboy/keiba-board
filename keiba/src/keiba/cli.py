@@ -327,9 +327,31 @@ def cmd_probe_workouts(args: argparse.Namespace) -> int:
         return 0
     log.info("=" * 60)
     log.info("レース単位のページを見る: %s", args.race_id)
+
+    # 新しいパーサが実ページで動くかを、件数だけで確かめる。
+    # 中身は出さない（有料データ・公開ログ）。
+    oikiri = f"https://race.netkeiba.com/race/oikiri.html?race_id={args.race_id}"
+    try:
+        rows = netkeiba.parse_race_oikiri(fetcher.fetch(oikiri, force=True))
+    except Exception as exc:  # noqa: BLE001
+        log.info("parse_race_oikiri が落ちた: %r", exc)
+    else:
+        horses = {w.horse_id for w in rows}
+        timed = sum(1 for w in rows if any(t is not None for t in w.times))
+        newest = min(((date.today() - w.workout_date).days for w in rows), default=None)
+        log.info(
+            "parse_race_oikiri → %d本 / %d頭 / タイムあり %d本 / 最新 %s日前",
+            len(rows), len(horses), timed, newest,
+        )
+
     for url in (
-        f"https://race.netkeiba.com/race/oikiri.html?race_id={args.race_id}",
+        oikiri,
         f"https://race.netkeiba.com/race/newspaper.html?race_id={args.race_id}",
+        # 厩舎コメントの在り処を探す。馬別の kyusya_comment は課金の壁で
+        # 本文が伏せられていた（提供元はデイリースポーツ）。調教と同じく
+        # レース単位のページなら出るかもしれない。
+        f"https://race.netkeiba.com/race/comment.html?race_id={args.race_id}",
+        f"https://race.netkeiba.com/race/danwa.html?race_id={args.race_id}",
     ):
         try:
             html = fetcher.fetch(url, force=True)
@@ -339,8 +361,13 @@ def cmd_probe_workouts(args: argparse.Namespace) -> int:
         soup = BeautifulSoup(html, "lxml")
         title = (soup.title.get_text(strip=True) if soup.title else "")[:80]
         tables = soup.select("table")
+        from keiba.sources.netkeiba_auth import WALL_PAGE_MARKERS
+        walled = [m for m in WALL_PAGE_MARKERS if m in html]
         log.info("  %s", url.split("/")[-1])
-        log.info("    %d bytes / title=%s / 表 %d個", len(html), title, len(tables))
+        log.info(
+            "    %d bytes / title=%s / 表 %d個 / 課金の壁=%s",
+            len(html), title, len(tables), walled or "なし",
+        )
         for table in tables[:6]:
             rows = table.find_all("tr")
             headers = (

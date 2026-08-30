@@ -414,6 +414,98 @@ def _training_times(value: str) -> list[float | None]:
     return out
 
 
+# レース単位の調教ページ。馬別ページとの違いは先頭の 枠|馬番|印|馬名 だけで、
+# 調教の列はまったく同じ並び。
+OIKIRI_HEAD = ("日付", "コース", "馬場", "乗り役")
+
+
+def parse_race_oikiri(html: str) -> list[HorseWorkout]:
+    """レース単位の追い切りページ（race/oikiri.html）。
+
+    ## なぜこれが要るか
+
+    馬別の調教ページ（?pid=horse_training）は、**既に走ったレースに紐づく
+    調教しか持たない**。今週の追い切りは、そのレースが終わるまで出てこない。
+
+    2026-08-28 の収集で実測した。今週の出走馬514頭ぶんを引いて 10,981本は
+    取れたのに、直近21日の調教を持つ馬は93頭（18.1%）だけ。最新が11日前・
+    25日前・39日前という並びで、どれも「その馬の前走の直前」にあたっていた。
+
+    これは学習と本番のズレとして効く。過去のレースを学習するときは当該
+    レースの追い切りが（走り終わっているので）入っているのに、本番は
+    これから走るレースなので同じ列が空になる。モデルは本番に存在しない列を
+    当てにして学習していたことになる。gain 上位10個のうち3つが調教だった。
+
+    ## 表の作り
+
+    1頭が複数本の追い切りを持ち、枠・馬番・馬名は rowspan で最初の行にしか
+    出ない。行をまたいで持ち越さないと、2本目以降が馬に紐づかない。
+
+    馬IDは馬名セルのリンクから取る。馬番だけだと、この関数の呼び出し側が
+    レースの出馬表を引き当てる必要があって面倒になる。
+    """
+    soup = BeautifulSoup(html, "lxml")
+    out: list[HorseWorkout] = []
+    seen: set[tuple[str, str, str]] = set()
+
+    for table in soup.select("table"):
+        rows = table.find_all("tr")
+        if not rows:
+            continue
+        headers = [_text(c) for c in rows[0].find_all(["th", "td"])]
+        if not all(h in headers for h in OIKIRI_HEAD) or "馬名" not in headers:
+            continue
+
+        # 見出しの位置から列を引く。列が増減しても添字がずれない
+        base = headers.index("日付")
+        horse_id = ""
+        for row in rows[1:]:
+            cells = row.find_all(["td", "th"])
+            if not cells:
+                continue
+
+            # rowspan で省かれた行は、日付から始まる短い行になる
+            offset = 0 if len(cells) > base else base
+            if offset == 0:
+                link = row.find("a", href=re.compile(r"/horse/(\d+)"))
+                if link:
+                    horse_id = re.search(r"/horse/(\d+)", link["href"]).group(1)
+            if not horse_id:
+                continue
+
+            def cell(i: int) -> str:
+                index = base + i - offset
+                return _text(cells[index]) if 0 <= index < len(cells) else ""
+
+            m = TRAINING_DATE_RE.search(cell(0))
+            course = cell(1)
+            if not m or not course:
+                continue
+            day = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+            key = (horse_id, day.isoformat(), course)
+            if key in seen:
+                continue
+            seen.add(key)
+
+            out.append(
+                HorseWorkout(
+                    horse_id=horse_id,
+                    workout_date=day,
+                    course=course,
+                    going=cell(2) or None,
+                    rider=cell(3) or None,
+                    times=_training_times(cell(4)),
+                    position=cell(5) or None,
+                    leg=cell(6) or None,
+                    evaluation=cell(7) or None,
+                    rank=cell(8) or None,
+                )
+            )
+
+    out.sort(key=lambda w: (w.horse_id, w.workout_date))
+    return out
+
+
 def parse_horse_training(html: str, horse_id: str) -> list[HorseWorkout]:
     """馬の調教履歴。有料プランでログインしていないと表そのものが出ない。
 
