@@ -403,6 +403,8 @@ def _dump_row_shape(rows: list) -> None:
     """
     from collections import Counter
 
+    from keiba.sources import netkeiba
+
     shapes = Counter(len(r.find_all(["td", "th"])) for r in rows)
     linked = sum(1 for r in rows if r.find("a", href=re.compile(r"/horse/\d+")))
     log.info("        セル数の分布=%s / 馬リンクを持つ行=%d/%d",
