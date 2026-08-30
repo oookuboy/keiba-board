@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -380,7 +381,43 @@ def cmd_probe_workouts(args: argparse.Namespace) -> int:
                 max(len(rows) - 1, 0),
                 "|".join(headers)[:160],
             )
+            _dump_row_shape(rows[1:])
     return 0
+
+
+# セルの中身は出さずに、行の形だけを出すための道具。
+# 有料データを公開ログへ出さずにパーサを直すために要る。
+_DATE_PATTERNS = {
+    "yyyy/m/d": re.compile(r"\d{4}/\d{1,2}/\d{1,2}"),
+    "m/d": re.compile(r"^\d{1,2}/\d{1,2}"),
+    "m月d日": re.compile(r"\d{1,2}月\d{1,2}日"),
+}
+
+
+def _dump_row_shape(rows: list) -> None:
+    """行あたりのセル数の分布と、日付らしき列の位置を出す。
+
+    rowspan で列が省かれる表は、行によってセル数が変わる。どの行がどれだけ
+    ずれているかが分からないと列を引き当てられない。中身は出さず、
+    セル数・文字数・日付の書式に一致するか、だけを見る。
+    """
+    from collections import Counter
+
+    shapes = Counter(len(r.find_all(["td", "th"])) for r in rows)
+    linked = sum(1 for r in rows if r.find("a", href=re.compile(r"/horse/\d+")))
+    log.info("        セル数の分布=%s / 馬リンクを持つ行=%d/%d",
+             dict(sorted(shapes.items())), linked, len(rows))
+
+    for label, row in (("先頭行", rows[0] if rows else None),
+                       ("2行目", rows[1] if len(rows) > 1 else None)):
+        if row is None:
+            continue
+        marks = []
+        for i, cell in enumerate(row.find_all(["td", "th"])):
+            text = netkeiba._text(cell)
+            hit = [name for name, rx in _DATE_PATTERNS.items() if rx.search(text)]
+            marks.append(f"{i}:len{len(text)}{'=' + '/'.join(hit) if hit else ''}")
+        log.info("        %s %s", label, " ".join(marks))
 
 
 def _review_one(store: Store, day: str, args: argparse.Namespace) -> int | None:
