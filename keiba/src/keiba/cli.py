@@ -345,6 +345,23 @@ def cmd_probe_workouts(args: argparse.Namespace) -> int:
             len(rows), len(horses), timed, newest,
         )
 
+    comment_url = f"https://race.netkeiba.com/race/comment.html?race_id={args.race_id}"
+    try:
+        comments = netkeiba.parse_race_comments(
+            fetcher.fetch(comment_url, force=True), args.race_id
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.info("parse_race_comments が落ちた: %r", exc)
+    else:
+        lengths = [len(c.body) for c in comments]
+        log.info(
+            "parse_race_comments → %d頭 / 本文の文字数 最小%s 中央%s 最大%s",
+            len(comments),
+            min(lengths, default=0),
+            sorted(lengths)[len(lengths) // 2] if lengths else 0,
+            max(lengths, default=0),
+        )
+
     for url in (
         oikiri,
         f"https://race.netkeiba.com/race/newspaper.html?race_id={args.race_id}",

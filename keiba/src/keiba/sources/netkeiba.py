@@ -30,6 +30,7 @@ from keiba.models import (
     Race,
     RaceCard,
     Result,
+    TrainerComment,
 )
 
 log = logging.getLogger(__name__)
@@ -414,9 +415,10 @@ def _training_times(value: str) -> list[float | None]:
     return out
 
 
-# レース単位の調教ページ。馬別ページとの違いは先頭の 枠|馬番|印|馬名 だけで、
-# 調教の列はまったく同じ並び。
-OIKIRI_HEAD = ("日付", "コース", "馬場", "乗り役")
+HORSE_LINK_RE = re.compile(r"/horse/(\d+)")
+# 行頭の日付。search ではなく match で使う。調教の行を「日付で始まる行」として
+# 見分けるので、途中に日付が現れる行を拾ってはいけない。
+TRAINING_DATE_HEAD_RE = re.compile(r"^\s*(\d{4})/(\d{1,2})/(\d{1,2})")
 
 
 def parse_race_oikiri(html: str) -> list[HorseWorkout]:
@@ -438,11 +440,22 @@ def parse_race_oikiri(html: str) -> list[HorseWorkout]:
 
     ## 表の作り
 
-    1頭が複数本の追い切りを持ち、枠・馬番・馬名は rowspan で最初の行にしか
-    出ない。行をまたいで持ち越さないと、2本目以降が馬に紐づかない。
+    見出しは13列あるが、**データ行は見出しと桁が合っていない**。実測した形:
 
-    馬IDは馬名セルのリンクから取る。馬番だけだと、この関数の呼び出し側が
-    レースの出馬表を引き当てる必要があって面倒になる。
+        馬の行    5セル   枠 / 馬番 / 印 / 馬名 / …
+        調教の行 10セル   日付 / コース / 馬場 / 乗り役 / タイム /
+                          位置 / 脚色 / 評価 / ランク / 映像
+
+    最初はこれを rowspan だと踏んで見出しの位置から列を引いたが、それだと
+    どちらの行も添字がずれて0本になった（実ページで確認）。行の形で見分ける。
+
+    見分けは「行頭が日付かどうか」でやる。セル数（5か10か）で判定すると、
+    netkeiba が列を1つ増やした日に静かに全部落ちる。
+
+    馬IDは馬の行のリンクから取り、**調教の行のリンクは見ない**。併せ馬の
+    相手馬へのリンクが入っているため（22行中15行がリンクを持っていて、
+    馬の行は11行しかなかった）。ここを間違えると、追い切りが相手馬に
+    紐づく。
     """
     soup = BeautifulSoup(html, "lxml")
     out: list[HorseWorkout] = []
@@ -450,36 +463,33 @@ def parse_race_oikiri(html: str) -> list[HorseWorkout]:
 
     for table in soup.select("table"):
         rows = table.find_all("tr")
-        if not rows:
+        if len(rows) < 2:
             continue
         headers = [_text(c) for c in rows[0].find_all(["th", "td"])]
-        if not all(h in headers for h in OIKIRI_HEAD) or "馬名" not in headers:
+        if "調教タイム" not in " ".join(headers) or "馬名" not in headers:
             continue
 
-        # 見出しの位置から列を引く。列が増減しても添字がずれない
-        base = headers.index("日付")
         horse_id = ""
         for row in rows[1:]:
             cells = row.find_all(["td", "th"])
             if not cells:
                 continue
 
-            # rowspan で省かれた行は、日付から始まる短い行になる
-            offset = 0 if len(cells) > base else base
-            if offset == 0:
-                link = row.find("a", href=re.compile(r"/horse/(\d+)"))
+            m = TRAINING_DATE_HEAD_RE.match(_text(cells[0]))
+            if not m:
+                # 馬の行。ここでだけ馬を切り替える
+                link = row.find("a", href=HORSE_LINK_RE)
                 if link:
-                    horse_id = re.search(r"/horse/(\d+)", link["href"]).group(1)
+                    horse_id = HORSE_LINK_RE.search(link["href"]).group(1)
+                continue
             if not horse_id:
                 continue
 
             def cell(i: int) -> str:
-                index = base + i - offset
-                return _text(cells[index]) if 0 <= index < len(cells) else ""
+                return _text(cells[i]) if i < len(cells) else ""
 
-            m = TRAINING_DATE_RE.search(cell(0))
             course = cell(1)
-            if not m or not course:
+            if not course:
                 continue
             day = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
             key = (horse_id, day.isoformat(), course)
@@ -503,6 +513,65 @@ def parse_race_oikiri(html: str) -> list[HorseWorkout]:
             )
 
     out.sort(key=lambda w: (w.horse_id, w.workout_date))
+    return out
+
+
+def parse_race_comments(html: str, race_id: str) -> list[TrainerComment]:
+    """レース単位の厩舎コメント（race/comment.html）。
+
+    ## 一度「取れない」と判断して、それが間違いだった
+
+    馬別の kyusya_comment ページは本文が「スーパープレミアムコースから
+    ご利用頂けます」で伏せられており、厩舎コメントは諦める判断をしていた。
+    **その測定は課金する前のもの**で、課金後に測り直していなかった。
+
+    実際にはレース単位のこのページで全頭ぶんが壁なしで出る（2026-08-30
+    新潟記念で 11行＝出走11頭、コメント本文70〜80文字）。
+
+    ## 表の作り
+
+        5セル   枠 / 馬番 / 馬名 / コメント / 評価
+
+    評価はテキストが空で、印の画像かクラス名で表現されている。本文が取れれば
+    キーワード判定は動くので、評価は取れたら添える程度に扱う。
+    """
+    soup = BeautifulSoup(html, "lxml")
+    out: list[TrainerComment] = []
+    seen: set[int] = set()
+
+    for table in soup.select("table"):
+        rows = table.find_all("tr")
+        if len(rows) < 2:
+            continue
+        headers = [_text(c) for c in rows[0].find_all(["th", "td"])]
+        if "コメント" not in headers or "馬名" not in headers:
+            continue
+
+        umaban_at = headers.index("馬 番") if "馬 番" in headers else 1
+        body_at = headers.index("コメント")
+
+        for row in rows[1:]:
+            cells = row.find_all(["td", "th"])
+            if len(cells) <= body_at:
+                continue
+            try:
+                umaban = int(_text(cells[umaban_at]))
+            except ValueError:
+                continue
+            body = _text(cells[body_at])
+            if not body or umaban in seen:
+                continue
+            seen.add(umaban)
+            out.append(
+                TrainerComment(
+                    race_id=race_id,
+                    umaban=umaban,
+                    body=body,
+                    source="netkeiba",
+                )
+            )
+
+    out.sort(key=lambda c: c.umaban)
     return out
 
 
