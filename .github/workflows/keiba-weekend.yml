@@ -109,6 +109,11 @@ jobs:
           # preview は木曜に走るので「今日」ではなく次の土日を見る
           SAT=$(TZ=Asia/Tokyo date -d "next saturday" +%F)
           SUN=$(TZ=Asia/Tokyo date -d "next sunday" +%F)
+          # 有料データの対象。手で日付を指定したときはそちらを優先する。
+          # 過ぎた開催に対して収集をやり直せないと、金曜まで検証できない。
+          PAID="${{ inputs.date }}"
+          [ -n "$PAID" ] || PAID="$SAT"
+          echo "paid=$PAID" >> "$GITHUB_OUTPUT"
           echo "sat=$SAT"  >> "$GITHUB_OUTPUT"
           echo "sun=$SUN"  >> "$GITHUB_OUTPUT"
           echo "job=$JOB"   >> "$GITHUB_OUTPUT"
@@ -182,10 +187,10 @@ jobs:
           NETKEIBA_EMAIL: ${{ secrets.NETKEIBA_EMAIL }}
           NETKEIBA_PASSWORD: ${{ secrets.NETKEIBA_PASSWORD }}
         run: |
-          SAT="${{ steps.plan.outputs.sat }}"
+          PAID="${{ steps.plan.outputs.paid }}"
           python -m keiba.cli -v \
             --workouts keiba/raw/workouts.jsonl.gz \
-            collect-paid --date "$SAT" --days 2
+            collect-paid --date "$PAID" --days 2
           python -m keiba.cli build
 
       # 過去の履歴は馬単位のページにしか無い。レース単位で取れるのは当該
