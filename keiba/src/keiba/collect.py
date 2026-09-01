@@ -195,3 +195,98 @@ def collect_range(
         total_kept += kept
         total_failed += failed
     return total_kept, total_failed
+
+
+# 今週の追い切りと厩舎コメント。どちらもレース単位のページにしか無い。
+OIKIRI_URL = "https://race.netkeiba.com/race/oikiri.html?race_id={race_id}"
+COMMENT_URL = "https://race.netkeiba.com/race/comment.html?race_id={race_id}"
+
+
+def collect_paid(
+    fetcher: Fetcher, raw_dir: Path, workouts_path: Path, days: list[date]
+) -> dict[str, int]:
+    """今週の追い切りと厩舎コメントを、レース単位のページから取る。
+
+    ## 馬単位では今週ぶんが取れない
+
+    db.netkeiba の馬別調教ページは**既に走ったレースに紐づく調教しか持たない**。
+    2026-08-28 に今週の出走馬514頭を引いて 10,981本は取れたのに、直近21日の
+    調教を持つ馬は93頭（18.1%）だった。最新が11日前・25日前・39日前で、どれも
+    「その馬の前走の直前」。今週の追い切りは、そのレースが終わるまで出てこない。
+
+    これは学習と本番のズレとして効いていた。過去のレースを学習するときは当該
+    レースの追い切りが（走り終わっているので）入っているのに、本番はこれから
+    走るレースなので同じ列が空になる。モデルの gain 上位10個のうち3つが調教で、
+    それを当てにして学習して本番では空、という状態だった。
+
+    レース単位のページには今週ぶんが載っている（実測で最新5日前）。しかも
+    36リクエストで全頭ぶん揃う。馬単位の514リクエスト13分から1分弱になる。
+
+    ## 厩舎コメントも同じページ群にある
+
+    馬別の kyusya_comment は本文が課金の壁で伏せられていて諦めていたが、
+    **それは課金前に測ったもの**だった。レース単位のこのページなら壁なしで
+    全頭ぶん出る（実測で本文70〜80文字）。
+
+    ## 過去の履歴は馬単位のままでよい
+
+    ここで取れるのは当該レース向けの追い切りだけ。それ以前の履歴は馬別ページ
+    にあるので、両方を足して初めて「直近21日に何本」が埋まる。
+    """
+    from keiba.backfill import _merge_workout_file
+    from keiba.sources import netkeiba_auth
+
+    # 未ログインでも netkeiba は 200 で案内ページを返す。黙って空を積まない
+    netkeiba_auth.login(fetcher, required=True)
+
+    stats = {"races": 0, "workouts": 0, "comments": 0, "failed": 0}
+    records: list[dict] = []
+
+    for day in sorted(days):
+        path = raw_dir / str(day.year) / f"{day.isoformat()}.jsonl.gz"
+        if not path.exists():
+            log.warning("%s の出馬表が無い。先に collect --upcoming を走らせること", day)
+            continue
+
+        cards = list(read_jsonl(path))
+        for card in cards:
+            race_id = card.race.race_id
+            stats["races"] += 1
+            try:
+                rows = netkeiba.parse_race_oikiri(
+                    fetcher.fetch(OIKIRI_URL.format(race_id=race_id), force=True)
+                )
+                comments = netkeiba.parse_race_comments(
+                    fetcher.fetch(COMMENT_URL.format(race_id=race_id), force=True),
+                    race_id,
+                )
+            except FetchError as exc:
+                log.warning("%s の有料データを取れない: %s", race_id, exc)
+                stats["failed"] += 1
+                continue
+
+            records.extend(w.to_dict() for w in rows)
+            stats["workouts"] += len(rows)
+            # コメントは出馬表と同じファイルに持つ。rebuild が comments へ
+            # 流し込むので、収集経路をここに足すだけで features 側に届く。
+            card.comments = comments
+            stats["comments"] += len(comments)
+
+        write_jsonl(cards, path)
+        log.info("%s: %d レース", day, len(cards))
+
+    if records:
+        _merge_workout_file(records, workouts_path)
+
+    # 「収集は成功・中身は空」を黙って通さない。ログインが切れていれば
+    # 全レースで0本になるので、そこで気づけるようにする。
+    if stats["races"] and not stats["workouts"]:
+        raise RuntimeError(
+            f"{stats['races']}レース引いて追い切りが1本も取れていない。"
+            " 有料プランの状態と Secrets を確かめること"
+        )
+    log.info(
+        "有料データ: %d レース / 追い切り %d本 / 厩舎コメント %d件（失敗 %d）",
+        stats["races"], stats["workouts"], stats["comments"], stats["failed"],
+    )
+    return stats

@@ -173,6 +173,27 @@ def test_the_review_picks_up_days_it_could_not_grade() -> None:
     )
 
 
+def test_this_weeks_paid_data_comes_from_the_race_pages() -> None:
+    """今週の追い切りと厩舎コメントを、レース単位のページから取っていること。
+
+    馬別の調教ページ（backfill-workouts）は**既に走ったレースに紐づく調教しか
+    持たない**。2026-08-28 に今週の出走馬514頭を引いて 10,981本は取れたのに、
+    直近21日の調教を持つ馬は93頭（18.1%）だった。最新が11日前・25日前・39日前で、
+    どれも「その馬の前走の直前」。
+
+    学習側は当該レースの追い切りが入った状態で学習しているので、これは
+    「モデルが本番に存在しない列を当てにする」形になる。gain 上位10個のうち
+    3つが調教なので影響は小さくない。
+
+    馬単位の収集に戻すとこれが再発する。レース単位の経路を必須にする。
+    """
+    text = (WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8")
+    assert "collect-paid" in text, (
+        "今週の追い切りと厩舎コメントを取っていない。馬別ページには載らないので、"
+        " backfill-workouts だけでは本番の調教が欠けたままになる"
+    )
+
+
 def test_the_workout_artifact_chain_renews_itself() -> None:
     """調教を取り込むワークフローが、上げ直しもすること。
 

@@ -175,7 +175,23 @@ jobs:
       #
       # 落ちても予想は続ける。調教が無ければ欠損として扱われるだけで、
       # 有料データの不調で週末の運用ごと止めるほうが害が大きい。
-      - name: 今週の調教を引く
+      - name: 今週の追い切りと厩舎コメントを引く
+        if: steps.plan.outputs.job == 'collect'
+        continue-on-error: true
+        env:
+          NETKEIBA_EMAIL: ${{ secrets.NETKEIBA_EMAIL }}
+          NETKEIBA_PASSWORD: ${{ secrets.NETKEIBA_PASSWORD }}
+        run: |
+          SAT="${{ steps.plan.outputs.sat }}"
+          python -m keiba.cli -v \
+            --workouts keiba/raw/workouts.jsonl.gz \
+            collect-paid --date "$SAT" --days 2
+          python -m keiba.cli build
+
+      # 過去の履歴は馬単位のページにしか無い。レース単位で取れるのは当該
+      # レース向けの1本だけなので、「直近21日に何本」を埋めるには両方要る。
+      # 未取得の馬を少しずつ埋める。落ちても週末は続ける。
+      - name: 調教の履歴を埋める（未取得ぶん）
         if: steps.plan.outputs.job == 'collect'
         continue-on-error: true
         env:
@@ -184,7 +200,7 @@ jobs:
         run: |
           python -m keiba.cli -v \
             --workouts keiba/raw/workouts.jsonl.gz \
-            backfill-workouts --upcoming
+            backfill-workouts --limit 300
 
       # 収集が失敗しても週末は続ける（continue-on-error）が、そのぶん
       # **黙って調教なしに戻る**。課金切れ・ログイン失敗・仕様変更のどれも

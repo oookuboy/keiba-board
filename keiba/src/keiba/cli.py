@@ -228,6 +228,22 @@ def cmd_predict(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_collect_paid(args: argparse.Namespace) -> int:
+    """今週の追い切りと厩舎コメントを、レース単位のページから取る。
+
+    馬単位の backfill-workouts では今週ぶんが取れない（馬別ページは既に
+    走ったレースの調教しか持たない）。詳しくは collect.collect_paid を見ること。
+    """
+    if args.days:
+        days = [args.day + timedelta(days=i) for i in range(args.days)]
+    else:
+        days = [args.day]
+    stats = collect.collect_paid(
+        Fetcher(cache_dir=args.cache), args.raw_dir, args.workouts, days
+    )
+    return 0 if stats["races"] else 1
+
+
 def cmd_probe_workouts(args: argparse.Namespace) -> int:
     """今週の追い切りが取れない原因を切り分ける。
 
@@ -1018,6 +1034,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--offset", type=int, default=0, help="対象リストの先頭から飛ばす頭数（並列分割用）"
     )
     p.set_defaults(func=cmd_backfill_pedigree)
+
+    p = sub.add_parser(
+        "collect-paid",
+        help="今週の追い切りと厩舎コメントをレース単位で取る（要 netkeiba 有料）",
+    )
+    p.add_argument("--date", dest="day", type=_date, required=True)
+    p.add_argument(
+        "--days", type=int, default=1,
+        help="この日から何日ぶんを対象にするか（土日をまとめて取るなら 2）",
+    )
+    p.set_defaults(func=cmd_collect_paid)
 
     p = sub.add_parser(
         "probe-workouts",
