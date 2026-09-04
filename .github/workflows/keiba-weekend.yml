@@ -106,9 +106,20 @@ jobs:
               DATE=$(TZ=Asia/Tokyo date +%F)
             fi
           fi
-          # preview は木曜に走るので「今日」ではなく次の土日を見る
-          SAT=$(TZ=Asia/Tokyo date -d "next saturday" +%F)
-          SUN=$(TZ=Asia/Tokyo date -d "next sunday" +%F)
+          # 対象の開催日。preview は木曜、collect は金曜に走るので、次の土日を見る。
+          #
+          # ここも **UTC** で決める。回顧の対象日と同じ罠を踏んだ。
+          # `TZ=Asia/Tokyo date -d "next saturday"` は JST が土曜に入った瞬間に
+          # 1週間先へ飛ぶ。collect の cron は 12:00 UTC（＝21:00 JST 金）で、
+          # JST の土曜まで3時間しか余裕が無い。2026-09-04 に実際そうなった:
+          # cron が3時間遅れて 15:21 UTC（＝翌 00:21 JST）に発火し、SAT が
+          # 9/12 になった。その日の出馬表はまだ無いので、有料データの収集が
+          # 3秒で0件のまま終わり、**ジョブは緑のまま**通った。
+          #
+          # UTC なら 00:00 UTC まで12時間の余裕がある。
+          # "next saturday" ではなく "saturday"（今日が土曜なら今日）を使う。
+          SAT=$(date -u -d "saturday" +%F)
+          SUN=$(date -u -d "sunday" +%F)
           # 有料データの対象。手で日付を指定したときはそちらを優先する。
           # 過ぎた開催に対して収集をやり直せないと、金曜まで検証できない。
           PAID="${{ inputs.date }}"
@@ -240,6 +251,24 @@ jobs:
           rate = fresh / runners if runners else 0.0
           print(f"今週の出走馬 {runners:,}頭 / 直近21日の調教あり {fresh:,}頭 ({rate:.1%})")
 
+          # 厩舎コメントも同じ形で数える。調教だけ見ていたので、コメントが
+          # 0件のまま週末に入っても気づけなかった（2026-09-05）。
+          commented, = conn.execute(
+              """
+              SELECT COUNT(*) FROM comments c
+              JOIN races r ON r.race_id = c.race_id
+              WHERE r.race_date >= ?
+              """,
+              (today.isoformat(),),
+          ).fetchone()
+          entries, = conn.execute(
+              "SELECT COUNT(*) FROM entries e JOIN races r ON r.race_id = e.race_id"
+              " WHERE r.race_date >= ?",
+              (today.isoformat(),),
+          ).fetchone()
+          crate = commented / entries if entries else 0.0
+          print(f"今週の出走 {entries:,}頭 / 厩舎コメントあり {commented:,}頭 ({crate:.1%})")
+
           out = pathlib.Path("keiba/data/health.json")
           out.parent.mkdir(parents=True, exist_ok=True)
           health = json.loads(out.read_text()) if out.exists() else {}
@@ -249,12 +278,23 @@ jobs:
               "fresh": fresh,
               "rate": round(rate, 3),
           }
+          health["comments"] = {
+              "checked": today.isoformat(),
+              "runners": entries,
+              "fresh": commented,
+              "rate": round(crate, 3),
+          }
           out.write_text(json.dumps(health, ensure_ascii=False), encoding="utf-8")
 
           if rate < 0.5:
               print(
                   "::warning::今週の調教が半分も入っていない"
                   f"（{rate:.1%}）。課金状態と Secrets を確認すること"
+              )
+          if crate < 0.5:
+              print(
+                  "::warning::今週の厩舎コメントが半分も入っていない"
+                  f"（{crate:.1%}）。収集の対象日がずれていないか確認すること"
               )
           PY
 

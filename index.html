@@ -246,15 +246,18 @@ async function renderHealth(){
   let h;
   try{ h=await (await fetch("keiba/data/health.json",{cache:"no-cache"})).json(); }
   catch(e){ return; }
-  const w=h&&h.workouts;
-  if(!w||!w.runners)return;
-  const pct=(w.rate*100).toFixed(1);
-  if(w.rate>=0.5){ box.hidden=true; return; }
+  /* 有料データは種類ごとに欠け方が違う。調教だけ見ていたせいで、厩舎コメントが
+     0件のまま週末に入っても気づけなかった（2026-09-05）。両方出す。 */
+  const kinds=[["workouts","調教"],["comments","厩舎コメント"]];
+  const bad=kinds
+    .map(([key,label])=>[label,h&&h[key]])
+    .filter(([,v])=>v&&v.runners&&v.rate<0.5)
+    .map(([label,v])=>
+      `${label} ${(v.rate*100).toFixed(1)}%（${v.runners}頭中 ${v.fresh}頭・${v.checked} 時点）`);
+  if(!bad.length){ box.hidden=true; return; }
   box.hidden=false;
   box.className="warn";
-  box.textContent=
-    `調教データが ${pct}%（今週の出走馬 ${w.runners}頭のうち ${w.fresh}頭・`+
-    `${w.checked} 時点）。予想はこの欠損を含んだ状態で出ている。`;
+  box.textContent=`有料データが欠けている: ${bad.join(" / ")}。予想はこの状態で出ている。`;
 }
 
 function renderTotals(){
