@@ -1,0 +1,46 @@
+name: keiba-replay
+
+# 過ぎた開催を、いまあるデータで予想し直して実際の予想と比べる。
+#
+# 有料データ（追い切り・厩舎コメント）が入っていない状態で出した予想が
+# 9日ぶん積み上がっている。あとから同じ日をデータが揃った状態で予想し直せば、
+# 「有料情報にいくらの価値があったのか」を実際の払戻で測れる。
+#
+# 使うのは発走前に存在した情報だけ。調教は workout_date < race_date で切って
+# あり、厩舎コメントは発走前に出るもの。オッズは raw に残っている発走前の
+# ものをそのまま使う。**結果を見て印を変えるわけではない。**
+#
+# 何も書かない。実際に出した予想の記録は事実として残す。
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "対象の開催日 YYYY-MM-DD"
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e . && pip install lightgbm
+
+      # 調教は公開リポジトリに置けないので artifact で持ち回っている
+      - name: 調教を artifact から戻す
+        uses: ./.github/actions/workouts
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: python -m keiba.cli build
+
+      - name: Replay
+        run: python -m keiba.cli -v replay --date "${{ inputs.date }}"

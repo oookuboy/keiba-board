@@ -244,6 +244,114 @@ def cmd_collect_paid(args: argparse.Namespace) -> int:
     return 0 if stats["races"] else 1
 
 
+
+def _settle_day(store: Store, payload: dict) -> dict:
+    """予想 payload を実結果で決済する。記録は残さない（比較専用）。"""
+    from keiba.backtest import _actual_top3, _settle
+    from keiba.betting import Ticket
+
+    spent = returned = hits = graded = 0
+    for race in payload["races"]:
+        card = store.load_card(race["race_id"])
+        if card is None or not card.results:
+            continue
+        top3 = _actual_top3(card)
+        if top3 is None:
+            continue
+        graded += 1
+        tickets = [
+            Ticket(b["type"], b["combination"], b["amount"], b["why"])
+            for b in race["bets"]
+        ]
+        s, r, hit_types, _ = _settle(tickets, card, top3)
+        spent += s
+        returned += r
+        hits += int(bool(hit_types))
+    return {
+        "graded": graded, "spend": spent, "returned": returned, "hits": hits,
+        "roi": round(returned / spent * 100, 1) if spent else None,
+    }
+
+
+def cmd_replay(args: argparse.Namespace) -> int:
+    """過ぎた開催を、いまあるデータで予想し直して実際の予想と比べる。
+
+    ## 何のためにあるか
+
+    有料データ（追い切り・厩舎コメント）が入っていない状態で出した予想が
+    9日ぶん積み上がっている。あとから同じ日を、データが揃った状態で予想し
+    直せば「有料情報にいくらの価値があったのか」を実際の払戻で測れる。
+
+    ## 先読みにはならない
+
+    使うのは発走前に存在した情報だけ。調教は `workout_date < race_date` で
+    切ってあり、厩舎コメントは発走前に出るもの。オッズは raw に残っている
+    発走前のものをそのまま使う。**結果を見て印を変えるわけではない。**
+
+    ただし netkeiba は走り終わったレースのコメントを落としていくので、
+    後から取ると被覆率が下がる。ここで出る数字は「全部揃っていたら」の
+    下限にあたる。
+
+    ## 何も書かない
+
+    reviews にも keiba/data にも書かない。実際に出した予想の記録は事実として
+    残す。ここは比較だけ。
+    """
+    weights, sire_table = _load_config(args)
+    day = args.day.isoformat()
+    path = args.data_dir / f"{day}.json"
+    if not path.exists():
+        log.error("実際に出した予想が無い: %s", path)
+        return 1
+    shipped = json.loads(path.read_text(encoding="utf-8"))
+
+    with Store(args.db) as store:
+        fresh = predict.predict_day(
+            store, weights, sire_table, args.day, config_dir=args.config_dir
+        )
+        now = _settle_day(store, fresh)
+        then = _settle_day(store, shipped)
+
+        commented, entries = store.conn.execute(
+            "SELECT (SELECT COUNT(*) FROM comments c JOIN races r ON r.race_id=c.race_id"
+            "        WHERE r.race_date = ?),"
+            "       (SELECT COUNT(*) FROM entries e JOIN races r ON r.race_id=e.race_id"
+            "        WHERE r.race_date = ?)",
+            (day, day),
+        ).fetchone()
+
+    log.info("=" * 62)
+    log.info("%s の予想を、いまあるデータで作り直した", day)
+    log.info("  厩舎コメント %d/%d頭", commented or 0, entries or 0)
+    log.info("")
+    log.info("%-14s %8s %10s %10s %8s", "", "照合R", "投資", "払戻", "回収率")
+    for label, s in (("実際に出した", then), ("作り直し", now)):
+        log.info(
+            "%-14s %8d %9s円 %9s円 %7s%%",
+            label, s["graded"], f"{s['spend']:,}", f"{s['returned']:,}",
+            s["roi"] if s["roi"] is not None else "-",
+        )
+
+    # どこが変わったか。印と自信度をレース単位で突き合わせる
+    old = {r["race_id"]: r for r in shipped["races"]}
+    marks = conf = bets = 0
+    for race in fresh["races"]:
+        before = old.get(race["race_id"])
+        if not before:
+            continue
+        def picked(r: dict) -> list:
+            return sorted((h["umaban"], h["mark"]) for h in r["horses"] if h["mark"])
+        marks += picked(race) != picked(before)
+        conf += race["confidence"] != before["confidence"]
+        bets += len(race["bets"]) != len(before["bets"])
+    log.info("")
+    log.info(
+        "印が変わった %dR / 自信度が変わった %dR / 買い目の点数が変わった %dR（全 %dR）",
+        marks, conf, bets, len(fresh["races"]),
+    )
+    return 0
+
+
 def cmd_probe_workouts(args: argparse.Namespace) -> int:
     """今週の追い切りが取れない原因を切り分ける。
 
@@ -1034,6 +1142,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--offset", type=int, default=0, help="対象リストの先頭から飛ばす頭数（並列分割用）"
     )
     p.set_defaults(func=cmd_backfill_pedigree)
+
+    p = sub.add_parser(
+        "replay",
+        help="過ぎた開催を、いまあるデータで予想し直して実際の予想と比べる",
+    )
+    p.add_argument("--date", dest="day", type=_date, required=True)
+    p.set_defaults(func=cmd_replay)
 
     p = sub.add_parser(
         "collect-paid",
