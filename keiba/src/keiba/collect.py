@@ -98,6 +98,35 @@ def collect_day(
     return kept, failed
 
 
+# JRA公式の出馬表には無いが、別経路で集めて raw に載せているもの。
+# ここに挙げたものは、出馬表を取り直しても捨てない。
+EXTRA_FIELDS = ("comments", "workouts", "past_runs", "results", "payouts")
+
+
+def _keep_extras(old: RaceCard | None, new: RaceCard) -> RaceCard:
+    """出馬表を取り直すとき、別経路で足した情報を引き継ぐ。
+
+    ## 集めたものを次の手順が捨てていた
+
+    collect_upcoming は race_id をキーにカードを**まるごと**差し替えていた。
+    JRA公式の出馬表にはコメントも調教も無いので、当日朝に馬体重とオッズを
+    取り直すたびに、金曜に付けた厩舎コメントが消えていた。
+
+    2026-09-05/06 が実際にそうなった。収集そのものは4分7秒かけて正常に
+    走り、72レースぶん取れていたのに、raw に残っていたのは0件。**取れて
+    いないのではなく、取ったあとに消していた。**
+
+    新しいカードに中身があればそちらを使い、空なら古いほうを残す。出馬表の
+    取り直しで馬体重やオッズが更新されるのは正しいので、そこは差し替える。
+    """
+    if old is None:
+        return new
+    for name in EXTRA_FIELDS:
+        if not getattr(new, name) and getattr(old, name):
+            setattr(new, name, getattr(old, name))
+    return new
+
+
 def collect_upcoming(fetcher: Fetcher, out_dir: Path) -> dict[date, int]:
     """JRA公式から、公開中の全開催ぶんの出馬表を取って日付ごとに書く。
 
@@ -124,7 +153,7 @@ def collect_upcoming(fetcher: Fetcher, out_dir: Path) -> dict[date, int]:
         if out_path.exists():
             merged = {c.race.race_id: c for c in read_jsonl(out_path)}
         for card in day_cards:
-            merged[card.race.race_id] = card
+            merged[card.race.race_id] = _keep_extras(merged.get(card.race.race_id), card)
         write_jsonl(merged.values(), out_path)
 
         confirmed = sum(1 for c in day_cards if jra.post_positions_confirmed(c))

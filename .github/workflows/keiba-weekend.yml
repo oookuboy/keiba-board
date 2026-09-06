@@ -230,7 +230,7 @@ jobs:
         if: steps.plan.outputs.job == 'collect'
         run: |
           python - <<'PY'
-          import datetime as dt, json, pathlib, sqlite3
+          import datetime as dt, json, pathlib, sqlite3, sys
           conn = sqlite3.connect("keiba/keiba.db")
           today = dt.date.today()
           # 特徴量は21日より古い調教を捨てる。その窓に入るものを数える
@@ -286,16 +286,24 @@ jobs:
           }
           out.write_text(json.dumps(health, ensure_ascii=False), encoding="utf-8")
 
+          # **警告ではなく落とす。**
+          #
+          # ここは3回作り直している。2026-08-28 は 18.1% で警告が出ていたのに
+          # ジョブが緑だったので数日気づかず、9/4 は対象日がずれて3秒で0件、
+          # 9/5 は取れたものを次のステップが上書きして0件だった。どれも
+          # 「警告は出したが誰も見ない」で通り抜けている。
+          #
+          # 有料データが入らないまま週末に入るのは、金を払っている意味が
+          # 無い状態。予想は前の週の raw で出せるので、ここで落としても
+          # 週末そのものは止まらない。
+          bad = []
           if rate < 0.5:
-              print(
-                  "::warning::今週の調教が半分も入っていない"
-                  f"（{rate:.1%}）。課金状態と Secrets を確認すること"
-              )
+              bad.append(f"調教 {rate:.1%}（{fresh}/{runners}頭）")
           if crate < 0.5:
-              print(
-                  "::warning::今週の厩舎コメントが半分も入っていない"
-                  f"（{crate:.1%}）。収集の対象日がずれていないか確認すること"
-              )
+              bad.append(f"厩舎コメント {crate:.1%}（{commented}/{entries}頭）")
+          if bad:
+              print("::error::有料データが入っていない: " + " / ".join(bad))
+              sys.exit(1)
           PY
 
       # 期限を更新して上げ直す。これで90日の時計が毎週リセットされ、
