@@ -223,93 +223,24 @@ jobs:
       # ジョブは緑のままなので、中身を数えて見えるようにする。
       #
       # 「収集は成功・中身は空」はこの開発で何度も踏んでいる形。
-      # `::warning::` はログの中に埋もれる。実際 2026-08-28 に 18.1% で鳴って
-      # いたのに、ジョブが緑だったので数日気づかなかった。
-      # 数字をファイルに残してコミットし、ボードの見出しにも出す。
-      - name: 今週の調教が入ったか確かめる
+      # 点検は CLI 側（keiba health）に置いてある。YAML に Python を埋めると
+      # テストが当たらず、書き換えるたびに壊れる。
+      #
+      # 収集のときは **落とす**。金曜に足りないなら週末までに直す時間がある。
+      # 「警告は出したが誰も見ない」でこれまで3回通り抜けている。
+      - name: 今週の有料データが入ったか確かめる
         if: steps.plan.outputs.job == 'collect'
         run: |
-          python - <<'PY'
-          import datetime as dt, json, pathlib, sqlite3, sys
-          conn = sqlite3.connect("keiba/keiba.db")
-          today = dt.date.today()
-          # 特徴量は21日より古い調教を捨てる。その窓に入るものを数える
-          since = (today - dt.timedelta(days=21)).isoformat()
-          runners, fresh = conn.execute(
-              """
-              SELECT COUNT(DISTINCT e.horse_id),
-                     COUNT(DISTINCT CASE WHEN w.horse_id IS NOT NULL
-                                         THEN e.horse_id END)
-              FROM entries e
-              JOIN races r ON r.race_id = e.race_id
-              LEFT JOIN horse_workouts w
-                     ON w.horse_id = e.horse_id AND w.workout_date >= ?
-              WHERE r.race_date >= ?
-              """,
-              (since, today.isoformat()),
-          ).fetchone()
-          rate = fresh / runners if runners else 0.0
-          print(f"今週の出走馬 {runners:,}頭 / 直近21日の調教あり {fresh:,}頭 ({rate:.1%})")
+          for D in "${{ steps.plan.outputs.sat }}" "${{ steps.plan.outputs.sun }}"; do
+            echo "--- $D"
+            python -m keiba.cli health --date "$D" --strict
+          done
 
-          # 厩舎コメントも同じ形で数える。調教だけ見ていたので、コメントが
-          # 0件のまま週末に入っても気づけなかった（2026-09-05）。
-          commented, = conn.execute(
-              """
-              SELECT COUNT(*) FROM comments c
-              JOIN races r ON r.race_id = c.race_id
-              WHERE r.race_date >= ?
-              """,
-              (today.isoformat(),),
-          ).fetchone()
-          entries, = conn.execute(
-              "SELECT COUNT(*) FROM entries e JOIN races r ON r.race_id = e.race_id"
-              " WHERE r.race_date >= ?",
-              (today.isoformat(),),
-          ).fetchone()
-          crate = commented / entries if entries else 0.0
-          print(f"今週の出走 {entries:,}頭 / 厩舎コメントあり {commented:,}頭 ({crate:.1%})")
-
-          out = pathlib.Path("keiba/data/health.json")
-          out.parent.mkdir(parents=True, exist_ok=True)
-          health = json.loads(out.read_text()) if out.exists() else {}
-          health["workouts"] = {
-              "checked": today.isoformat(),
-              "runners": runners,
-              "fresh": fresh,
-              "rate": round(rate, 3),
-          }
-          health["comments"] = {
-              "checked": today.isoformat(),
-              "runners": entries,
-              "fresh": commented,
-              "rate": round(crate, 3),
-          }
-          out.write_text(json.dumps(health, ensure_ascii=False), encoding="utf-8")
-
-          # **警告ではなく落とす。**
-          #
-          # ここは3回作り直している。2026-08-28 は 18.1% で警告が出ていたのに
-          # ジョブが緑だったので数日気づかず、9/4 は対象日がずれて3秒で0件、
-          # 9/5 は取れたものを次のステップが上書きして0件だった。どれも
-          # 「警告は出したが誰も見ない」で通り抜けている。
-          #
-          # 有料データが入らないまま週末に入るのは、金を払っている意味が
-          # 無い状態。予想は前の週の raw で出せるので、ここで落としても
-          # 週末そのものは止まらない。
-          bad = []
-          if rate < 0.5:
-              bad.append(f"調教 {rate:.1%}（{fresh}/{runners}頭）")
-          if crate < 0.5:
-              bad.append(f"厩舎コメント {crate:.1%}（{commented}/{entries}頭）")
-          if bad:
-              print("::error::有料データが入っていない: " + " / ".join(bad))
-              sys.exit(1)
-          PY
-
-      # 期限を更新して上げ直す。これで90日の時計が毎週リセットされ、
-      # 週次で回っている限り消えない。
+      # 点検が落ちても**必ず**上げ直す。調教は artifact にしか無いので、
+      # ここを飛ばすと収集したものがそのまま消える。落とすつもりで入れた
+      # 見張りが、データを失わせる形になってはいけない。
       - name: 調教を artifact へ戻す
-        if: steps.plan.outputs.job == 'collect'
+        if: ${{ always() && steps.plan.outputs.job == 'collect' }}
         uses: actions/upload-artifact@v4
         with:
           name: workouts
@@ -329,6 +260,13 @@ jobs:
       # 着順はまず JRA公式から取る。db.netkeiba は結果データベースだが反映が
       # 遅く、開催当日の夜になっても race_id を1件も出していなかった（実測）。
       # JRA が確定前なら netkeiba へ落とす（翌日以降はこちらでも取れる）。
+      # 予想のときも数えて health.json を書き直す。ボードの赤帯が当日の実態を
+      # 映すようにするため。**ここでは落とさない**。欠けたデータで出した予想の
+      # ほうが、予想が無いよりましなので。
+      - name: 予想に有料データが乗ったか確かめる
+        if: steps.plan.outputs.job == 'predict'
+        run: python -m keiba.cli health --date "${{ steps.plan.outputs.date }}"
+
       - name: Review
         if: steps.plan.outputs.job == 'review'
         run: |

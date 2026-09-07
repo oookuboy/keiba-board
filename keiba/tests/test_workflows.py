@@ -194,6 +194,44 @@ def test_this_weeks_paid_data_comes_from_the_race_pages() -> None:
     )
 
 
+def test_有料データの点検が収集と予想の両方にある() -> None:
+    """点検を collect にしか置いていなかった。
+
+    データを壊したのは predict のほう（出馬表を取り直してコメントを上書き）
+    だったのに、見張りは collect にしか無かった。**壊す側に見張りを置く。**
+
+    収集のときは落とす（週末までに直す時間がある）。予想のときは落とさない
+    （買い目が1つも出ないほうが害が大きい）。この向きも固定する。
+    """
+    text = (WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8")
+    calls = [line for line in text.splitlines() if "keiba.cli health" in line]
+    assert len(calls) >= 2, "点検が収集か予想のどちらかにしかない"
+    assert any("--strict" in c for c in calls), "収集のときに落としていない"
+    assert any("--strict" not in c for c in calls), (
+        "予想のときまで落としている。買い目が1つも出なくなる"
+    )
+
+
+def test_点検で落ちても調教のartifactは上げ直す() -> None:
+    """見張りがデータを失わせる形になっていないこと。
+
+    点検は artifact の上げ直しより前にある。落ちるようにしたぶん、素直に
+    書くと後続がスキップされて**集めた調教がそのまま消える**。調教は
+    artifact にしか無いので、これは検出より高くつく。
+    """
+    import yaml
+
+    text = (WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8")
+    steps = yaml.safe_load(text)["jobs"]["run"]["steps"]
+    names = [s.get("name", "") for s in steps]
+    upload = next(i for i, n in enumerate(names) if "artifact へ戻す" in n)
+    check = next(i for i, n in enumerate(names) if "有料データが入ったか" in n)
+    assert check < upload, "前提が変わった。順序を確かめ直すこと"
+    assert "always()" in str(steps[upload].get("if", "")), (
+        "点検が落ちると調教の上げ直しが飛ぶ。集めたものが消える"
+    )
+
+
 def test_the_workout_artifact_chain_renews_itself() -> None:
     """調教を取り込むワークフローが、上げ直しもすること。
 

@@ -352,6 +352,93 @@ def cmd_replay(args: argparse.Namespace) -> int:
     return 0
 
 
+
+# 有料データが「入っているつもりで入っていない」を検出する閾値。
+# 出走馬の半分に届かなければ、予想の前提が崩れているとみなす。
+HEALTH_FLOOR = 0.5
+# 調教の特徴量は21日より古いものを捨てる。その窓に入るものだけ数える。
+WORKOUT_WINDOW = 21
+
+
+def cmd_health(args: argparse.Namespace) -> int:
+    """有料データがその開催日ぶん入っているかを数える。
+
+    ## 3回作り直している
+
+        2026-08-28  18.1% で ::warning:: → ジョブが緑なので数日気づかず
+        2026-09-04  対象日が1週間ずれて3秒で0件 → continue-on-error が握りつぶす
+        2026-09-05  取れたものを次の手順が上書き → 0件
+
+    どれも「警告は出したが誰も見ない」で通り抜けている。**作る側が見ない前提で
+    組む。** --strict なら exit 1 で落とす。
+
+    ## 収集のときは落とし、予想のときは落とさない
+
+    金曜の収集で足りないなら、週末までに直す時間がある。落として気づかせる。
+
+    予想のときに落とすと**買い目が1つも出ない**。欠けたデータで出した予想の
+    ほうが、予想が無いよりましなので、ここは記録と警告にとどめる。かわりに
+    health.json を書き直すので、ボードの赤帯が当日の実態を映す。
+    """
+    day = args.day.isoformat()
+    with Store(args.db) as store:
+        since = (args.day - timedelta(days=WORKOUT_WINDOW)).isoformat()
+        runners, fresh = store.conn.execute(
+            """
+            SELECT COUNT(DISTINCT e.horse_id),
+                   COUNT(DISTINCT CASE WHEN w.horse_id IS NOT NULL THEN e.horse_id END)
+            FROM entries e
+            JOIN races r ON r.race_id = e.race_id
+            LEFT JOIN horse_workouts w
+                   ON w.horse_id = e.horse_id
+                  AND w.workout_date >= ? AND w.workout_date < ?
+            WHERE r.race_date = ?
+            """,
+            (since, day, day),
+        ).fetchone()
+        entries, commented = store.conn.execute(
+            """
+            SELECT COUNT(*),
+                   COUNT(c.umaban)
+            FROM entries e
+            JOIN races r ON r.race_id = e.race_id
+            LEFT JOIN comments c
+                   ON c.race_id = e.race_id AND c.umaban = e.umaban
+            WHERE r.race_date = ?
+            """,
+            (day,),
+        ).fetchone()
+
+    kinds = {
+        "workouts": ("調教", fresh or 0, runners or 0),
+        "comments": ("厩舎コメント", commented or 0, entries or 0),
+    }
+
+    path = args.data_dir / "health.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    health = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    bad = []
+    for key, (label, got, total) in kinds.items():
+        rate = got / total if total else 0.0
+        health[key] = {
+            "checked": day, "runners": total, "fresh": got, "rate": round(rate, 3),
+        }
+        log.info("%s: %d/%d頭 (%.1f%%)", label, got, total, rate * 100)
+        if total and rate < args.floor:
+            bad.append(f"{label} {rate:.1%}（{got}/{total}頭）")
+    path.write_text(json.dumps(health, ensure_ascii=False), encoding="utf-8")
+
+    if not bad:
+        return 0
+    message = "有料データが入っていない: " + " / ".join(bad)
+    if args.strict:
+        log.error(message)
+        print(f"::error::{message}")
+        return 1
+    print(f"::warning::{message}")
+    return 0
+
+
 def cmd_probe_workouts(args: argparse.Namespace) -> int:
     """今週の追い切りが取れない原因を切り分ける。
 
@@ -1142,6 +1229,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--offset", type=int, default=0, help="対象リストの先頭から飛ばす頭数（並列分割用）"
     )
     p.set_defaults(func=cmd_backfill_pedigree)
+
+    p = sub.add_parser("health", help="有料データがその開催日ぶん入っているか数える")
+    p.add_argument("--date", dest="day", type=_date, required=True)
+    p.add_argument(
+        "--strict", action="store_true",
+        help="足りなければ exit 1 で落とす（収集のときに使う）",
+    )
+    p.add_argument("--floor", type=float, default=HEALTH_FLOOR)
+    p.set_defaults(func=cmd_health)
 
     p = sub.add_parser(
         "replay",
