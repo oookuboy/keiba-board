@@ -426,8 +426,11 @@ def cmd_health(args: argparse.Namespace) -> int:
         log.info("%s: %d/%d頭 (%.1f%%)", label, got, total, rate * 100)
         if total and rate < args.floor:
             bad.append(f"{label} {rate:.1%}（{got}/{total}頭）")
-    path.write_text(json.dumps(health, ensure_ascii=False), encoding="utf-8")
 
+    # ここまでは DB に何行あるかの話。**予想に効いたか**は別で、そちらが本題。
+    bad += _paid_data_reached_the_prediction(args, day, health)
+
+    path.write_text(json.dumps(health, ensure_ascii=False), encoding="utf-8")
     if not bad:
         return 0
     message = "有料データが入っていない: " + " / ".join(bad)
@@ -437,6 +440,56 @@ def cmd_health(args: argparse.Namespace) -> int:
         return 1
     print(f"::warning::{message}")
     return 0
+
+
+def _paid_data_reached_the_prediction(
+    args: argparse.Namespace, day: str, health: dict
+) -> list[str]:
+    """その日の**予想**に有料データが効いたかを数える。
+
+    DB に何行あるかと、予想に効いたかは別の話。行はあるのに予想が使って
+    いない、という形でこのプロジェクトは何度も壊れている（モデルがボードに
+    届いていない・調教が特徴量に入っていない・コメントの収集経路が無い）。
+
+    見るのは出力そのもの。
+
+      scored_by     学習モデルで採点したか、手置きの重みか
+      厩舎コメント  印を打った馬の根拠に「厩舎コメント」が出た数
+
+    コメントは features.condition_changes が根拠テキストに書くので、そこを
+    数えれば「読み込んで、評価に使った」ことが出力側から確かめられる。
+    前向きな語が無ければ加点しない作りなので、コメントが全頭ぶん入っていても
+    この数は全頭にはならない。0 かどうかを見る。
+    """
+    path = args.data_dir / f"{day}.json"
+    if not path.exists():
+        return []
+    payload = json.loads(path.read_text(encoding="utf-8"))
+
+    marked = cited = 0
+    for r in payload.get("races", []):
+        for h in r.get("horses", []):
+            if not h.get("mark"):
+                continue
+            marked += 1
+            cited += any("厩舎コメント" in x for x in h.get("reasons", []))
+
+    scored_by = payload.get("scored_by")
+    health["prediction"] = {
+        "checked": day, "scored_by": scored_by, "marked": marked,
+        "comment_cited": cited,
+    }
+    log.info(
+        "予想: %s で採点 / 印 %d頭 / うち厩舎コメントを根拠にした %d頭",
+        scored_by, marked, cited,
+    )
+
+    bad = []
+    if scored_by != "model":
+        bad.append(f"予想が学習モデルで採点されていない（{scored_by}）")
+    if marked and not cited:
+        bad.append("予想が厩舎コメントを1頭も根拠にしていない")
+    return bad
 
 
 def cmd_probe_workouts(args: argparse.Namespace) -> int:

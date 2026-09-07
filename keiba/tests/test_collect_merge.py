@@ -91,3 +91,59 @@ def test_書き出して読み直してもコメントが残る(tmp_path: pathli
     path = tmp_path / "2026-09-05.jsonl.gz"
     write_jsonl([card(comments=3)], path)
     assert len(list(read_jsonl(path))[0].comments) == 3
+
+
+# --- 予想に効いたかを数える ---------------------------------------------
+
+
+def health_args(tmp: pathlib.Path):
+    import argparse
+    return argparse.Namespace(data_dir=tmp)
+
+
+def prediction(tmp: pathlib.Path, *, scored_by: str, cited: int) -> None:
+    """印5頭のうち cited 頭の根拠に厩舎コメントが出る予想を書く。"""
+    import json
+    horses = [
+        {
+            "umaban": i + 1,
+            "mark": "◎",
+            "reasons": (
+                ["厩舎コメントに前向きな語（上向き）"] if i < cited else ["父の複勝率"]
+            ),
+        }
+        for i in range(5)
+    ]
+    (tmp / "2026-09-11.json").write_text(
+        json.dumps({"scored_by": scored_by, "races": [{"horses": horses}]}),
+        encoding="utf-8",
+    )
+
+
+def test_予想がコメントを1頭も使っていなければ検出する(tmp_path: pathlib.Path) -> None:
+    """9/5 に実際に起きた形。
+
+    印を175頭に打って、厩舎コメントを根拠にしたのは0頭だった。DB の行数を
+    数えるだけでは分からない。**出力を見る。**
+    """
+    from keiba.cli import _paid_data_reached_the_prediction
+
+    prediction(tmp_path, scored_by="model", cited=0)
+    bad = _paid_data_reached_the_prediction(health_args(tmp_path), "2026-09-11", {})
+    assert any("厩舎コメント" in b for b in bad)
+
+
+def test_使っていれば通す(tmp_path: pathlib.Path) -> None:
+    from keiba.cli import _paid_data_reached_the_prediction
+
+    prediction(tmp_path, scored_by="model", cited=2)
+    assert _paid_data_reached_the_prediction(health_args(tmp_path), "2026-09-11", {}) == []
+
+
+def test_手置きの重みで採点していたら検出する(tmp_path: pathlib.Path) -> None:
+    """モデルがボードに届いていない、という壊れ方を過去にしている。"""
+    from keiba.cli import _paid_data_reached_the_prediction
+
+    prediction(tmp_path, scored_by="weights", cited=2)
+    bad = _paid_data_reached_the_prediction(health_args(tmp_path), "2026-09-11", {})
+    assert any("学習モデル" in b for b in bad)
