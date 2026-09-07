@@ -23,6 +23,14 @@ on:
         description: "レース単位の調教ページも見る（race_id）"
         required: false
         default: ""
+      nar_date:
+        description: "地方を調べる日 YYYY-MM-DD（空なら調べない）"
+        required: false
+        default: ""
+      venue_code:
+        description: "場コード（名古屋=48）"
+        required: false
+        default: "48"
 
 permissions:
   contents: read
@@ -53,3 +61,14 @@ jobs:
           RACE=""
           [ -n "${{ inputs.race_id }}" ] && RACE="--race-id ${{ inputs.race_id }}"
           python -m keiba.cli -v probe-workouts --limit ${{ inputs.limit }} $RACE
+
+      # 地方は中央と別の話。1レースだけなら netkeiba から全部引けるのかを見る
+      - name: 地方のレースを調べる
+        if: inputs.nar_date != ''
+        env:
+          NETKEIBA_EMAIL: ${{ secrets.NETKEIBA_EMAIL }}
+          NETKEIBA_PASSWORD: ${{ secrets.NETKEIBA_PASSWORD }}
+        run: |
+          python -m keiba.cli -v probe-race \
+            --date "${{ inputs.nar_date }}" \
+            --venue-code "${{ inputs.venue_code }}"

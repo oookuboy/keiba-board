@@ -29,7 +29,7 @@ SUBSTITUTIONS = [
     (r"\$\{\{\s*steps\.plan\.outputs\.date[^}]*\}\}", "2026-08-08"),
     # 日付を受ける inputs は日付に置く。汎用の "x" を入れると、綴りは
     # 正しいのに型で落ちて偽の失敗になる。
-    (r"\$\{\{\s*inputs\.(since|valid_from|date|from|to)[^}]*\}\}", "2026-08-08"),
+    (r"\$\{\{\s*inputs\.(since|valid_from|date|from|to|nar_date)[^}]*\}\}", "2026-08-08"),
     # 数を受ける inputs も同じ理由で数に置く（"x" だと型で落ちて偽の失敗になる）
     (r"\$\{\{\s*inputs\.(limit|offset|chunk|days|count)[^}]*\}\}", "5"),
     (r"\$\{\{[^}]*\}\}", "x"),

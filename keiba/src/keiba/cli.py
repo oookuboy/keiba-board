@@ -492,6 +492,71 @@ def _paid_data_reached_the_prediction(
     return bad
 
 
+def cmd_probe_race(args: argparse.Namespace) -> int:
+    """1レースぶんを netkeiba から全部引けるか、構造だけ見る。
+
+    ## 何を確かめたいか
+
+    このシステムは中央しか扱えない。3年分のバックフィルも、種牡馬適性も、
+    モデルの学習も、全部 JRA のもの。地方をやるなら同じ手順を1周回す、と
+    答えたが、**1レースだけならその場で全部引けるのではないか**という問いが
+    残っている。
+
+    要るのは出走馬と過去走。netkeiba には馬柱（shutuba_past.html）があり、
+    ここに全出走馬の過去5走が1リクエストで載っているはず。以前これを
+    「JavaScript の空シェルで使えない」と判定したが、**その測定は未ログイン
+    時のもの**で、同じ判定で oikiri と comment を2回取りこぼしている。
+
+    測り直す。出すのは表の見出し・class・行数と title だけ。中身は出さない。
+    """
+    from bs4 import BeautifulSoup
+
+    from keiba.sources import netkeiba, netkeiba_auth
+
+    fetcher = Fetcher(cache_dir=args.cache)
+    netkeiba_auth.login(fetcher, required=True)
+
+    stamp = args.day.strftime("%Y%m%d")
+    listing = fetcher.fetch(
+        f"https://db.netkeiba.com/race/list/{stamp}/", force=True
+    )
+    ids = netkeiba.parse_race_list(listing, jra_only=False)
+    log.info("%s の race_id: %d件", args.day, len(ids))
+
+    codes = sorted({i[4:6] for i in ids})
+    log.info("場コード: %s", codes)
+    target = [i for i in ids if i[4:6] == args.venue_code]
+    if not target:
+        log.error("場コード %s のレースが見つからない", args.venue_code)
+        return 1
+    race_id = target[args.race_no - 1] if len(target) >= args.race_no else target[0]
+    log.info("調べる race_id: %s（%d件中）", race_id, len(target))
+
+    for name in ("shutuba", "shutuba_past", "comment", "oikiri"):
+        url = f"https://race.netkeiba.com/race/{name}.html?race_id={race_id}"
+        try:
+            html = fetcher.fetch(url, force=True)
+        except Exception as exc:  # noqa: BLE001
+            log.info("  %-13s 取れない: %s", name, exc)
+            continue
+        soup = BeautifulSoup(html, "lxml")
+        title = (soup.title.get_text(strip=True) if soup.title else "")[:70]
+        tables = soup.select("table")
+        log.info("  %-13s %6d bytes / 表 %d個 / %s", name, len(html), len(tables), title)
+        for table in tables[:4]:
+            rows = table.find_all("tr")
+            head = (
+                [netkeiba._text(c) for c in rows[0].find_all(["th", "td"])]
+                if rows else []
+            )
+            log.info(
+                "      class=%s 行=%d 見出し=%s",
+                ".".join(table.get("class") or []) or "-",
+                max(len(rows) - 1, 0), "|".join(head)[:150],
+            )
+    return 0
+
+
 def cmd_probe_workouts(args: argparse.Namespace) -> int:
     """今週の追い切りが取れない原因を切り分ける。
 
@@ -1309,6 +1374,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="この日から何日ぶんを対象にするか（土日をまとめて取るなら 2）",
     )
     p.set_defaults(func=cmd_collect_paid)
+
+    p = sub.add_parser(
+        "probe-race", help="1レースぶんを netkeiba から引けるか構造だけ見る"
+    )
+    p.add_argument("--date", dest="day", type=_date, required=True)
+    p.add_argument("--venue-code", default="48", help="場コード（名古屋=48）")
+    p.add_argument("--race-no", type=int, default=1)
+    p.set_defaults(func=cmd_probe_race)
 
     p = sub.add_parser(
         "probe-workouts",
