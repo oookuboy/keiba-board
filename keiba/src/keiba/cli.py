@@ -383,49 +383,77 @@ def cmd_health(args: argparse.Namespace) -> int:
     day = args.day.isoformat()
     with Store(args.db) as store:
         since = (args.day - timedelta(days=WORKOUT_WINDOW)).isoformat()
-        runners, fresh = store.conn.execute(
+        rows = store.conn.execute(
             """
-            SELECT COUNT(DISTINCT e.horse_id),
-                   COUNT(DISTINCT CASE WHEN w.horse_id IS NOT NULL THEN e.horse_id END)
+            -- 調教は1頭に何本もぶら下がるので、どの列も DISTINCT で数える。
+            -- 素直に COUNT(*) と書くと出走頭数が調教の本数ぶん水増しされる。
+            SELECT e.race_id,
+                   COUNT(DISTINCT e.umaban) AS runners,
+                   COUNT(DISTINCT w.horse_id) AS fresh,
+                   COUNT(DISTINCT c.umaban) AS commented
             FROM entries e
             JOIN races r ON r.race_id = e.race_id
             LEFT JOIN horse_workouts w
                    ON w.horse_id = e.horse_id
                   AND w.workout_date >= ? AND w.workout_date < ?
-            WHERE r.race_date = ?
-            """,
-            (since, day, day),
-        ).fetchone()
-        entries, commented = store.conn.execute(
-            """
-            SELECT COUNT(*),
-                   COUNT(c.umaban)
-            FROM entries e
-            JOIN races r ON r.race_id = e.race_id
             LEFT JOIN comments c
                    ON c.race_id = e.race_id AND c.umaban = e.umaban
             WHERE r.race_date = ?
+            GROUP BY e.race_id
             """,
-            (day,),
-        ).fetchone()
+            (since, day, day),
+        ).fetchall()
 
     kinds = {
-        "workouts": ("調教", fresh or 0, runners or 0),
-        "comments": ("厩舎コメント", commented or 0, entries or 0),
+        "workouts": ("調教", 2),
+        "comments": ("厩舎コメント", 3),
     }
 
     path = args.data_dir / "health.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     health = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     bad = []
-    for key, (label, got, total) in kinds.items():
+    for key, (label, col) in kinds.items():
+        total = sum(r[1] for r in rows)
+        got = sum(r[col] for r in rows)
         rate = got / total if total else 0.0
+
+        # netkeiba は全レースに有料データを出すわけではない。2026-09-12 を
+        # 数えるとこうなった。
+        #
+        #     5R 6R（新馬） 9R 10R 11R  → 全頭ぶんある
+        #     未勝利・1勝クラス          → 1頭も無い
+        #
+        # 全出走馬を分母にすると 39.9% になり、取りこぼしゼロでも「半分未満」
+        # として落ちる。**毎週かならず鳴る警報**がもう一つできあがっていた。
+        #
+        # 出る／出ないはこちらでは決められない。決められるのは「出ている
+        # レースを取りこぼさないこと」だけなので、そこを分母にして測る。
+        # 出ているレースが1つも無くなったら、それは経路が死んだということ。
+        served = [r for r in rows if r[col]]
+        s_total = sum(r[1] for r in served)
+        s_got = sum(r[col] for r in served)
+        s_rate = s_got / s_total if s_total else 0.0
+
         health[key] = {
             "checked": day, "runners": total, "fresh": got, "rate": round(rate, 3),
+            "races": len(rows), "served_races": len(served),
+            "served_runners": s_total, "served_rate": round(s_rate, 3),
         }
-        log.info("%s: %d/%d頭 (%.1f%%)", label, got, total, rate * 100)
-        if total and rate < args.floor:
-            bad.append(f"{label} {rate:.1%}（{got}/{total}頭）")
+        log.info(
+            "%s: %d/%d頭 (%.1f%%) ／ 出ている %d/%dR では %d/%d頭 (%.1f%%)",
+            label, got, total, rate * 100,
+            len(served), len(rows), s_got, s_total, s_rate * 100,
+        )
+        if not rows:
+            continue
+        if not served:
+            bad.append(f"{label}が1レースも取れていない（{len(rows)}R中0R）")
+        elif s_rate < args.floor:
+            bad.append(
+                f"{label} 出ている{len(served)}Rで {s_rate:.1%}"
+                f"（{s_got}/{s_total}頭）"
+            )
 
     # ここまでは DB に何行あるかの話。**予想に効いたか**は別で、そちらが本題。
     bad += _paid_data_reached_the_prediction(args, day, health)

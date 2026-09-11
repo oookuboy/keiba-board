@@ -247,13 +247,21 @@ async function renderHealth(){
   try{ h=await (await fetch("keiba/data/health.json",{cache:"no-cache"})).json(); }
   catch(e){ return; }
   /* 有料データは種類ごとに欠け方が違う。調教だけ見ていたせいで、厩舎コメントが
-     0件のまま週末に入っても気づけなかった（2026-09-05）。両方出す。 */
+     0件のまま週末に入っても気づけなかった（2026-09-05）。両方出す。
+
+     分母は**出ているレース**。netkeiba は全レースに厩舎コメントを出すわけでは
+     なく、2026-09-12 は新馬と 9R 以降の10レースだけだった（未勝利・1勝クラスは
+     1頭も無い）。全出走馬を分母にすると 39.9% になり、取りこぼしゼロでも赤帯が
+     出っぱなしになる。出る／出ないはこちらで決められないので、決められること
+     （出ているレースを取りこぼさない）だけを見る。 */
   const kinds=[["workouts","調教"],["comments","厩舎コメント"]];
   const bad=kinds
     .map(([key,label])=>[label,h&&h[key]])
-    .filter(([,v])=>v&&v.runners&&v.rate<0.5)
-    .map(([label,v])=>
-      `${label} ${(v.rate*100).toFixed(1)}%（${v.runners}頭中 ${v.fresh}頭・${v.checked} 時点）`);
+    .filter(([,v])=>v&&v.races&&(!v.served_races||v.served_rate<0.5))
+    .map(([label,v])=>v.served_races
+      ? `${label} 出ている${v.served_races}Rで ${(v.served_rate*100).toFixed(1)}%`
+        +`（${v.served_runners}頭中 ${v.fresh}頭・${v.checked} 時点）`
+      : `${label}が1レースも取れていない（${v.races}R中0R・${v.checked} 時点）`);
   if(!bad.length){ box.hidden=true; return; }
   box.hidden=false;
   box.className="warn";

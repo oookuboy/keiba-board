@@ -18,6 +18,7 @@ JRA公式の出馬表には厩舎コメントも調教も無いので、当日�
 from __future__ import annotations
 
 import datetime as dt
+import json
 import pathlib
 
 from keiba import collect
@@ -91,6 +92,129 @@ def test_書き出して読み直してもコメントが残る(tmp_path: pathli
     path = tmp_path / "2026-09-05.jsonl.gz"
     write_jsonl([card(comments=3)], path)
     assert len(list(read_jsonl(path))[0].comments) == 3
+
+
+# --- 被覆率の分母 -------------------------------------------------------
+
+
+def test_有料データが出ているレースだけを分母にする(tmp_path: pathlib.Path) -> None:
+    """netkeiba が出さないレースを「取りこぼし」と数えないこと。
+
+    2026-09-12 を数えるとこうなった。
+
+        5R 6R（新馬） 9R 10R 11R  → 全頭ぶんある
+        未勝利・1勝クラス          → 1頭も無い
+
+    全出走馬を分母にすると 126/316 = 39.9% で、取りこぼしゼロでも「半分未満」
+    として落ちる。毎週かならず鳴る警報がもう一つできあがっていた。
+
+    出る／出ないはこちらでは決められない。決められるのは**出ているレースを
+    取りこぼさないこと**だけなので、そこを分母にする。
+    """
+    import argparse
+    import datetime as dt
+
+    from keiba.cli import cmd_health
+    from keiba.store import Store
+
+    db = tmp_path / "t.db"
+    with Store(db) as store:
+        store.conn.executescript(
+            """
+            INSERT INTO races (race_id, race_date, venue, venue_code, race_no)
+                VALUES ('A', '2026-09-12', '中山', '06', 9),
+                       ('B', '2026-09-12', '中山', '06', 1);
+            INSERT INTO entries (race_id, umaban, horse_id)
+                VALUES ('A',1,'h1'), ('A',2,'h2'), ('B',1,'h3'), ('B',2,'h4');
+            INSERT INTO comments (race_id, umaban, body)
+                VALUES ('A',1,'上向き'), ('A',2,'変わらず');
+            -- 調教はここでは論点でないので、全頭ぶん埋めておく
+            INSERT INTO horse_workouts (horse_id, workout_date, course, rank)
+                VALUES ('h1','2026-09-09','美浦W',1), ('h2','2026-09-09','美浦W',1),
+                       ('h3','2026-09-09','美浦W',1), ('h4','2026-09-09','美浦W',1);
+            """
+        )
+        store.conn.commit()
+
+    args = argparse.Namespace(
+        day=dt.date(2026, 9, 12), db=db, data_dir=tmp_path, floor=0.5, strict=True,
+    )
+    assert cmd_health(args) == 0, "出ているレースは全頭ぶんあるのに落ちている"
+
+    health = json.loads((tmp_path / "health.json").read_text(encoding="utf-8"))
+    c = health["comments"]
+    assert c["rate"] == 0.5, "全体の被覆率は事実として残す"
+    assert c["served_rate"] == 1.0, "出ているレースでは取りこぼしゼロ"
+    assert (c["served_races"], c["races"]) == (1, 2)
+
+
+def test_1レースも出ていなければ落とす(tmp_path: pathlib.Path) -> None:
+    """分母を狭めたせいで「全滅」を見逃さないこと。
+
+    出ているレースだけを分母にすると、0レースのときは 0/0 になる。素直に
+    書くと率が計算できず素通りする。**経路が死んだ**のはいちばん重い失敗
+    なので、ここは必ず鳴らす。
+    """
+    import argparse
+    import datetime as dt
+
+    from keiba.cli import cmd_health
+    from keiba.store import Store
+
+    db = tmp_path / "t.db"
+    with Store(db) as store:
+        store.conn.executescript(
+            """
+            INSERT INTO races (race_id, race_date, venue, venue_code, race_no)
+                VALUES ('A', '2026-09-13', '中山', '06', 9);
+            INSERT INTO entries (race_id, umaban, horse_id)
+                VALUES ('A',1,'h1'), ('A',2,'h2');
+            """
+        )
+        store.conn.commit()
+
+    args = argparse.Namespace(
+        day=dt.date(2026, 9, 13), db=db, data_dir=tmp_path, floor=0.5, strict=True,
+    )
+    assert cmd_health(args) == 1, "厩舎コメントが全滅しているのに通している"
+
+
+def test_調教が何本あっても出走頭数は水増しされない(tmp_path: pathlib.Path) -> None:
+    """1頭に調教が何本もぶら下がる。素直に COUNT(*) と書くと分母が壊れる。"""
+    import argparse
+    import datetime as dt
+
+    from keiba.cli import cmd_health
+    from keiba.store import Store
+
+    db = tmp_path / "t.db"
+    with Store(db) as store:
+        store.conn.executescript(
+            """
+            INSERT INTO races (race_id, race_date, venue, venue_code, race_no)
+                VALUES ('A', '2026-09-12', '中山', '06', 9);
+            INSERT INTO entries (race_id, umaban, horse_id)
+                VALUES ('A',1,'h1'), ('A',2,'h2');
+            INSERT INTO comments (race_id, umaban, body)
+                VALUES ('A',1,'上向き'), ('A',2,'変わらず');
+            INSERT INTO horse_workouts (horse_id, workout_date, course, rank)
+                VALUES ('h1','2026-09-09','美浦W',1),
+                       ('h1','2026-09-05','美浦W',2),
+                       ('h1','2026-09-02','美浦坂',3),
+                       ('h2','2026-09-09','栗東CW',1);
+            """
+        )
+        store.conn.commit()
+
+    args = argparse.Namespace(
+        day=dt.date(2026, 9, 12), db=db, data_dir=tmp_path, floor=0.5, strict=True,
+    )
+    assert cmd_health(args) == 0
+
+    health = json.loads((tmp_path / "health.json").read_text(encoding="utf-8"))
+    assert health["workouts"]["runners"] == 2, "調教の本数ぶん出走頭数が増えている"
+    assert health["comments"]["runners"] == 2
+    assert health["workouts"]["served_rate"] == 1.0
 
 
 # --- 予想に効いたかを数える ---------------------------------------------
