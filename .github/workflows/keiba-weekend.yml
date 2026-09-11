@@ -131,6 +131,14 @@ jobs:
           echo "date=$DATE" >> "$GITHUB_OUTPUT"
           echo "→ $JOB / $DATE"
 
+      # 調教（netkeiba 有料）を手元に戻す。予想する側でも学習した側と同じ列が
+      # 埋まっていないと、モデルが使っている特徴量が本番だけ欠損になる。
+      - name: 調教を artifact から戻す
+        if: steps.plan.outputs.job != 'review'
+        uses: ./.github/actions/workouts
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       # 木曜。出馬表が公開される日なので、取れるだけ取って暫定予想を出す。
       # 発走前の出馬表が db.netkeiba に出るかは未確定（8/5 時点では開催場の名前は
       # 出るが race_id が0件だった）。取れなかったことが分かるよう、収集が空なら
@@ -167,14 +175,6 @@ jobs:
           "db.netkeiba に race_id が生えていない可能性が高い（sources/jra.py が必要）"
             exit 1
           fi
-
-      # 調教（netkeiba 有料）を手元に戻す。予想する側でも学習した側と同じ列が
-      # 埋まっていないと、モデルが使っている特徴量が本番だけ欠損になる。
-      - name: 調教を artifact から戻す
-        if: steps.plan.outputs.job != 'review'
-        uses: ./.github/actions/workouts
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       # 金曜。枠順が確定するので、ここで初めて馬番の入った出馬表が取れる
       - name: Collect

@@ -271,6 +271,26 @@ def test_予想の直前にも有料データを引き直す() -> None:
     assert any(i < predict_at for i in paid), "引き直しが予想より後にある"
 
 
+def test_木曜の下見も調教を戻してから予想する() -> None:
+    """暫定予想だけ調教なしで作られていた。
+
+    artifact を戻す手順が Preview より後ろにあった。木曜の予想は毎回
+    「調教が1件も入っていない」まま出ていたことになる。買い目は組まないので
+    金額の被害は無いが、能力評価と印は出るし、ボードにも載る。
+
+    学習で使っている列が本番だけ欠損する、というのはこのプロジェクトが
+    いちばん繰り返している壊れ方。順序で起きるぶんだけ気づきにくい。
+    """
+    import yaml
+
+    text = (WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8")
+    steps = yaml.safe_load(text)["jobs"]["run"]["steps"]
+    names = [s.get("name", "") for s in steps]
+    restore = next(i for i, n in enumerate(names) if "artifact から戻す" in n)
+    preview = next(i for i, n in enumerate(names) if n.startswith("Preview"))
+    assert restore < preview, "木曜の予想が調教なしで作られる"
+
+
 def test_予想のときに引いた調教も_artifactへ戻す() -> None:
     """予想の直前に引いたぶんが、毎回そのまま捨てられないこと。
 
