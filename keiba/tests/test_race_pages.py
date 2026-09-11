@@ -167,3 +167,117 @@ def test_comment_keywords_reach_the_feature() -> None:
 def test_comments_ignore_rows_without_a_number() -> None:
     broken = COMMENTS.replace("<td>1</td><td>1</td>", "<td>1</td><td>—</td>", 1)
     assert [r.umaban for r in parse_race_comments(broken, "x")] == [2]
+
+
+# --- コメントが予想まで届くか -------------------------------------------
+
+
+def _store_with_comment(tmp_path, body: str):
+    from keiba.store import Store
+
+    store = Store(tmp_path / "t.db")
+    store.conn.execute(
+        "INSERT INTO comments (race_id, umaban, body) VALUES ('R', 1, ?)", (body,)
+    )
+    store.conn.commit()
+    return store
+
+
+def _entry_and_race():
+    import datetime as dt
+
+    from keiba.models import Entry, Race
+
+    return (
+        Entry(race_id="R", umaban=1, horse_name="ウマ", horse_id="1"),
+        Race(
+            race_id="R", race_date=dt.date(2026, 9, 12), venue="中山", venue_code="06",
+            kai=4, nichi=3, race_no=5, name="メイクデビュー中山",
+            surface="芝", distance=1600,
+        ),
+    )
+
+
+def _cfg():
+    import pathlib
+
+    import yaml
+
+    return yaml.safe_load(
+        (pathlib.Path(__file__).parents[1] / "config/weights.yml").read_text()
+    )["condition_change"]
+
+
+def test_過去走の無い馬でもコメントを読む(tmp_path) -> None:
+    """新馬戦のコメントがまるごと落ちていた。
+
+    厩舎コメントの判定は condition_changes の**末尾**にあり、その手前に
+    `if not past_runs: return` があった。新馬は定義上つねに過去走が無いので、
+    1件も読まれない。しかも netkeiba がいちばんコメントを出すのが新馬戦で、
+    2026-09-12 でいえばコメントのある10レースのうち4つがメイクデビュー。
+    有料データのいちばん厚いところが落ちていた。
+    """
+    from keiba.features import condition_changes
+
+    entry, race = _entry_and_race()
+    store = _store_with_comment(tmp_path, "追うごとに動きは良化。気性も素直で初戦から。")
+    score, notes = condition_changes(
+        entry, race, [], {}, store, _cfg(), {}, {},
+    )
+    assert score > 0, "新馬のコメントが読まれていない"
+    assert any("厩舎コメント" in n for n in notes)
+
+
+def test_後ろ向きな語のほうが多ければ減点する(tmp_path) -> None:
+    """前向きな語だけ数えると、コメントは加点しかしない道具になる。
+
+    厩舎の話は半分が留保で、実際「動きは水準以上」と「使ってからでは」が
+    同じ文に並ぶ。差し引きで向きを決める。
+    """
+    from keiba.features import trainer_comment_bonus
+
+    entry, race = _entry_and_race()
+    store = _store_with_comment(
+        tmp_path, "乗り込んでいるが時計が詰まってこない。実戦を使いつつ力をつけてから。"
+    )
+    bonus, note = trainer_comment_bonus(entry, race, store, _cfg())
+    assert bonus < 0
+    assert note and "後ろ向き" in note
+
+
+def test_前向きと後ろ向きが同数なら何も言っていない扱い(tmp_path) -> None:
+    from keiba.features import trainer_comment_bonus
+
+    entry, race = _entry_and_race()
+    store = _store_with_comment(tmp_path, "動きは水準以上。ただ使ってからでは。")
+    assert trainer_comment_bonus(entry, race, store, _cfg()) == (0.0, None)
+
+
+def test_向きが反転する語を表に入れない() -> None:
+    """「悪くない」「良くなって」は含むかどうかで見ると向きが逆に出る。
+
+    素朴な部分一致で読んでいるので、打ち消しの効いた語を表に入れると
+    **逆の向きに加点する**。入れないことを明示しておく。
+    """
+    cfg = _cfg()
+    for word in ("悪くな", "良くな"):
+        assert word not in cfg["negative_keywords"]
+        assert word not in cfg["positive_keywords"]
+
+
+def test_同じ場所を二度数えない(tmp_path) -> None:
+    """語の表に重なりがある。
+
+    「動きは水準以上」は `動きは水準` と `水準以上` の両方に当たる。素直に
+    数えると前向き2になり、重なりの多い言い回しほど強く出るという歪みが
+    入る。実文を通して初めて出た。
+    """
+    from keiba.features import _keyword_sides
+
+    good, bad = _keyword_sides(
+        "動きは水準以上。ただ使ってからでは。",
+        ["動きは水準", "水準以上"],
+        ["使ってから"],
+    )
+    assert len(good) == 1, f"同じ場所を二度数えている: {good}"
+    assert len(bad) == 1

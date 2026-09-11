@@ -220,8 +220,20 @@ def condition_changes(
     score = 0.0
     notes: list[str] = []
 
+    # 7. 厩舎コメント。**過去走を要らない唯一のパターンなので先に見る。**
+    #
+    # ここは関数の末尾にあった。上の `if not past_runs: return` を通れないので、
+    # 過去走の無い馬のコメントは1件も読まれていなかった。netkeiba がいちばん
+    # コメントを出すのは新馬戦（メイクデビュー）で、新馬は定義上つねに過去走が
+    # 無い。2026-09-12 でいえば、コメントのある10レースのうち4つが新馬戦。
+    # **有料データがいちばん厚いところが、まるごと落ちていた。**
+    bonus, note = trainer_comment_bonus(entry, race, store, cfg)
+    if bonus:
+        score += bonus
+        notes.append(note or "")
+
     if not past_runs:
-        return 0.0, notes
+        return score, [n for n in notes if n]
     previous = past_runs[0]
 
     # 1. 馬場替わり（血統裏付きのみ）
@@ -271,18 +283,92 @@ def condition_changes(
             score += cfg["jockey_upgrade"]
             notes.append(f"{previous.jockey}→{entry.jockey}へ乗り替わり（勝率{now_win:.0%}）")
 
-    # 7. 調教師コメントに前向きな語
-    comment = store.conn.execute(
+    return score, [n for n in notes if n]
+
+
+def _keyword_sides(
+    body: str, positive: list[str], negative: list[str]
+) -> tuple[list[str], list[str]]:
+    """本文の同じ場所を二度数えないように、語を場所で解いてから振り分ける。
+
+    語の表には重なりがある。「動きは水準以上」は `動きは水準` と `水準以上` の
+    両方に当たり、素直に数えると前向き2として出る。片方の表だけ重なっても
+    向きは変わらないが、重なりの多い言い回しほど強く出るという歪みになる。
+    実文で踏んだ（テストに残してある）。
+
+    当たった場所を全部集め、前から見て重ならないものだけ採る。同じ場所に
+    複数当たったときは長いほうを採る（より具体的に言い当てているので）。
+    """
+    spans: list[tuple[int, int, bool]] = []
+    for words, good in ((positive, True), (negative, False)):
+        for word in words:
+            at = body.find(word)
+            while at >= 0:
+                spans.append((at, at + len(word), good))
+                at = body.find(word, at + 1)
+
+    spans.sort(key=lambda s: (s[0], -(s[1] - s[0])))
+    taken: list[tuple[int, int, bool]] = []
+    end = -1
+    for span in spans:
+        if span[0] >= end:
+            taken.append(span)
+            end = span[1]
+
+    return (
+        [body[s:e] for s, e, good in taken if good],
+        [body[s:e] for s, e, good in taken if not good],
+    )
+
+
+def trainer_comment_bonus(
+    entry: Entry, race: Race, store: Store, cfg: dict
+) -> tuple[float, str | None]:
+    """厩舎コメントの向きを読む。前向きな語と後ろ向きな語の差で決める。
+
+    ## 語彙を実文から書き直した
+
+    元の語は書いた側の想像で、実際のコメントに当たっていなかった。
+    2026-09-12 の126件で数えるとこうなる。
+
+        変わり身 0件   攻めた 0件   勝負 0件   気配 0件
+        9語のうち4語は一度も出てこない
+        拾えたのは 16件 / 126（12.7%）
+
+    実文から語を起こし直すと 前向き 55件（43.7%）／後ろ向き 13件（10.3%）。
+
+    ## 片側だけ見ない
+
+    前向きな語だけ数えると、コメントは加点しかしない道具になる。厩舎の話は
+    半分が留保で、実際「動きは水準以上」と「使ってからでは」が同じ文に並ぶ。
+    後ろ向きな語も同じ重みで数え、**差し引きで向きを決める**。同数なら
+    何も言っていないものとして扱う。
+
+    語をそのまま含むかで見るので、打ち消しには弱い。「悪くない」「良くなって」
+    のように向きが反転する語は、どちらの表にも入れない。
+    """
+    row = store.conn.execute(
         "SELECT body FROM comments WHERE race_id = ? AND umaban = ?",
         (race.race_id, entry.umaban),
     ).fetchone()
-    if comment and comment[0]:
-        hits = [k for k in cfg["positive_keywords"] if k in comment[0]]
-        if hits:
-            score += cfg["trainer_comment"]
-            notes.append(f"厩舎コメントに前向きな語（{'・'.join(hits[:2])}）")
+    if not row or not row[0]:
+        return 0.0, None
+    body = row[0]
 
-    return score, [n for n in notes if n]
+    good, bad = _keyword_sides(
+        body, cfg["positive_keywords"], cfg.get("negative_keywords", [])
+    )
+    if len(good) > len(bad):
+        return (
+            cfg["trainer_comment"],
+            f"厩舎コメントに前向きな語（{'・'.join(good[:2])}）",
+        )
+    if len(bad) > len(good):
+        return (
+            -cfg["trainer_comment"],
+            f"厩舎コメントに後ろ向きな語（{'・'.join(bad[:2])}）",
+        )
+    return 0.0, None
 
 
 # --------------------------------------------------------------- 実績
