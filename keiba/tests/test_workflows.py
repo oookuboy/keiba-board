@@ -232,6 +232,61 @@ def test_点検で落ちても調教のartifactは上げ直す() -> None:
     )
 
 
+def test_予想の直前にも有料データを引き直す() -> None:
+    """日曜の予想に厩舎コメントが1件も入らない、という穴を塞いだままにする。
+
+    有料データを引く手順は金曜の収集にしか無かった。金曜の夜（JST 土曜未明）
+    に netkeiba へ出ているのは土曜ぶんの一部だけで、日曜ぶんはまだ無い。
+    2026-09-11 の収集を実測するとこうなった。
+
+        2026-09-12  24R中 10R・126/316頭
+        2026-09-13  0R・0頭
+
+    金曜の収集をいくら直しても、予想の側に引き直す手順が無いかぎり日曜は
+    埋まらない。「集めたのに使っていない」ではなく、**そもそも集める機会が
+    無かった**という形。
+    """
+    import yaml
+
+    text = (WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8")
+    steps = yaml.safe_load(text)["jobs"]["run"]["steps"]
+
+    paid = [
+        i for i, s in enumerate(steps)
+        if "collect-paid" in str(s.get("run", ""))
+    ]
+    jobs = {
+        str(steps[i].get("if", "")).split("'")[1] if "'" in str(steps[i].get("if", ""))
+        else "" for i in paid
+    }
+    assert "collect" in jobs, "金曜の収集で有料データを引いていない"
+    assert "predict" in jobs, (
+        "予想の直前に引き直していない。日曜の予想に厩舎コメントが入らない"
+    )
+
+    # 引いてから予想する順であること。逆だと引いたぶんが次の週まで効かない。
+    predict_at = next(
+        i for i, s in enumerate(steps) if s.get("name") == "Predict"
+    )
+    assert any(i < predict_at for i in paid), "引き直しが予想より後にある"
+
+
+def test_予想のときに引いた調教も_artifactへ戻す() -> None:
+    """予想の直前に引いたぶんが、毎回そのまま捨てられないこと。
+
+    上げ直しを収集のときだけにしていると、当日ぶんの追い切りは artifact に
+    入らない。集めて、使って、保存せずに捨てる形になる。
+    """
+    import yaml
+
+    text = (WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8")
+    steps = yaml.safe_load(text)["jobs"]["run"]["steps"]
+    upload = next(s for s in steps if "artifact へ戻す" in s.get("name", ""))
+    assert "predict" in str(upload.get("if", "")), (
+        "予想のときに引いた調教が保存されない"
+    )
+
+
 def test_the_workout_artifact_chain_renews_itself() -> None:
     """調教を取り込むワークフローが、上げ直しもすること。
 

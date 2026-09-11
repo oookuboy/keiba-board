@@ -236,18 +236,29 @@ jobs:
             python -m keiba.cli health --date "$D" --strict
           done
 
-      # 点検が落ちても**必ず**上げ直す。調教は artifact にしか無いので、
-      # ここを飛ばすと収集したものがそのまま消える。落とすつもりで入れた
-      # 見張りが、データを失わせる形になってはいけない。
-      - name: 調教を artifact へ戻す
-        if: ${{ always() && steps.plan.outputs.job == 'collect' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: workouts
-          path: keiba/raw/workouts.jsonl.gz
-          retention-days: 90
-          overwrite: true
-          if-no-files-found: warn
+      # 当日ぶんの厩舎コメントと追い切りを引き直す。
+      #
+      # ここが無いと、予想に入る有料データは**金曜に取れたぶんで固定**される。
+      # 金曜の夜（JST 土曜未明）に netkeiba に出ているのは土曜ぶんの一部だけで、
+      # 日曜ぶんはまだ公開されていない。2026-09-11 の収集で実測するとこうなった。
+      #
+      #     2026-09-12  24R中 10R・126/316頭
+      #     2026-09-13  0R・0頭
+      #
+      # つまり**日曜の予想には厩舎コメントが構造的に1件も入らない。** 金曜の
+      # 収集を何度直しても、この経路が無いかぎり日曜は埋まらない。
+      #
+      # 発走前の情報しか取らないので先読みにはならない。落ちても予想は続ける。
+      - name: 当日の追い切りと厩舎コメントを引き直す
+        if: steps.plan.outputs.job == 'predict'
+        continue-on-error: true
+        env:
+          NETKEIBA_EMAIL: ${{ secrets.NETKEIBA_EMAIL }}
+          NETKEIBA_PASSWORD: ${{ secrets.NETKEIBA_PASSWORD }}
+        run: |
+          python -m keiba.cli -v \
+            --workouts keiba/raw/workouts.jsonl.gz \
+            collect-paid --date "${{ steps.plan.outputs.date }}" --days 1
 
       - name: Predict
         if: steps.plan.outputs.job == 'predict'
@@ -266,6 +277,23 @@ jobs:
       - name: 予想に有料データが乗ったか確かめる
         if: steps.plan.outputs.job == 'predict'
         run: python -m keiba.cli health --date "${{ steps.plan.outputs.date }}"
+
+      # 点検が落ちても**必ず**上げ直す。調教は artifact にしか無いので、
+      # ここを飛ばすと収集したものがそのまま消える。落とすつもりで入れた
+      # 見張りが、データを失わせる形になってはいけない。
+      #
+      # 収集だけでなく予想のときも上げる。当日ぶんの追い切りを引くのは
+      # 予想の直前なので、収集のときしか上げないと、そこで取ったものが
+      # 毎回そのまま捨てられる。
+      - name: 調教を artifact へ戻す
+        if: ${{ always() && (steps.plan.outputs.job == 'collect' || steps.plan.outputs.job == 'predict') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: workouts
+          path: keiba/raw/workouts.jsonl.gz
+          retention-days: 90
+          overwrite: true
+          if-no-files-found: warn
 
       - name: Review
         if: steps.plan.outputs.job == 'review'
