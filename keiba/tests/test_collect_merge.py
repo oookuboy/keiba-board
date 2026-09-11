@@ -101,7 +101,9 @@ def health_args(tmp: pathlib.Path):
     return argparse.Namespace(data_dir=tmp)
 
 
-def prediction(tmp: pathlib.Path, *, scored_by: str, cited: int) -> None:
+def prediction(
+    tmp: pathlib.Path, *, scored_by: str, cited: int, provisional: bool = False
+) -> None:
     """印5頭のうち cited 頭の根拠に厩舎コメントが出る予想を書く。"""
     import json
     horses = [
@@ -115,7 +117,11 @@ def prediction(tmp: pathlib.Path, *, scored_by: str, cited: int) -> None:
         for i in range(5)
     ]
     (tmp / "2026-09-11.json").write_text(
-        json.dumps({"scored_by": scored_by, "races": [{"horses": horses}]}),
+        json.dumps({
+            "scored_by": scored_by,
+            "provisional": provisional,
+            "races": [{"horses": horses}],
+        }),
         encoding="utf-8",
     )
 
@@ -138,6 +144,37 @@ def test_使っていれば通す(tmp_path: pathlib.Path) -> None:
 
     prediction(tmp_path, scored_by="model", cited=2)
     assert _paid_data_reached_the_prediction(health_args(tmp_path), "2026-09-11", {}) == []
+
+
+def test_暫定予想は裁かない(tmp_path: pathlib.Path) -> None:
+    """木曜のプレビューを「有料データを使っていない」と数えない。
+
+    有料データを引くのは金曜。収集の直後に置いてある予想は必ず木曜の暫定に
+    なるので、ここで赤にすると毎週かならず鳴る警報ができあがる。2026-09-11
+    の収集は実際にこれで落ちた（weights / コメント根拠0頭）。裁くのは土日朝の
+    本予想だけにする。
+    """
+    from keiba.cli import _paid_data_reached_the_prediction
+
+    prediction(tmp_path, scored_by="weights", cited=0, provisional=True)
+    health: dict = {}
+    assert _paid_data_reached_the_prediction(
+        health_args(tmp_path), "2026-09-11", health
+    ) == []
+    assert health["prediction"]["provisional"] is True
+
+
+def test_本予想になったら同じ内容でも裁く(tmp_path: pathlib.Path) -> None:
+    """暫定を外した瞬間に、同じ中身が失敗として出ること。
+
+    「暫定は見逃す」を入れたせいで本予想まで見逃す、では意味がない。
+    """
+    from keiba.cli import _paid_data_reached_the_prediction
+
+    prediction(tmp_path, scored_by="weights", cited=0, provisional=False)
+    bad = _paid_data_reached_the_prediction(health_args(tmp_path), "2026-09-11", {})
+    assert any("厩舎コメント" in b for b in bad)
+    assert any("学習モデル" in b for b in bad)
 
 
 def test_手置きの重みで採点していたら検出する(tmp_path: pathlib.Path) -> None:

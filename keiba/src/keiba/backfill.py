@@ -244,6 +244,7 @@ def collect_workouts(
     log.info("調教を引く対象: %d頭", len(targets))
     records: list[dict] = []
     empty = 0
+    empty_bytes: list[int] = []
     for i, horse_id in enumerate(targets, 1):
         try:
             html = fetcher.fetch(
@@ -256,13 +257,26 @@ def collect_workouts(
         rows = netkeiba.parse_horse_training(html, horse_id)
         if not rows:
             empty += 1
+            empty_bytes.append(len(html))
         records.extend(w.to_dict() for w in rows)
 
         if i == EMPTY_CHECK_AFTER and empty / i > EMPTY_RATIO_LIMIT:
             # ここで止めないと、空のまま2.4万頭ぶん走って何時間も無駄にする。
+            #
+            # 止める理由は正しいが、**理由の言い当ては間違えうる**。2026-09-11
+            # はここで「ログインが効いていない」と言って落ちた。実際には同じ
+            # run の25秒前にログインは成功していて、レース単位の追い切りページ
+            # からは131頭ぶん取れていた。効いていなかったのは資格情報ではなく、
+            # このエンドポイントのほう（全頭が 200 で 85バイト）。
+            #
+            # 推測を書かず、**観測した大きさを書く**。中身の薄いページが返って
+            # いるのか、中身はあるのに解析できていないのかが、これで分かれる。
+            biggest = max(empty_bytes)
             raise RuntimeError(
-                f"最初の{i}頭のうち{empty}頭が空。ログインが効いていない可能性が高い。"
-                " 有料プランの状態と Secrets を確かめること"
+                f"最初の{i}頭のうち{empty}頭が空（本文は最大 {biggest} バイト）。"
+                " 数百バイトしか返っていないならページ側が変わっている。"
+                " 数万バイトあるなら解析が合っていない。"
+                " どちらでもなければ有料プランの状態と Secrets を確かめること"
             )
         if i % 200 == 0:
             log.info("  %d/%d（空 %d頭・調教 %d本）", i, len(targets), empty, len(records))

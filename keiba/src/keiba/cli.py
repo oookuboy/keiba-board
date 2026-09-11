@@ -460,11 +460,25 @@ def _paid_data_reached_the_prediction(
     数えれば「読み込んで、評価に使った」ことが出力側から確かめられる。
     前向きな語が無ければ加点しない作りなので、コメントが全頭ぶん入っていても
     この数は全頭にはならない。0 かどうかを見る。
+
+    ## 暫定予想は裁かない
+
+    木曜のプレビューは出馬表しか無い時点のもので、買い目も組まない。有料
+    データを引くのは金曜なので、**収集の直後に置いてある予想は必ず木曜の
+    暫定**になる。それを「有料データを使っていない」と数えると、毎週かならず
+    赤になる点検ができあがる。実際 2026-09-11 の収集はこれで落ちた。
+
+    鳴りっぱなしの警報は見られなくなる。裁くのは土日朝の本予想だけにする。
     """
     path = args.data_dir / f"{day}.json"
     if not path.exists():
         return []
     payload = json.loads(path.read_text(encoding="utf-8"))
+
+    if payload.get("provisional"):
+        health["prediction"] = {"checked": day, "provisional": True}
+        log.info("予想はまだ暫定（木曜の下見）。有料データの判定は本予想まで待つ")
+        return []
 
     marked = cited = 0
     for r in payload.get("races", []):
