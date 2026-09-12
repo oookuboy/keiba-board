@@ -534,6 +534,135 @@ def _paid_data_reached_the_prediction(
     return bad
 
 
+def cmd_comment_value(args: argparse.Namespace) -> int:
+    """厩舎コメントに、モデルが取りこぼしている情報が残っているかを測る。
+
+    ## 素の差は当てにならない
+
+    コメントのある馬を前向き／中立／後ろ向きに分けると 3着内率は 26.1% /
+    21.7% / 16.8% で、同じレースの中で比べても 9.1pt 開く。しかし**それは
+    モデルが既に知っていることかもしれない。** コメントが出るのは新馬と
+    9R以降の特別戦だけで、そこには騎手も実績も血統も偏りがある。
+
+    問うべきは「モデルのスコアをそろえてから、まだ差が残るか」。残らなければ
+    他の81列が同じことを言っているので、上乗せする理由が無い。
+
+    ## 手元では測れない
+
+    調教は artifact にしかなく、手元に無い状態で採点するとモデルが不利に
+    なり、コメントの残差が過大に出る。**この測定は Actions で回すこと。**
+    調教が入っていなければ警告を出す。
+
+    ## 回収率も見る
+
+    3着内率が上がっても、それが人気側に偏っていれば回収率は上がらない。
+    後ろ向きの馬を外したときに払戻がどう動くかを、実際の払戻で決済して
+    並べる。ここが下がるなら入れない。
+    """
+    import numpy as np
+    import pandas as pd
+
+    from keiba import dataset, ml
+
+    with Store(args.db) as store:
+        frame = dataset.prepare(store)
+        if frame["w_last_3f"].notna().mean() < 0.05:
+            print("::warning::調教が入っていない。モデルが不利な状態なので"
+                  "コメントの残差が過大に出る")
+
+        booster = ml.load(args.config_dir / "model.txt")
+        if booster is None:
+            log.error("モデルが無い。先に train を回すこと")
+            return 1
+        frame["p"] = ml.predict(booster, frame)
+
+        sub = frame[frame["cm_net"].notna() & frame["placed"].notna()].copy()
+        sub["dir"] = np.where(
+            sub["cm_net"] > 0, "前向き",
+            np.where(sub["cm_net"] < 0, "後ろ向き", "中立"),
+        )
+        log.info("対象 %d頭 / 3着内率 %.1f%%", len(sub), sub["placed"].mean() * 100)
+
+        # モデルのスコアで5分割し、その中で向きごとに比べる
+        sub["bin"] = pd.qcut(sub["p"], 5, labels=False)
+        print("\nモデルのスコアをそろえてから比べる")
+        print(f"{'帯':4s} {'前向き':>14s} {'中立':>14s} {'後ろ向き':>14s} {'前-後':>8s} {'中-後':>8s}")
+        for b, g in sub.groupby("bin", observed=True):
+            cells = {}
+            for d in ("前向き", "中立", "後ろ向き"):
+                m = g[g["dir"] == d]
+                cells[d] = (m["placed"].mean(), len(m))
+            def show(d):
+                v, n = cells[d]
+                return f"{v:.1%}(n={n:,})" if n >= 30 else f"-(n={n})"
+            def gap(a, b2):
+                (va, na), (vb, nb) = cells[a], cells[b2]
+                return f"{100 * (va - vb):+.1f}" if na >= 30 and nb >= 30 else "-"
+            print(f"{b:<4d} {show('前向き'):>14s} {show('中立'):>14s} "
+                  f"{show('後ろ向き'):>14s} {gap('前向き','後ろ向き'):>8s} "
+                  f"{gap('中立','後ろ向き'):>8s}")
+
+        _comment_payout_check(store, sub)
+    return 0
+
+
+def _comment_payout_check(store: Store, sub) -> None:
+    """後ろ向きのコメントが付いた馬を外すと、払戻がどう動くか。
+
+    3着内率だけでは足りない。外した馬が人気薄なら的中は増えても配当は下がる。
+    実際の払戻で決済して並べる。
+
+    見るのは「モデル上位3頭の三連複」を1点だけ買った場合。買い方の議論を
+    混ぜないために、いちばん単純な形に固定する。
+    """
+    import pandas as pd
+
+    payouts = pd.read_sql_query(
+        "SELECT race_id, combination, payout FROM payouts WHERE bet_type = '三連複'",
+        store.conn,
+    )
+    table = {
+        (r.race_id, frozenset(r.combination.split("-"))): r.payout
+        for r in payouts.itertuples()
+    }
+
+    rows = []
+    for race_id, g in sub.groupby("race_id", observed=True):
+        if len(g) < 6:
+            continue
+        top3 = g.nlargest(3, "p")
+        # 後ろ向きの馬を落として、次点を繰り上げる
+        kept = g[g["cm_net"] >= 0].nlargest(3, "p")
+        if len(kept) < 3:
+            continue
+        for label, pick in (("そのまま", top3), ("後ろ向きを外す", kept)):
+            combo = frozenset(str(int(u)) for u in pick["umaban"])
+            rows.append({
+                "race_id": race_id, "how": label,
+                "spend": 100,
+                "back": table.get((race_id, combo), 0),
+            })
+
+    if not rows:
+        print("\n払戻の比較: 対象レースなし")
+        return
+
+    df = pd.DataFrame(rows)
+    print("\n三連複1点（モデル上位3頭）を実際の払戻で決済")
+    print(f"{'買い方':16s} {'R数':>6s} {'的中':>5s} {'投資':>9s} {'払戻':>10s} {'回収率':>8s}")
+    for how, g in df.groupby("how"):
+        hit = (g["back"] > 0).sum()
+        spend, back = g["spend"].sum(), g["back"].sum()
+        print(f"{how:16s} {len(g):6,} {hit:5,} {spend:9,} {back:10,} "
+              f"{back / spend:7.1%}")
+
+    # 最高配当を除いた数字も出す。1本の大穴で結論が変わるのを防ぐ
+    print("\n最高配当を除くと")
+    for how, g in df.groupby("how"):
+        g2 = g.drop(g["back"].idxmax())
+        print(f"{how:16s} {g2['back'].sum() / g2['spend'].sum():7.1%}")
+
+
 def cmd_probe_race(args: argparse.Namespace) -> int:
     """1レースぶんを netkeiba から全部引けるか、構造だけ見る。
 
@@ -1389,6 +1518,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--offset", type=int, default=0, help="対象リストの先頭から飛ばす頭数（並列分割用）"
     )
     p.set_defaults(func=cmd_backfill_pedigree)
+
+    p = sub.add_parser(
+        "comment-value",
+        help="厩舎コメントにモデルが取りこぼした情報が残っているか測る",
+    )
+    p.set_defaults(func=cmd_comment_value)
 
     p = sub.add_parser("health", help="有料データがその開催日ぶん入っているか数える")
     p.add_argument("--date", dest="day", type=_date, required=True)

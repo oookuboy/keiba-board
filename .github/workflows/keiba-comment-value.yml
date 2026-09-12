@@ -1,0 +1,58 @@
+name: keiba-comment-value
+
+# 厩舎コメントに、モデルが取りこぼしている情報が残っているかを測る。
+#
+# ## 手元では測れない
+#
+# 調教は artifact にしかなく、開発セッションからは取れない（外部blobが
+# 組織ポリシーで遮断されている）。調教なしで採点するとモデルが不利になり、
+# **コメントの残差が過大に出る。** 実際に手元で測ると各スコア帯で
+# +2.6〜+7.1pt の残差が出たが、その数字は信用できない。
+#
+# 調教を戻した状態で測り直すためのワークフロー。
+#
+# ## 何を決めるための測定か
+#
+# コメントを列にしてもモデルの gain はほぼ0だった（71位 309 / 下位3列は0）。
+# 学習行のうちコメントがあるのが 9.1% しかないため。
+#
+# ここで「モデルのスコアをそろえても差が残る」なら、モデルが取りこぼして
+# いるので明示的な上乗せに根拠がある。残らないなら他の81列が同じことを
+# 言っているので、**何もしない**のが正しい。
+#
+# 回収率も並べる。3着内率が上がっても人気側に偏っていれば回収率は上がらない。
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  # 週末の運用を待たせない
+  group: keiba-comment-value
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+
+      # これが本題。調教なしで測ると結論が変わる
+      - name: 調教を artifact から戻す
+        uses: ./.github/actions/workouts
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: DB を作る
+        run: python -m keiba.cli build
+
+      - name: 測る
+        run: python -m keiba.cli -v comment-value
