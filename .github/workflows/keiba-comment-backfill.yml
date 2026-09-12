@@ -99,31 +99,6 @@ jobs:
 
           python -m keiba.cli build
 
-      # 何レースぶん取れたかを日付ごとに出す。本文は出さない。
-      - name: どこまで遡れたかを数える
-        run: |
-          python - <<'PY'
-          import sqlite3
-          c = sqlite3.connect("keiba/keiba.db")
-          rows = c.execute("""
-              SELECT substr(r.race_date, 1, 7) AS ym,
-                     COUNT(DISTINCT r.race_id)  AS races,
-                     COUNT(DISTINCT cm.race_id) AS with_comment,
-                     COUNT(cm.umaban)           AS comments
-              FROM races r
-              LEFT JOIN comments cm ON cm.race_id = r.race_id
-              GROUP BY ym HAVING with_comment > 0 ORDER BY ym
-          """).fetchall()
-          print(f"{'月':9s} {'レース':>6s} {'コメント有':>8s} {'件数':>7s}")
-          for ym, races, withc, n in rows:
-              print(f"{ym:9s} {races:6d} {withc:8d} {n:7d}")
-          total_races = c.execute("SELECT COUNT(*) FROM races").fetchone()[0]
-          withc = c.execute(
-              "SELECT COUNT(DISTINCT race_id) FROM comments").fetchone()[0]
-          print(f"\n全 {total_races} レース中 {withc} レースにコメント"
-                f"（{withc / total_races:.1%}）")
-          PY
-
       - name: 調教を artifact へ戻す
         if: always()
         uses: actions/upload-artifact@v4
@@ -147,3 +122,32 @@ jobs:
             git pull --rebase origin main
             git push origin HEAD:main
           fi
+
+      # 集計は**いちばん最後**に出す。ログは末尾しか取り出せないことがあり、
+      # 途中に置くと後続ステップの出力に押し流されて読めない（実際そうなった）。
+      - name: どこまで遡れたかを数える
+        if: always()
+        run: |
+          python -m keiba.cli build
+          python - <<'PY'
+          import sqlite3
+          c = sqlite3.connect("keiba/keiba.db")
+          rows = c.execute(
+              "SELECT substr(r.race_date, 1, 7) AS ym,"
+              "       COUNT(DISTINCT r.race_id),"
+              "       COUNT(DISTINCT cm.race_id),"
+              "       COUNT(cm.umaban)"
+              "  FROM races r"
+              "  LEFT JOIN comments cm ON cm.race_id = r.race_id"
+              " GROUP BY ym HAVING COUNT(DISTINCT cm.race_id) > 0"
+              " ORDER BY ym"
+          ).fetchall()
+          print("月        レース  コメント有    件数")
+          for ym, races, withc, n in rows:
+              print(f"{ym:9s} {races:6d} {withc:10d} {n:7d}")
+          total = c.execute("SELECT COUNT(*) FROM races").fetchone()[0]
+          withc = c.execute(
+              "SELECT COUNT(DISTINCT race_id) FROM comments").fetchone()[0]
+          print(f"\n全 {total} レース中 {withc} レースにコメント "
+                f"({withc / total:.1%})")
+          PY

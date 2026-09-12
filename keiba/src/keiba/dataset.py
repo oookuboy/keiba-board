@@ -177,7 +177,11 @@ def _prior_roll(df: pd.DataFrame, keys: list[str], column: str, window: int) -> 
 
 
 def build_features(
-    df: pd.DataFrame, speed_before=None, workouts: pd.DataFrame | None = None
+    df: pd.DataFrame,
+    speed_before=None,
+    workouts: pd.DataFrame | None = None,
+    comments: pd.DataFrame | None = None,
+    weights: dict | None = None,
 ) -> pd.DataFrame:
     """先読みなしの特徴量を組み立てる。
 
@@ -189,7 +193,7 @@ def build_features(
     有料データで、手元に無い環境（テストなど）でも同じ列がそろっていないと
     「呼び出し側によって列が違う」に逆戻りする。
     """
-    from keiba import speed, workout_features
+    from keiba import comment_features, speed, workout_features
 
     out = df.copy()
 
@@ -293,12 +297,23 @@ def build_features(
         out, pd.DataFrame() if workouts is None else workouts
     )
 
+    # --- 厩舎コメント（netkeiba 有料） -----------------------------------
+    # 手置きの重み側にしか無かったので、学習モデルで採点すると丸ごと捨てられ
+    # ていた（2026-09-11 発覚）。列にして初めて印に効く。
+    # 発走前に公開される情報なので先読みにはならない。
+    out = comment_features.attach(
+        out,
+        pd.DataFrame() if comments is None else comments,
+        weights if weights is not None else comment_features.load_keywords(),
+    )
+
     return out
 
 
 # 走破時計と調教の特徴量。定義はそれぞれのモジュール側に置いてある
 # （作り方の説明が長いため）。
 from keiba.speed import SPEED_FEATURES  # noqa: E402
+from keiba.comment_features import COMMENT_FEATURES  # noqa: E402
 from keiba.workout_features import WORKOUT_FEATURES  # noqa: E402
 
 FEATURE_COLUMNS = [
@@ -341,6 +356,14 @@ FEATURE_COLUMNS = [
     # 一方「人気薄」は +0.0083 → +0.0044 で再現しなかった。1回目だけ見て
     # 「狙っている層に効く」と言うところだった。切り口の数字は1回では信じない。
     *WORKOUT_FEATURES,
+    # 厩舎コメント（netkeiba 有料）。集めて判定コードまであったのに、手置きの
+    # 重み側にしか無かったので、学習モデルで採点すると丸ごと捨てられていた。
+    # 印は1頭も動いていなかった（2026-09-11 発覚）。列にして初めて効く。
+    #
+    # netkeiba は全レースに出すわけではない（新馬と 9R 以降の特別戦）。出ない
+    # 馬は欠損のままにする。0 で埋めると「コメントが無い」と「何も言っていない
+    # コメント」が混ざる。
+    *COMMENT_FEATURES,
     # カテゴリ
     *CATEGORICAL,
 ]
@@ -392,8 +415,19 @@ def prepare(
     else:
         log.info("調教 %d本を読み込み", len(workouts))
 
+    from keiba import comment_features
+
+    comments = comment_features.load_comments(store)
+    if comments.empty:
+        log.warning("厩舎コメントが1件も入っていない。コメントの列は欠損のまま進む")
+    else:
+        log.info("厩舎コメント %d件を読み込み", len(comments))
+
     log.info("特徴量を構築中（先読みなし）…")
-    df = build_features(df, speed_before=speed_before, workouts=workouts)
+    df = build_features(
+        df, speed_before=speed_before, workouts=workouts,
+        comments=comments, weights=comment_features.load_keywords(),
+    )
 
     assert_no_market_leakage(FEATURE_COLUMNS)
     for column in CATEGORICAL:
