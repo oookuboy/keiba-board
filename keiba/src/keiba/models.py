@@ -186,11 +186,38 @@ class HorseWorkout(_Row):
 
 @dataclass
 class TrainerComment(_Row):
+    """厩舎コメントから**数と語だけ**を残したもの。
+
+    ## 本文を保存しない
+
+    本文は netkeiba の有料会員向けの文章で、raw は公開リポジトリにコミット
+    される。数千件・数年ぶんを載せるのは規模として別の話になるので、収集した
+    時点で数に落とし、本文は捨てる。
+
+      positive / negative  前向き・後ろ向きな語の数（重なりは解いてある）
+      hits                 当たった語（根拠テキストに出す用・最大2語）
+      length               本文の長さ
+
+    学習に要るのは数のほうで、本文そのものではない。ボードの根拠テキストに
+    要るのは当たった語だけなので、hits で足りる。
+
+    body は当日の収集でだけ一時的に入る（判定はその場で行う）。raw へ書く
+    前に落とす。読み込み側は常に空として扱えること。
+    """
+
     race_id: str
     umaban: int
-    body: str
+    positive: int = 0
+    negative: int = 0
+    hits: list[str] = field(default_factory=list)
+    length: int = 0
+    body: str = ""
     source: str | None = None
     fetched_at: str | None = None
+
+    @property
+    def net(self) -> int:
+        return self.positive - self.negative
 
 
 @dataclass

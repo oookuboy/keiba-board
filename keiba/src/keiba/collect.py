@@ -20,12 +20,14 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from datetime import date, timedelta
 from pathlib import Path
 
 from collections import defaultdict
 
-from keiba.models import RaceCard
+from keiba import features
+from keiba.models import RaceCard, TrainerComment
 from keiba.sources import jra, netkeiba
 from keiba.sources.http import Fetcher, FetchError
 from keiba.store import read_jsonl, write_jsonl
@@ -100,6 +102,42 @@ def collect_day(
 
 # JRA公式の出馬表には無いが、別経路で集めて raw に載せているもの。
 # ここに挙げたものは、出馬表を取り直しても捨てない。
+def _score_comments(rows: list[TrainerComment]) -> list[TrainerComment]:
+    """本文をその場で数に落として、本文は捨てる。
+
+    ## なぜ収集の時点で落とすか
+
+    本文は netkeiba の有料会員向けの文章で、raw は公開リポジトリにコミット
+    される。数千件・数年ぶんを載せるのは規模として別の話になる。
+
+    学習に要るのは数（前向き・後ろ向きの語数）で、本文そのものではない。
+    ボードの根拠テキストに要るのは当たった語だけなので hits で足りる。
+    **後で消すのではなく、最初から持たない。** 一度コミットすると履歴に
+    残るので、落とす場所は収集の出口でなければ意味がない。
+    """
+    from keiba import comment_features
+
+    cfg = comment_features.load_keywords()
+    positive = list(cfg.get("positive_keywords", []))
+    negative = list(cfg.get("negative_keywords", []))
+
+    out: list[TrainerComment] = []
+    for row in rows:
+        body = row.body or ""
+        good, bad = features._keyword_sides(body, positive, negative)
+        out.append(
+            replace(
+                row,
+                positive=len(good),
+                negative=len(bad),
+                hits=(good if len(good) > len(bad) else bad)[:2],
+                length=len(body),
+                body="",
+            )
+        )
+    return out
+
+
 EXTRA_FIELDS = ("comments", "workouts", "past_runs", "results", "payouts")
 
 
@@ -285,9 +323,11 @@ def collect_paid(
                 rows = netkeiba.parse_race_oikiri(
                     fetcher.fetch(OIKIRI_URL.format(race_id=race_id), force=True)
                 )
-                comments = netkeiba.parse_race_comments(
-                    fetcher.fetch(COMMENT_URL.format(race_id=race_id), force=True),
-                    race_id,
+                comments = _score_comments(
+                    netkeiba.parse_race_comments(
+                        fetcher.fetch(COMMENT_URL.format(race_id=race_id), force=True),
+                        race_id,
+                    )
                 )
             except FetchError as exc:
                 log.warning("%s の有料データを取れない: %s", race_id, exc)

@@ -10,6 +10,7 @@ SKILL.md の各観点を、DB から計算できる 0.0〜1.0 の数値に落と
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
 from datetime import date, timedelta
@@ -346,27 +347,33 @@ def trainer_comment_bonus(
 
     語をそのまま含むかで見るので、打ち消しには弱い。「悪くない」「良くなって」
     のように向きが反転する語は、どちらの表にも入れない。
+
+    ## 本文はここには無い
+
+    数え上げは**収集の時点**で済ませてある（collect._score_comments）。本文は
+    有料会員向けの文章で、raw は公開リポジトリに入るので保存していない。
+    ここが読むのは数と、当たった語だけ。判定の規則そのものは _keyword_sides に
+    あり、収集側と共有している。
     """
     row = store.conn.execute(
-        "SELECT body FROM comments WHERE race_id = ? AND umaban = ?",
+        "SELECT positive, negative, hits FROM comments"
+        " WHERE race_id = ? AND umaban = ?",
         (race.race_id, entry.umaban),
     ).fetchone()
-    if not row or not row[0]:
+    if not row:
         return 0.0, None
-    body = row[0]
 
-    good, bad = _keyword_sides(
-        body, cfg["positive_keywords"], cfg.get("negative_keywords", [])
-    )
-    if len(good) > len(bad):
+    good, bad, hits = row[0] or 0, row[1] or 0, row[2]
+    words = json.loads(hits) if hits else []
+    if good > bad:
         return (
             cfg["trainer_comment"],
-            f"厩舎コメントに前向きな語（{'・'.join(good[:2])}）",
+            f"厩舎コメントに前向きな語（{'・'.join(words[:2])}）",
         )
-    if len(bad) > len(good):
+    if bad > good:
         return (
             -cfg["trainer_comment"],
-            f"厩舎コメントに後ろ向きな語（{'・'.join(bad[:2])}）",
+            f"厩舎コメントに後ろ向きな語（{'・'.join(words[:2])}）",
         )
     return 0.0, None
 

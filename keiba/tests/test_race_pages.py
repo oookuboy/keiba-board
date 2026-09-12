@@ -173,11 +173,31 @@ def test_comments_ignore_rows_without_a_number() -> None:
 
 
 def _store_with_comment(tmp_path, body: str):
+    """本文を**収集の経路**に通してから入れる。
+
+    本文は保存しない設計なので、テストで body 列へ直接入れると実際と違う
+    ものを測る。collect._score_comments を通し、DB に入るのと同じ形
+    （数と当たった語）で置く。
+    """
+    import json
+
+    from keiba.collect import _score_comments
+    from keiba.models import TrainerComment
     from keiba.store import Store
+
+    scored = _score_comments([TrainerComment(race_id="R", umaban=1, body=body)])[0]
+    assert not scored.body, "収集の出口で本文が落ちていない"
 
     store = Store(tmp_path / "t.db")
     store.conn.execute(
-        "INSERT INTO comments (race_id, umaban, body) VALUES ('R', 1, ?)", (body,)
+        "INSERT INTO comments (race_id, umaban, positive, negative, hits, length)"
+        " VALUES ('R', 1, ?, ?, ?, ?)",
+        (
+            scored.positive,
+            scored.negative,
+            json.dumps(scored.hits, ensure_ascii=False),
+            scored.length,
+        ),
     )
     store.conn.commit()
     return store

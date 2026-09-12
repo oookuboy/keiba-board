@@ -67,9 +67,14 @@ COMMENT_FEATURES = [
 
 
 def load_comments(store) -> pd.DataFrame:
-    """comments テーブルを丸ごと読む。race_id・umaban・本文だけ。"""
+    """comments テーブルを読む。**本文は保存していない。**
+
+    数え上げは収集の時点で済ませてある（collect._score_comments）。本文は
+    netkeiba の有料会員向けの文章で、raw は公開リポジトリに入るので持たない。
+    ここが読むのは数だけ。
+    """
     return pd.read_sql_query(
-        "SELECT race_id, umaban, body FROM comments WHERE body IS NOT NULL AND body <> ''",
+        "SELECT race_id, umaban, positive, negative, length FROM comments",
         store.conn,
     )
 
@@ -122,16 +127,25 @@ def attach(frame: pd.DataFrame, comments: pd.DataFrame, cfg: dict) -> pd.DataFra
         out["cm_has"] = 0.0
         return out
 
-    positive = list(cfg.get("positive_keywords", []))
-    negative = list(cfg.get("negative_keywords", []))
-
     scored = comments.copy()
-    counted = scored["body"].map(lambda b: _sides(str(b), positive, negative))
-    scored["cm_positive"] = [p for p, _ in counted]
-    scored["cm_negative"] = [n for _, n in counted]
+    if "body" in scored.columns:
+        # 収集の出口を通っていない古い raw から来た行だけ、ここで数える。
+        # 新しい経路では body 列そのものが無い。
+        positive = list(cfg.get("positive_keywords", []))
+        negative = list(cfg.get("negative_keywords", []))
+        counted = scored["body"].fillna("").map(
+            lambda b: _sides(str(b), positive, negative)
+        )
+        scored["positive"] = [p for p, _ in counted]
+        scored["negative"] = [n for _, n in counted]
+        scored["length"] = scored["body"].fillna("").str.len()
+        scored = scored.drop(columns=["body"])
+
+    scored["cm_positive"] = scored["positive"].fillna(0)
+    scored["cm_negative"] = scored["negative"].fillna(0)
     scored["cm_net"] = scored["cm_positive"] - scored["cm_negative"]
-    scored["cm_len"] = scored["body"].str.len()
-    scored = scored.drop(columns=["body"])
+    scored["cm_len"] = scored["length"].fillna(0)
+    scored = scored.drop(columns=["positive", "negative", "length"])
 
     out = out.drop(columns=COMMENT_FEATURES).merge(
         scored, on=["race_id", "umaban"], how="left"

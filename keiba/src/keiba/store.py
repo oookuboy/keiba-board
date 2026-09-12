@@ -108,8 +108,13 @@ CREATE TABLE IF NOT EXISTS horse_workouts (
 CREATE INDEX IF NOT EXISTS idx_horse_workouts_date
     ON horse_workouts(horse_id, workout_date);
 
+-- 厩舎コメントは**本文を持たない**。有料会員向けの文章で、raw は公開
+-- リポジトリにコミットされる。収集の出口で数に落としてある（models
+-- .TrainerComment を見ること）。body 列は当日の一時的な値だけが入りうる。
 CREATE TABLE IF NOT EXISTS comments (
     race_id TEXT NOT NULL, umaban INTEGER NOT NULL,
+    positive INTEGER DEFAULT 0, negative INTEGER DEFAULT 0,
+    hits TEXT, length INTEGER DEFAULT 0,
     body TEXT, source TEXT, fetched_at TEXT,
     PRIMARY KEY (race_id, umaban)
 );
