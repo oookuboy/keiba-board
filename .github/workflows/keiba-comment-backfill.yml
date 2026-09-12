@@ -1,0 +1,149 @@
+name: keiba-comment-backfill
+
+# 厩舎コメントを過去へ遡って集める。
+#
+# ## なぜ要るか
+#
+# コメントは収集も判定コードもあるのに、予想に効いていない。engine.run は
+# 学習モデルで採点するとき手置きの重みを丸ごと捨てるので、コメントの加点が
+# 印に届かない。モデルの列にすれば届くが、学習データが足りない。
+#
+#     学習に使えるレース 11,057
+#     うちコメントのあるレース  63   ← 2026-08-29 以降の5日ぶんだけ
+#
+# 63レースでは何も学習できない。**足りないのはコードではなくデータ。**
+#
+# ## 取れるかどうかは測らないと分からない
+#
+# netkeiba は走り終わったレースのコメントを落としていく（replay で実測した
+# ときに被覆率が下がった）。どこまで遡れるかは推測せず、実際に引いて数える。
+# 先に少数の日付で測り、取れると分かってから範囲を広げる。
+#
+# ## ログに本文を出さない
+#
+# コメントは有料データで、このログは公開される。出すのは**件数だけ**。
+
+on:
+  workflow_dispatch:
+    inputs:
+      dates:
+        description: "日付をスペース区切りで（例: 2026-01-05 2026-04-13）。range より優先"
+        required: false
+        default: ""
+      start:
+        description: "開始日 YYYY-MM-DD（dates が空のとき使う）"
+        required: false
+        default: ""
+      days:
+        description: "start から何日ぶん見るか"
+        required: false
+        default: "14"
+      commit:
+        description: "集めたものをコミットするか"
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  # 週末の収集・予想と raw/ を取り合わない
+  group: keiba-weekend
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+
+      - name: 調教を artifact から戻す
+        uses: ./.github/actions/workouts
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 遡って引く
+        env:
+          NETKEIBA_EMAIL: ${{ secrets.NETKEIBA_EMAIL }}
+          NETKEIBA_PASSWORD: ${{ secrets.NETKEIBA_PASSWORD }}
+        run: |
+          set -o pipefail
+          DATES="${{ inputs.dates }}"
+          if [ -z "$DATES" ]; then
+            START="${{ inputs.start }}"
+            [ -n "$START" ] || { echo "::error::dates か start のどちらかが要る"; exit 1; }
+            DATES=""
+            for i in $(seq 0 $(( ${{ inputs.days }} - 1 ))); do
+              DATES="$DATES $(date -u -d "$START + $i day" +%F)"
+            done
+          fi
+
+          for D in $DATES; do
+            # 開催の無い日は raw が無い。引く前に弾く（リクエストを無駄にしない）
+            Y=${D%%-*}
+            if [ ! -f "keiba/raw/$Y/$D.jsonl.gz" ]; then
+              echo "$D: 出馬表なし（開催なし）"
+              continue
+            fi
+            python -m keiba.cli \
+              --workouts keiba/raw/workouts.jsonl.gz \
+              collect-paid --date "$D" --days 1 || echo "$D: 取得に失敗"
+          done
+
+          python -m keiba.cli build
+
+      # 何レースぶん取れたかを日付ごとに出す。本文は出さない。
+      - name: どこまで遡れたかを数える
+        run: |
+          python - <<'PY'
+          import sqlite3
+          c = sqlite3.connect("keiba/keiba.db")
+          rows = c.execute("""
+              SELECT substr(r.race_date, 1, 7) AS ym,
+                     COUNT(DISTINCT r.race_id)  AS races,
+                     COUNT(DISTINCT cm.race_id) AS with_comment,
+                     COUNT(cm.umaban)           AS comments
+              FROM races r
+              LEFT JOIN comments cm ON cm.race_id = r.race_id
+              GROUP BY ym HAVING with_comment > 0 ORDER BY ym
+          """).fetchall()
+          print(f"{'月':9s} {'レース':>6s} {'コメント有':>8s} {'件数':>7s}")
+          for ym, races, withc, n in rows:
+              print(f"{ym:9s} {races:6d} {withc:8d} {n:7d}")
+          total_races = c.execute("SELECT COUNT(*) FROM races").fetchone()[0]
+          withc = c.execute(
+              "SELECT COUNT(DISTINCT race_id) FROM comments").fetchone()[0]
+          print(f"\n全 {total_races} レース中 {withc} レースにコメント"
+                f"（{withc / total_races:.1%}）")
+          PY
+
+      - name: 調教を artifact へ戻す
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workouts
+          path: keiba/raw/workouts.jsonl.gz
+          retention-days: 90
+          overwrite: true
+          if-no-files-found: warn
+
+      - name: Commit
+        if: ${{ always() && inputs.commit }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A keiba/raw
+          if git diff --cached --quiet; then
+            echo "変化なし"
+          else
+            git commit -m "chore(keiba): backfill comments"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
