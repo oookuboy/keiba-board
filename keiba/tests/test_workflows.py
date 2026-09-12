@@ -380,3 +380,31 @@ def test_data_committing_workflows_can_trigger_a_redeploy() -> None:
     assert not missing, (
         f"データをコミットするのに配信を起こさないワークフロー: {missing}"
     )
+
+
+def test_バックフィルが週末の運用を待たせない() -> None:
+    """長時間走るジョブを、発走に間に合わせたいジョブと同じ群に入れない。
+
+    厩舎コメントのバックフィルは1年ぶんで約3時間かかる。concurrency の群を
+    週末の運用（収集・予想・回顧）と共有していると、走っている間に予想の
+    定時が来たら待たされる。予想は発走前に出なければ価値がゼロなので、
+    これは「遅れる」ではなく「無くなる」。
+
+    2026-09-12 にこの形を作りかけた（1年ぶんのバックフィルを keiba-weekend
+    群で回した）。たまたま予想の定時より先に終わったので事故にならなかった。
+    """
+    import yaml
+
+    weekend = yaml.safe_load(
+        (WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8")
+    )["concurrency"]["group"]
+
+    for name in ("keiba-comment-backfill.yml", "keiba-workouts.yml"):
+        path = WORKFLOWS / name
+        if not path.exists():
+            continue
+        group = yaml.safe_load(path.read_text(encoding="utf-8"))["concurrency"]["group"]
+        assert group != weekend, (
+            f"{name} が週末の運用と同じ群（{group}）にある。"
+            " 長いバックフィルが予想を発走後まで押し出しうる"
+        )

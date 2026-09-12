@@ -49,8 +49,13 @@ permissions:
   actions: read
 
 concurrency:
-  # 週末の収集・予想と raw/ を取り合わない
-  group: keiba-weekend
+  # **週末の運用と同じ群にしない。** バックフィルは1年ぶんで3時間かかる。
+  # 同じ群に入れると、走っている間に予想の定時が来たら待たされ、発走までに
+  # 予想が出ないという事故になる。実際 2026-09-12 にその形を作りかけた。
+  #
+  # raw の取り合いは、触る日付が重ならないことで避ける（バックフィルは
+  # 過去日、週末の運用は当週）。commit は git pull --rebase を通す。
+  group: keiba-backfill
   cancel-in-progress: false
 
 jobs:
