@@ -13,21 +13,26 @@ on:
     - cron: "0 11 * * 4"
     # 金 21:00 JST = 金 12:00 UTC — 出馬表が出そろったころに収集
     - cron: "0 12 * * 5"
-    # 土日 05:00 JST = 金土 20:00 UTC — 前日夜の予想確定
-    - cron: "0 20 * * 5,6"
-    # 土日 07:00 JST = 土日 22:00 UTC(前日) — 当日朝の再生成
-    - cron: "0 22 * * 5,6"
+    # 開催日 05:00 JST = 前日 20:00 UTC — 前日夜の予想確定
+    #
+    # 金土だけにしていたので、**祝日の月曜開催で予想が1つも出なかった**。
+    # 2026-09-21（敬老の日）は24レースの出馬表が取れているのに予想が無い。
+    # 日曜も足して月曜05:00 JST を拾う。開催が無ければ中で飛ばす。
+    - cron: "0 20 * * 5,6,0"
+    # 開催日 07:00 JST = 前日 22:00 UTC — 当日朝の再生成
+    - cron: "0 22 * * 5,6,0"
     # 土日 22:00 JST = 土日 13:00 UTC — **当日の**結果照合と回顧
     #
     # 一度これで着順を1件も取れず翌朝に倒したが、原因は時刻ではなく経路だった。
     # db.netkeiba は結果データベースで反映が遅い。JRA公式は確定後すぐ出るので、
     # そちらを先に見るようにした今なら当日中に回せる。
-    - cron: "0 13 * * 6,0"
+    # 月曜も足す（3日開催の最終日を当日中に回顧する）
+    - cron: "0 13 * * 6,0,1"
     # 日月 09:00 JST = 土日 00:00 UTC — 前日ぶんの取りこぼしを拾う
     #
     # 当日の回顧が終わっていても害は無い。回顧は「前より多く照合できたとき
     # だけ」記録を差し替えるので、遅れて出た着順を拾い直す保険になる。
-    - cron: "0 0 * * 0,1"
+    - cron: "0 0 * * 0,1,2"
   workflow_dispatch:
     inputs:
       job:
@@ -79,10 +84,10 @@ jobs:
             case "${{ github.event.schedule }}" in
               "0 11 * * 4")     JOB=preview ;;
               "0 12 * * 5")     JOB=collect ;;
-              "0 20 * * 5,6")   JOB=predict ;;
-              "0 22 * * 5,6")   JOB=predict ;;
-              "0 13 * * 6,0")   JOB=review; SAMEDAY=1 ;;
-              "0 0 * * 0,1")    JOB=review  ;;
+              "0 20 * * 5,6,0") JOB=predict ;;
+              "0 22 * * 5,6,0") JOB=predict ;;
+              "0 13 * * 6,0,1") JOB=review; SAMEDAY=1 ;;
+              "0 0 * * 0,1,2")  JOB=review  ;;
               *)                JOB=predict ;;
             esac
           fi
@@ -118,8 +123,25 @@ jobs:
           #
           # UTC なら 00:00 UTC まで12時間の余裕がある。
           # "next saturday" ではなく "saturday"（今日が土曜なら今日）を使う。
-          SAT=$(date -u -d "saturday" +%F)
-          SUN=$(date -u -d "sunday" +%F)
+          # **曜日を数え上げない。** 土日だけを見る作りだったので、祝日の
+          # 月曜開催（2026-09-21 敬老の日）が丸ごと落ちていた。出馬表は
+          # 取れているのに予想が1つも出ない、という形。
+          #
+          # 開催のある日は raw を見れば分かる。今日以降7日ぶんのうち、
+          # 出馬表のあるファイルが存在する日を対象にする。
+          DAYS=""
+          for i in $(seq 0 7); do
+            D=$(date -u -d "+$i day" +%F)
+            [ -f "keiba/raw/${D%%-*}/$D.jsonl.gz" ] && DAYS="$DAYS $D"
+          done
+          DAYS=$(echo $DAYS)
+          echo "開催のある日: ${DAYS:-なし}"
+          # 後方互換。sat/sun は preview と収集の点検が使っている
+          SAT=$(echo $DAYS | cut -d" " -f1)
+          SUN=$(echo $DAYS | cut -d" " -f2)
+          [ -n "$SAT" ] || SAT=$(date -u -d "saturday" +%F)
+          [ -n "$SUN" ] || SUN=$(date -u -d "sunday" +%F)
+          echo "days=$DAYS" >> "$GITHUB_OUTPUT"
           # 有料データの対象。手で日付を指定したときはそちらを優先する。
           # 過ぎた開催に対して収集をやり直せないと、金曜まで検証できない。
           PAID="${{ inputs.date }}"
@@ -147,15 +169,14 @@ jobs:
         if: steps.plan.outputs.job == 'preview'
         run: |
           set -o pipefail
-          SAT="${{ steps.plan.outputs.sat }}"
-          SUN="${{ steps.plan.outputs.sun }}"
-          echo "対象: $SAT / $SUN"
+          DAYS="${{ steps.plan.outputs.days }}"
+          echo "対象: ${DAYS:-なし}"
           # 発走前は JRA公式が唯一の経路。db.netkeiba には race_id が無い
           python -m keiba.cli collect --upcoming
           python -m keiba.cli build
 
           FOUND=0
-          for D in "$SAT" "$SUN"; do
+          for D in $DAYS; do
             N=$(python - "$D" <<'PY'
           import sys, sqlite3
           c = sqlite3.connect("keiba/keiba.db")
@@ -198,10 +219,15 @@ jobs:
           NETKEIBA_EMAIL: ${{ secrets.NETKEIBA_EMAIL }}
           NETKEIBA_PASSWORD: ${{ secrets.NETKEIBA_PASSWORD }}
         run: |
-          PAID="${{ steps.plan.outputs.paid }}"
-          python -m keiba.cli -v \
-            --workouts keiba/raw/workouts.jsonl.gz \
-            collect-paid --date "$PAID" --days 2
+          # 2日固定にしていたので、3日開催の最終日が引けていなかった。
+          # 開催のある日を1日ずつ引く。
+          DAYS="${{ steps.plan.outputs.days }}"
+          [ -n "$DAYS" ] || DAYS="${{ steps.plan.outputs.paid }}"
+          for D in $DAYS; do
+            python -m keiba.cli -v \
+              --workouts keiba/raw/workouts.jsonl.gz \
+              collect-paid --date "$D" --days 1 || echo "$D: 取得に失敗"
+          done
           python -m keiba.cli build
 
       # 過去の履歴は馬単位のページにしか無い。レース単位で取れるのは当該
@@ -231,7 +257,7 @@ jobs:
       - name: 今週の有料データが入ったか確かめる
         if: steps.plan.outputs.job == 'collect'
         run: |
-          for D in "${{ steps.plan.outputs.sat }}" "${{ steps.plan.outputs.sun }}"; do
+          for D in ${{ steps.plan.outputs.days }}; do
             echo "--- $D"
             python -m keiba.cli health --date "$D" --strict
           done

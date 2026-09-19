@@ -193,7 +193,7 @@ def build_features(
     有料データで、手元に無い環境（テストなど）でも同じ列がそろっていないと
     「呼び出し側によって列が違う」に逆戻りする。
     """
-    from keiba import comment_features, speed, workout_features
+    from keiba import comment_features, pace_features, speed, workout_features
 
     out = df.copy()
 
@@ -297,6 +297,19 @@ def build_features(
         out, pd.DataFrame() if workouts is None else workouts
     )
 
+    # --- 展開・隊列 ------------------------------------------------------
+    # SKILL.md が「予想の核心」と書いている展開読みは手置きの側にしか無く、
+    # 学習モデルで採点する本番では丸ごと捨てられていた（engine.run が
+    # ml_scores のとき apply_floors を呼ばない）。**印は展開を見ていなかった。**
+    # 材料は過去走の通過順だけなので先読みにはならない。
+    pace_cfg = pace_features.load_pace_config()
+    out = pace_features.attach(
+        out,
+        front_threshold=pace_cfg.get("style_thresholds", {}).get("逃げ", 0.15),
+        small_field_max=pace_cfg.get("small_field_max", 10),
+        multi_front_runners=pace_cfg.get("multi_front_runners", 2),
+    )
+
     # --- 厩舎コメント（netkeiba 有料） -----------------------------------
     # 手置きの重み側にしか無かったので、学習モデルで採点すると丸ごと捨てられ
     # ていた（2026-09-11 発覚）。列にして初めて印に効く。
@@ -314,6 +327,7 @@ def build_features(
 # （作り方の説明が長いため）。
 from keiba.speed import SPEED_FEATURES  # noqa: E402
 from keiba.comment_features import COMMENT_FEATURES  # noqa: E402
+from keiba.pace_features import PACE_FEATURES  # noqa: E402
 from keiba.workout_features import WORKOUT_FEATURES  # noqa: E402
 
 FEATURE_COLUMNS = [
@@ -364,6 +378,10 @@ FEATURE_COLUMNS = [
     # 馬は欠損のままにする。0 で埋めると「コメントが無い」と「何も言っていない
     # コメント」が混ざる。
     *COMMENT_FEATURES,
+    # 展開・隊列。SKILL.md が「予想の核心」と書いているのに、手置きの側に
+    # しか無かったので本番では1ミリも効いていなかった。レース内の相対で
+    # 作る（同じ通過順 0.2 でも、他に前へ行く馬が居るかで意味が変わる）。
+    *PACE_FEATURES,
     # カテゴリ
     *CATEGORICAL,
 ]

@@ -147,3 +147,60 @@ def test_厩舎コメントがモデルの列になったら一覧から外す()
         assert "comments" not in KNOWN_GAPS, (
             "comments を特徴量にしたなら KNOWN_GAPS から外すこと"
         )
+
+
+# --- 表だけでなく、手置きのロジックも照合する ---------------------------
+#
+# 表の照合（上）は DB のテーブルを見る作りで、**手置きのロジックは対象外**
+# だった。同じ穴がもう1つ空いていて、2026-09-19 に見つかった。
+#
+#     engine.run:
+#         if ml_scores is None:
+#             apply_floors(horses, weights)
+#
+# 本番は ml_scores があるので呼ばれない。想定ペースの加点も score_horse 側。
+# SKILL.md が「予想の核心」と書いている展開読みが、印を1ミリも動かして
+# いなかった。
+#
+# 手置き側にある判断は、モデルの列として同じことが表現されていなければ
+# 本番に届かない。対応表を置いて、抜けたら落とす。
+
+# 手置きの判断 → それを表す特徴量の接頭辞
+HAND_LOGIC = {
+    "想定ペース（教訓2・7）": "pc_",
+    "単騎逃げの床（教訓8）": "pc_",
+    "厩舎コメントの向き": "cm_",
+    "条件一変": "c_",
+    "血統の馬場替わり（教訓1）": "ss_",
+}
+
+
+def test_手置きの判断がモデルの列にもある() -> None:
+    """手置き側にしかない判断を残さない。
+
+    engine.run は学習モデルで採点するとき手置きのスコアを丸ごと捨てる。
+    捨てられる側にしか無い判断は、**本番では存在しないのと同じ**。
+    """
+    from keiba.dataset import FEATURE_COLUMNS
+
+    missing = [
+        name for name, prefix in HAND_LOGIC.items()
+        if not any(c.startswith(prefix) for c in FEATURE_COLUMNS)
+    ]
+    assert not missing, (
+        f"手置きにあってモデルに無い判断: {missing}。"
+        " 本番は ml_scores で採点するので、列にしないと印に効かない"
+    )
+
+
+def test_モデル採点のとき手置きのスコアが捨てられることを忘れない() -> None:
+    """この事実がコードから消えたら、上の対応表は要らなくなる。
+
+    逆に言えば、消えていないうちは対応表を維持しなければならない。
+    engine.run の形が変わったときに気づけるようにしておく。
+    """
+    source = (SRC / "engine.py").read_text(encoding="utf-8")
+    assert "if ml_scores is None:" in source, (
+        "engine.run の分岐が変わった。手置きの判断が本番に届くように"
+        " なったのなら HAND_LOGIC は不要。まだなら書き換えること"
+    )

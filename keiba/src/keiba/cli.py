@@ -21,7 +21,7 @@ import yaml
 
 from keiba import backfill, backtest, collect, predict, review
 from keiba.sources.http import Fetcher
-from keiba.store import Store, rebuild
+from keiba.store import Store, read_jsonl, rebuild
 
 log = logging.getLogger(__name__)
 
@@ -360,6 +360,24 @@ HEALTH_FLOOR = 0.5
 WORKOUT_WINDOW = 21
 
 
+def _runners_in_raw(args: argparse.Namespace, day: str) -> int:
+    """その日の出馬表に何頭載っているか。DB ではなく raw を見る。
+
+    DB は枠順の確定していない馬を入れない。「まだ枠順が出ていない」と
+    「集めそこねた」を見分けるには、集めた元のほうを数える必要がある。
+    """
+    raw_dir = getattr(args, "raw_dir", None)
+    if raw_dir is None:
+        return 0
+    path = raw_dir / day[:4] / f"{day}.jsonl.gz"
+    if not path.exists():
+        return 0
+    try:
+        return sum(len(card.entries) for card in read_jsonl(path))
+    except OSError:
+        return 0
+
+
 def cmd_health(args: argparse.Namespace) -> int:
     """有料データがその開催日ぶん入っているかを数える。
 
@@ -403,6 +421,25 @@ def cmd_health(args: argparse.Namespace) -> int:
             """,
             (since, day, day),
         ).fetchall()
+
+    # 枠順がまだ出ていない日を裁かない。
+    #
+    # JRA は土曜ぶんの枠順を先に出す。日曜・月曜は金曜の収集時点でまだ
+    # 未確定で、build が馬番の無い馬を DB へ入れないため、出走頭数が
+    # 数頭しか立たない。そこへ「有料データが1レースも取れていない」と
+    # 出すのは**存在しないものを欠落と数えている**だけで、2026-09-18 は
+    # これで収集ジョブが失敗し、ボードにも赤帯が出た。
+    #
+    # 先週2つ潰した「毎週かならず鳴る警報」の3つ目。出馬表そのものが
+    # 揃っていない日は、点検の対象にしない。
+    entered = sum(r[1] for r in rows)
+    expected = _runners_in_raw(args, day)
+    if expected and entered < expected * 0.5:
+        log.info(
+            "%s: 枠順が未確定（DB %d頭 / 出馬表 %d頭）。点検はまだ行わない",
+            day, entered, expected,
+        )
+        return 0
 
     kinds = {
         "workouts": ("調教", 2),

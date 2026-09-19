@@ -131,7 +131,11 @@ def test_the_review_runs_on_the_day_of_the_races() -> None:
 
     minute, hour, _, _, dow = same_day.group(1).split()
     assert int(hour) < 14, "JST の深夜になる。UTC 13時=JST 22時あたりに置くこと"
-    assert set(dow.split(",")) == {"6", "0"}, "土日に走らせること"
+    # 祝日の月曜開催（敬老の日・体育の日など）も当日中に回顧する。
+    # 土日だけにしていたので、2026-09-21 の3日開催で最終日が落ちていた。
+    days = set(dow.split(","))
+    assert {"6", "0"} <= days, "土日に走らせること"
+    assert "1" in days, "祝日の月曜開催が当日回顧されない"
 
 
 def test_the_review_target_day_survives_a_late_cron() -> None:
