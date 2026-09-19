@@ -1,0 +1,67 @@
+name: keiba-edge
+
+# 市場と自分の評価のズレに妙味があるかを測る。
+#
+# ## 問い
+#
+# 「人気が無い馬でも、調教や展開などの情報が良ければ来るのではないか」。
+#
+# これは人気を能力評価に混ぜる話ではない。能力の採点はオッズを一切見ずに
+# 行い（SKILL.md の絶対ルール）、**そのうえで市場の織り込みと比べる**。
+# 市場が間違えている場所を探す、という別の層の話。
+#
+# ## 手元では測れない
+#
+# 調教は artifact にしかない。調教なしで採点するとモデルが不利になり、
+# 乖離が過大に出る。コメントの残差を測ったときと同じ罠。
+#
+# ## 何で判定するか
+#
+# 実際の複勝払戻で回収率を出す。複勝の控除率は20%なので、でたらめに買えば
+# 約80%。ここを超える区分があれば、そこに市場の取りこぼしがある。
+
+on:
+  workflow_dispatch:
+    inputs:
+      valid_from:
+        description: "検証開始日 YYYY-MM-DD（学習に使っていない期間）"
+        required: false
+        default: "2026-06-20"
+      longshot_from:
+        description: "人気薄とみなす人気順"
+        required: false
+        default: "8"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: keiba-edge
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+
+      - name: 調教を artifact から戻す
+        uses: ./.github/actions/workouts
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: DB を作る
+        run: python -m keiba.cli build
+
+      # 集計は最後に出す。ログは末尾しか取り出せないことがある
+      - name: 測る
+        run: |
+          python -m keiba.cli -v edge \
+            --valid-from "${{ inputs.valid_from }}" \
+            --longshot-from "${{ inputs.longshot_from }}"
