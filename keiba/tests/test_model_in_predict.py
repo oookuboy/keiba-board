@@ -152,3 +152,70 @@ def test_an_empty_day_never_overwrites_a_good_prediction(tmp_path) -> None:
     assert cmd_predict(args) == 1, "空の日を成功として返している"
     assert "前回の予想" in good.read_text(encoding="utf-8"), "前回の予想を潰した"
     assert '"races":24' in index.read_text(encoding="utf-8"), "index.json を潰した"
+
+
+# --- 市場と比べる物差し -------------------------------------------------
+
+
+def test_学習のたびに市場と比べる() -> None:
+    """AUC だけ見て「学習できている」と判断していた。
+
+    AUC は全レースの全頭を混ぜて並べた指標で、**レースの中で誰が上か**を
+    測っていない。実測では AUC 0.75 のまま、◎ の3着内率 49.4% に対し市場の
+    1番人気が 61.8%。負けているのに気づけない物差しを使っていた。
+
+    モデルの1位と1番人気を、同じレースの上で直接比べる。
+    """
+    import numpy as np
+    import pandas as pd
+
+    from keiba import ml
+
+    # 3レース。モデルは毎回1番人気とは違う馬を1位にする
+    df = pd.DataFrame({
+        "race_id": ["A"] * 3 + ["B"] * 3 + ["C"] * 3,
+        "market_popularity": [1, 2, 3] * 3,
+        "finish_pos": [1, 2, 5,   4, 1, 2,   1, 3, 6],
+        ml.TARGET: [1, 1, 0,   0, 1, 1,   1, 1, 0],
+    })
+    # 各レースの2番人気を1位に置くスコア
+    scores = np.array([0.1, 0.9, 0.2] * 3)
+    s = ml.vs_market(df, scores)
+
+    assert s["races"] == 3
+    # モデル1位（2番人気）の勝率は 1/3、3着内は 3/3
+    assert s["model_win"] == pytest.approx(1 / 3)
+    assert s["model_p3"] == pytest.approx(1.0)
+    # 1番人気の勝率は 2/3、3着内は 2/3
+    assert s["market_win"] == pytest.approx(2 / 3)
+    assert s["market_p3"] == pytest.approx(2 / 3)
+    assert "モデルが上" in ml.format_vs_market(df, scores)
+
+
+def test_ランキング学習を選べる() -> None:
+    """レースの中の順位を学習する経路があること。
+
+    既定の binary は1頭ずつ独立に「3着以内か」を当てる。同じレースの14頭を
+    正しく並べる、という本来の目的とずれている。
+    """
+    import inspect
+
+    from keiba import ml
+
+    assert ml.RANK_PARAMS["objective"] == "lambdarank"
+    assert "objective" in inspect.signature(ml.train).parameters
+
+
+def test_ランキング学習はレース単位で並べ直す() -> None:
+    """group と行の並びが一致していないと、別レースの馬を同じレースとして学ぶ。
+
+    lambdarank でいちばん壊しやすい所なので、並べ直しが残っていることを見る。
+    """
+    import inspect
+
+    from keiba import ml
+
+    source = inspect.getsource(ml.train)
+    assert 'sort_values(["race_date", "race_id"])' in source, (
+        "group を渡す前に並べ直していない。別レースの馬が同じ group に入る"
+    )

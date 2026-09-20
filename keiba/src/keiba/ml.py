@@ -31,6 +31,41 @@ log = logging.getLogger(__name__)
 MODEL_PATH = Path("keiba/config/model.txt")
 META_PATH = Path("keiba/config/model.json")
 
+# レースの中での順位を学習する設定。
+#
+# ## なぜ用意するか
+#
+# 既定の binary は1頭ずつ独立に「3着以内に入るか」を当てる。**レースの中で
+# 誰が上か**は学習していない。しかし予想で要るのは絶対的な確率ではなく、
+# 同じレースの14頭を正しく並べることのほうで、目的がずれている。
+#
+# 実測でも、14日・405頭の ◎ の3着内率 49.4% に対し、市場の2番人気が 49.3%、
+# 1番人気が 61.8%。**市場より下手な並べ方をしている。**
+#
+# lambdarank はレースを group として渡し、順位の入れ替えが評価をどれだけ
+# 動かすかで学習する。同じ特徴量でも並べ方だけが変わる。
+RANK_PARAMS = {
+    "objective": "lambdarank",
+    "metric": "ndcg",
+    "ndcg_eval_at": [3],
+    # 3着以内だけを正解にすると 0/1 になり、1着と3着が同じ扱いになる。
+    # 着順に応じた重みを付けて、1着を当てたときのほうが高くなるようにする。
+    "lambdarank_truncation_level": 15,
+    "learning_rate": 0.05,
+    "num_leaves": 63,
+    "min_data_in_leaf": 200,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 0.8,
+    "bagging_freq": 1,
+    "lambda_l2": 1.0,
+    "verbose": -1,
+    "num_threads": 0,
+    "seed": 20260805,
+    "bagging_seed": 20260805,
+    "feature_fraction_seed": 20260805,
+    "deterministic": True,
+}
+
 PARAMS = {
     "objective": "binary",
     "metric": ["auc", "binary_logloss"],
@@ -100,6 +135,7 @@ def train(
     valid_from: date,
     rounds: int = 2000,
     features: list[str] | None = None,
+    objective: str = "binary",
 ) -> TrainResult:
     """3着以内に入る確率を学習する。
 
@@ -125,23 +161,53 @@ def train(
         valid_df["race_date"].min().date(), valid_df["race_date"].max().date(),
     )
 
+    if objective == "lambdarank":
+        # レース単位で group を渡す。**行の並びが group と一致していないと
+        # 別のレースの馬を同じレースとして学習する**ので、ここで必ず並べ直す。
+        train_df = train_df.sort_values(["race_date", "race_id"])
+        valid_df = valid_df.sort_values(["race_date", "race_id"])
+        # 着順が良いほど高い関連度。1着を当てたときがいちばん効くようにする。
+        def _label(frame):
+            pos = frame["finish_pos"]
+            return (
+                pos.map({1: 4, 2: 3, 3: 2}).fillna(0).astype(int)
+                if "finish_pos" in frame else frame[TARGET]
+            )
+        train_label, valid_label = _label(train_df), _label(valid_df)
+        train_group = train_df.groupby("race_id", sort=False).size().to_numpy()
+        valid_group = valid_df.groupby("race_id", sort=False).size().to_numpy()
+        params = RANK_PARAMS
+    else:
+        train_label, valid_label = train_df[TARGET], valid_df[TARGET]
+        train_group = valid_group = None
+        params = PARAMS
+
     train_set = lgb.Dataset(
-        train_df[features], label=train_df[TARGET],
+        train_df[features], label=train_label, group=train_group,
         categorical_feature=CATEGORICAL, free_raw_data=False,
     )
     valid_set = lgb.Dataset(
-        valid_df[features], label=valid_df[TARGET],
+        valid_df[features], label=valid_label, group=valid_group,
         categorical_feature=CATEGORICAL, reference=train_set, free_raw_data=False,
     )
 
     booster = lgb.train(
-        PARAMS, train_set, num_boost_round=rounds,
+        params, train_set, num_boost_round=rounds,
         valid_sets=[valid_set], valid_names=["valid"],
         callbacks=[
             lgb.early_stopping(100, verbose=False),
             lgb.log_evaluation(200),
         ],
     )
+
+    # AUC は binary のときしか出ない。ランキングでは自前で計算する
+    # （比較の物差しが変わると良し悪しが判定できなくなるため）。
+    scores = booster.predict(valid_df[features], num_iteration=booster.best_iteration)
+    auc = (
+        booster.best_score["valid"].get("auc")
+        or roc_auc(valid_df[TARGET].to_numpy(), scores)
+    )
+    log.info("%s", format_vs_market(valid_df, scores))
 
     gains = booster.feature_importance("gain")
     importance = sorted(
@@ -150,12 +216,55 @@ def train(
     )
     return TrainResult(
         booster=booster,
-        auc=booster.best_score["valid"]["auc"],
+        auc=auc,
         best_iteration=booster.best_iteration,
         train_rows=len(train_df),
         valid_rows=len(valid_df),
         importance=importance,
         valid_from=valid_from,
+    )
+
+
+def vs_market(df: pd.DataFrame, scores) -> dict:
+    """モデルと市場を、同じレースの上で直接比べる。
+
+    ## AUC では足りない
+
+    AUC は全レースの全頭を混ぜて並べたときの指標で、**レースの中で誰が上か**
+    を測っていない。AUC 0.75 でも、各レースの1位が市場の1番人気より当たって
+    いなければ、予想としては市場に負けている。
+
+    実際そうなっていた。14日・405頭の ◎ の3着内率が 49.4% で、市場の
+    2番人気（49.3%）と同じ。1番人気は 61.8%。**負けているのに AUC を見て
+    「学習できている」と判断していた。**
+
+    ここで出すのは「モデルの1位」と「1番人気」の勝率・3着内率。学習のたびに
+    必ずログへ出す。物差しを揃えておかないと良し悪しが判定できない。
+    """
+    frame = df[["race_id", "market_popularity", TARGET]].copy()
+    frame["score"] = scores
+    frame["won"] = df["finish_pos"].eq(1) if "finish_pos" in df else 0
+
+    top = frame.loc[frame.groupby("race_id")["score"].idxmax()]
+    fav = frame[frame["market_popularity"] == 1]
+    races = frame["race_id"].nunique()
+    return {
+        "races": races,
+        "model_win": float(top["won"].mean()),
+        "model_p3": float(top[TARGET].mean()),
+        "market_win": float(fav["won"].mean()) if len(fav) else float("nan"),
+        "market_p3": float(fav[TARGET].mean()) if len(fav) else float("nan"),
+    }
+
+
+def format_vs_market(df: pd.DataFrame, scores) -> str:
+    s = vs_market(df, scores)
+    verdict = "モデルが上" if s["model_p3"] > s["market_p3"] else "市場が上"
+    return (
+        f"検証 {s['races']}R — "
+        f"モデル1位: 勝率 {s['model_win']:.1%} / 3着内 {s['model_p3']:.1%}　|　"
+        f"1番人気: 勝率 {s['market_win']:.1%} / 3着内 {s['market_p3']:.1%}　"
+        f"→ {verdict}"
     )
 
 

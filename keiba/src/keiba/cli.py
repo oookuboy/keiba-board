@@ -1110,7 +1110,10 @@ def cmd_strategy(args: argparse.Namespace) -> int:
 
     with Store(args.db) as store:
         df = dataset.prepare(store, speed_before=pd.Timestamp(str(args.valid_from)))
-        result = ml.train(df, valid_from=args.valid_from)
+        result = ml.train(
+            df, valid_from=args.valid_from,
+            objective=getattr(args, "objective", "binary"),
+        )
         valid = df[df["race_date"] >= str(args.valid_from)].copy()
         scores = ml.predict(result.booster, valid)
 
@@ -1275,7 +1278,10 @@ def cmd_edge(args: argparse.Namespace) -> int:
         curve = edge.market_curve(train, dataset.TARGET)
         log.info("市場の織り込み（単勝オッズ帯 → 3着内率）:\n%s", curve.to_string())
 
-        result = ml.train(df, valid_from=args.valid_from)
+        result = ml.train(
+            df, valid_from=args.valid_from,
+            objective=getattr(args, "objective", "binary"),
+        )
         p_model = ml.predict(result.booster, valid)
         p_market = edge.apply_curve(valid, curve).to_numpy()
 
@@ -1440,7 +1446,10 @@ def cmd_train(args: argparse.Namespace) -> int:
         # 検証期間より前だけで指数の基準を作る。ここを全期間にすると、
         # 報告する AUC が本番より良く出てしまう。
         df = dataset.prepare(store, speed_before=pd.Timestamp(str(args.valid_from)))
-        result = ml.train(df, valid_from=args.valid_from)
+        result = ml.train(
+            df, valid_from=args.valid_from,
+            objective=getattr(args, "objective", "binary"),
+        )
         print(result.report())
 
         valid = df[df["race_date"] >= str(args.valid_from)]
@@ -1769,6 +1778,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--max-auc-drop", type=float, default=0.005,
         help="前回モデルからのAUC低下がこれを超えたら差し替えない（既定 0.005）",
+    )
+    p.add_argument(
+        "--objective", choices=["binary", "lambdarank"], default="binary",
+        help="binary は1頭ずつ独立に採点する。lambdarank はレースの中の順位を学習する",
     )
     p.add_argument(
         "--force", action="store_true",

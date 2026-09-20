@@ -27,6 +27,12 @@ on:
         description: "AUCが下がっても差し替える"
         type: boolean
         default: false
+      objective:
+        description: "binary（1頭ずつ）/ lambdarank（レース内の順位を学習）"
+        required: false
+        type: choice
+        options: [binary, lambdarank]
+        default: binary
 
 permissions:
   contents: write
@@ -78,7 +84,11 @@ jobs:
           [ "${{ inputs.force }}" = "true" ] && FORCE="--force"
 
           # AUC が既定より下がったら cmd_train が exit 1 で差し替えを拒む
-          if python -m keiba.cli train --valid-from "$VF" $FORCE; then
+          # $FORCE と同じ形にする。${{ }} の中に || を書くと、ワークフローの
+          # 引数を検証するテストが値の区切りと取り違える。
+          OBJ=""
+          [ -n "${{ inputs.objective }}" ] && OBJ="--objective ${{ inputs.objective }}"
+          if python -m keiba.cli train $OBJ --valid-from "$VF" $FORCE; then
             echo "replaced=yes" >> "$GITHUB_OUTPUT"
           else
             echo "replaced=no" >> "$GITHUB_OUTPUT"
