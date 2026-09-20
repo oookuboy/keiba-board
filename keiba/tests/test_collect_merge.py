@@ -308,3 +308,70 @@ def test_手置きの重みで採点していたら検出する(tmp_path: pathli
     prediction(tmp_path, scored_by="weights", cited=2)
     bad = _paid_data_reached_the_prediction(health_args(tmp_path), "2026-09-11", {})
     assert any("学習モデル" in b for b in bad)
+
+
+def test_足りなければ引き直す(tmp_path: pathlib.Path) -> None:
+    """点検が「足りない」と言うだけで終わっていた。
+
+    見つけたあと何もしておらず、人が手で回し直す前提になっていた。実際には
+    誰も回していない。2026-09-20 の重賞も、出ているレースの被覆が68.2%の
+    まま予想が出ている。
+
+    欠けたレースだけを引き直す。全部引き直すと1日36レースぶんの無駄な
+    リクエストになり、発走までの時間を食う。
+    """
+    import argparse
+    import datetime as dt
+    from unittest.mock import patch
+
+    from keiba.cli import _refetch_missing
+
+    args = argparse.Namespace(
+        cache=tmp_path, raw_dir=tmp_path, workouts=tmp_path / "w.jsonl.gz",
+    )
+    # (race_id, runners, fresh, commented)
+    rows = [("A", 10, 0, 0), ("B", 12, 12, 12), ("C", 8, 0, 0), ("D", 9, 0, 5)]
+
+    with patch("keiba.collect.collect_paid") as paid:
+        paid.return_value = {"races": 2, "workouts": 20, "comments": 18}
+        got = _refetch_missing(args, "2026-09-20", rows)
+
+    assert got == 38
+    called = paid.call_args.kwargs["only_races"]
+    assert called == {"A", "C"}, f"引き直す対象が違う: {called}"
+    assert "B" not in called, "揃っているレースまで引き直している"
+    assert "D" not in called, (
+        "コメントだけある部分欠けまで引き直している。"
+        " netkeiba が出していない可能性が高く、引いても増えない"
+    )
+
+
+def test_引き直しに失敗しても週末を止めない(tmp_path: pathlib.Path) -> None:
+    """有料データの不調で運用ごと止めるほうが害が大きい、という既存の方針。"""
+    import argparse
+    from unittest.mock import patch
+
+    from keiba.cli import _refetch_missing
+
+    args = argparse.Namespace(
+        cache=tmp_path, raw_dir=tmp_path, workouts=tmp_path / "w.jsonl.gz",
+    )
+    with patch("keiba.collect.collect_paid", side_effect=RuntimeError("落ちた")):
+        assert _refetch_missing(args, "2026-09-20", [("A", 10, 0, 0)]) == 0
+
+
+def test_ワークフローが引き直しを使っている() -> None:
+    """CLI に足しただけで呼んでいない、という形を塞ぐ。
+
+    このプロジェクトが何度も踏んでいる「作ったのに使っていない」の変種。
+    """
+    import pathlib as _p
+
+    text = (_p.Path(__file__).parents[2] / ".github/workflows/keiba-weekend.yml").read_text(
+        encoding="utf-8"
+    )
+    calls = [x for x in text.splitlines() if "keiba.cli health" in x]
+    assert calls, "点検を呼んでいない"
+    assert all("--refetch" in x for x in calls), (
+        f"引き直さない点検が残っている: {[x.strip() for x in calls if '--refetch' not in x]}"
+    )

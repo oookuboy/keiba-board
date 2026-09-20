@@ -270,7 +270,11 @@ COMMENT_URL = "https://race.netkeiba.com/race/comment.html?race_id={race_id}"
 
 
 def collect_paid(
-    fetcher: Fetcher, raw_dir: Path, workouts_path: Path, days: list[date]
+    fetcher: Fetcher,
+    raw_dir: Path,
+    workouts_path: Path,
+    days: list[date],
+    only_races: set[str] | None = None,
 ) -> dict[str, int]:
     """今週の追い切りと厩舎コメントを、レース単位のページから取る。
 
@@ -318,6 +322,11 @@ def collect_paid(
         cards = list(read_jsonl(path))
         for card in cards:
             race_id = card.race.race_id
+            # 取り直しのときは、欠けているレースだけを引く。全部引き直すと
+            # 1日36レースぶんの無駄なリクエストになり、発走までの時間を
+            # 食う。欠けた所だけなら数分で終わる。
+            if only_races is not None and race_id not in only_races:
+                continue
             stats["races"] += 1
             try:
                 rows = netkeiba.parse_race_oikiri(

@@ -259,7 +259,7 @@ jobs:
         run: |
           for D in ${{ steps.plan.outputs.days }}; do
             echo "--- $D"
-            python -m keiba.cli health --date "$D" --strict
+            python -m keiba.cli health --date "$D" --refetch --strict
           done
 
       # 当日ぶんの厩舎コメントと追い切りを引き直す。
@@ -302,7 +302,10 @@ jobs:
       # ほうが、予想が無いよりましなので。
       - name: 予想に有料データが乗ったか確かめる
         if: steps.plan.outputs.job == 'predict'
-        run: python -m keiba.cli health --date "${{ steps.plan.outputs.date }}"
+        env:
+          NETKEIBA_EMAIL: ${{ secrets.NETKEIBA_EMAIL }}
+          NETKEIBA_PASSWORD: ${{ secrets.NETKEIBA_PASSWORD }}
+        run: python -m keiba.cli health --date "${{ steps.plan.outputs.date }}" --refetch
 
       # 点検が落ちても**必ず**上げ直す。調教は artifact にしか無いので、
       # ここを飛ばすと収集したものがそのまま消える。落とすつもりで入れた

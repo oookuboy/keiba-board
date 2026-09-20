@@ -360,6 +360,52 @@ HEALTH_FLOOR = 0.5
 WORKOUT_WINDOW = 21
 
 
+def _refetch_missing(args: argparse.Namespace, day: str, rows: list) -> int:
+    """欠けているレースだけを引き直す。
+
+    ## 点検が言うだけで何もしていなかった
+
+    「有料データが足りない」と出すところまでは作ってあったが、**足りないと
+    分かったあと何もしていなかった**。人が見て手で回し直す前提になっており、
+    実際には誰も回していない。2026-09-20 の重賞（オールカマー）も、出ている
+    レースの被覆が68.2%のまま予想が出ている。
+
+    見つけたら取り直す。全部引き直すと1日36レースぶんの無駄なリクエストに
+    なるので、**欠けたレースだけ**を対象にする。
+
+    ## 落とさない
+
+    取り直しに失敗しても予想は続ける。有料データの不調で週末の運用ごと
+    止めるほうが害が大きい、という既存の方針と揃える。
+    """
+    from keiba import collect
+    from keiba.sources.http import Fetcher
+
+    # そのレースに1頭も入っていないものだけを対象にする。部分欠けは
+    # netkeiba 側が出していない可能性が高く、引き直しても増えない。
+    missing = {r[0] for r in rows if r[1] and not r[2] and not r[3]}
+    if not missing:
+        return 0
+
+    log.info("%s: 有料データの無いレース %d件を引き直す", day, len(missing))
+    try:
+        stats = collect.collect_paid(
+            Fetcher(cache_dir=args.cache),
+            args.raw_dir,
+            args.workouts,
+            [date.fromisoformat(day)],
+            only_races=missing,
+        )
+    except Exception as exc:  # 取り直しで週末を止めない
+        log.warning("引き直しに失敗: %s", exc)
+        return 0
+    log.info(
+        "引き直し: %dレース / 調教 %d本 / コメント %d件",
+        stats.get("races", 0), stats.get("workouts", 0), stats.get("comments", 0),
+    )
+    return stats.get("workouts", 0) + stats.get("comments", 0)
+
+
 def _runners_in_raw(args: argparse.Namespace, day: str) -> int:
     """その日の出馬表に何頭載っているか。DB ではなく raw を見る。
 
@@ -401,8 +447,7 @@ def cmd_health(args: argparse.Namespace) -> int:
     day = args.day.isoformat()
     with Store(args.db) as store:
         since = (args.day - timedelta(days=WORKOUT_WINDOW)).isoformat()
-        rows = store.conn.execute(
-            """
+        query = """
             -- 調教は1頭に何本もぶら下がるので、どの列も DISTINCT で数える。
             -- 素直に COUNT(*) と書くと出走頭数が調教の本数ぶん水増しされる。
             SELECT e.race_id,
@@ -418,9 +463,8 @@ def cmd_health(args: argparse.Namespace) -> int:
                    ON c.race_id = e.race_id AND c.umaban = e.umaban
             WHERE r.race_date = ?
             GROUP BY e.race_id
-            """,
-            (since, day, day),
-        ).fetchall()
+        """
+        rows = store.conn.execute(query, (since, day, day)).fetchall()
 
     # 枠順がまだ出ていない日を裁かない。
     #
@@ -440,6 +484,12 @@ def cmd_health(args: argparse.Namespace) -> int:
             day, entered, expected,
         )
         return 0
+
+    # 足りなければ取り直す。見つけて終わりにしない。
+    if getattr(args, "refetch", False) and _refetch_missing(args, day, rows):
+        rebuild(args.raw_dir, args.db, args.pedigree, args.config_dir)
+        with Store(args.db) as store:
+            rows = store.conn.execute(query, (since, day, day)).fetchall()
 
     kinds = {
         "workouts": ("調教", 2),
@@ -1569,6 +1619,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="足りなければ exit 1 で落とす（収集のときに使う）",
     )
     p.add_argument("--floor", type=float, default=HEALTH_FLOOR)
+    p.add_argument(
+        "--refetch", action="store_true",
+        help="有料データの無いレースを引き直してから数える",
+    )
     p.set_defaults(func=cmd_health)
 
     p = sub.add_parser(
