@@ -412,3 +412,22 @@ def test_バックフィルが週末の運用を待たせない() -> None:
             f"{name} が週末の運用と同じ群（{group}）にある。"
             " 長いバックフィルが予想を発走後まで押し出しうる"
         )
+
+
+def test_コメントに式の記法を書かない() -> None:
+    """GitHub は run ブロック全体を走査するので、コメント内の式も解釈する。
+
+    説明のつもりで書いた空の式が構文エラーになり、workflow_dispatch が
+    「An expression was expected」で弾かれた（2026-09-20）。YAML として
+    正しくても GitHub 側で落ちるので、ローカルの yaml.safe_load では
+    検出できない。
+
+    中身のある式（inputs.x など）は当然使う。**空の式**だけを禁じる。
+    """
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        text = path.read_text(encoding="utf-8")
+        empty = re.findall(r"\$\{\{\s*\}\}", text)
+        assert not empty, (
+            f"{path.name}: 空の式 ${{{{ }}}} がある。"
+            " 説明で式の記法に触れるときは別の書き方にすること"
+        )

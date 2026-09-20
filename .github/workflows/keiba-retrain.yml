@@ -84,8 +84,12 @@ jobs:
           [ "${{ inputs.force }}" = "true" ] && FORCE="--force"
 
           # AUC が既定より下がったら cmd_train が exit 1 で差し替えを拒む
-          # $FORCE と同じ形にする。${{ }} の中に || を書くと、ワークフローの
+          # $FORCE と同じ形にする。GitHub の式の中に || を書くと、ワークフローの
           # 引数を検証するテストが値の区切りと取り違える。
+          #
+          # コメントであっても式の記法をそのまま書いてはいけない。GitHub は
+          # run ブロック全体を走査するので、空の式が構文エラーになる（実際に
+          # ここで workflow_dispatch が弾かれた）。
           OBJ=""
           [ -n "${{ inputs.objective }}" ] && OBJ="--objective ${{ inputs.objective }}"
           if python -m keiba.cli train $OBJ --valid-from "$VF" $FORCE; then
