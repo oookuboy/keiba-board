@@ -65,6 +65,17 @@ APTITUDE_FEATURES = [
     "h_venue_best_finish",  # その競馬場での最高着順
     # 今回の条件と、その馬が得意な条件の差
     "h_last3f_gap_here",    # その条件の最速上がり − 全体の最速上がり
+    # --- 経験の無い馬を血統で埋める --------------------------------------
+    # その競馬場で走った経験がある馬は半分（hv_place_rate の非欠損 49.1%）。
+    # 残り半分には自身の履歴が何も無いので、父・母父の同条件成績を当てる。
+    # 洋芝（札幌・函館）の適性は血統に強く出るところ。
+    "s_turf_type_place",    # 父の、今走の芝種別での複勝率
+    "ds_turf_type_place",   # 母父の、今走の芝種別での複勝率
+    "s_cond_last3f",        # 父産駒がその条件で出す上がりの平均
+    "cond_place_filled",    # 自身の同条件複勝率。無ければ父の値
+    "turf_place_filled",    # 自身の芝種別複勝率。無ければ父の値
+    "cond_last3f_filled",   # 自身の同条件最速上がり。無ければ父産駒の平均
+    "filled_from_pedigree", # 血統で埋めた数（0〜3）。どれだけ推測かを渡す
 ]
 
 
@@ -145,6 +156,45 @@ def attach(frame: pd.DataFrame) -> pd.DataFrame:
     # 全条件での最速と比べることで「ここでは脚が使えない」を表す。
     best_all = _prior_min(out, horse, "last3f")
     out["h_last3f_gap_here"] = out["h_cond_best_last3f"] - best_all
+
+    # --- 経験の無い馬を血統で埋める --------------------------------------
+    #
+    # その競馬場で走った経験がある馬は半分しかいない（hv_place_rate の
+    # 非欠損 49.1%）。条件ごとの出走数も中央値3走。**残りには自身の履歴が
+    # 何も無い。**
+    #
+    # 父・母父の同条件成績を当てる。洋芝は血統に強く出るところで、
+    # 2026-09-21 阪神10R の1番人気アルマデオロ（洋芝で1着1着2着 → 初阪神で
+    # 11着）のような馬を、走る前に区別したい。
+    #
+    # **埋めたことを隠さない。** filled_from_pedigree で「いくつ推測で
+    # 埋めたか」を渡し、どれだけ信用するかはモデルに決めさせる。自身の
+    # 実績と血統の推測が同じ顔で入ると、後から区別できなくなる。
+    if "sire" in out.columns:
+        out["s_turf_type_place"] = _prior_mean(out, ["sire", "turf_type"], "placed")
+        out["s_cond_last3f"] = _prior_mean(
+            out, ["sire", "surface", "band"], "last3f"
+        )
+    if "damsire" in out.columns:
+        out["ds_turf_type_place"] = _prior_mean(
+            out, ["damsire", "turf_type"], "placed"
+        )
+
+    sire_cond = (
+        out["ssb_place_rate"] if "ssb_place_rate" in out.columns
+        else out.get("s_turf_type_place")
+    )
+    filled = 0
+    for name, own, fallback in (
+        ("cond_place_filled", "hsb_place_rate", sire_cond),
+        ("turf_place_filled", "h_turf_type_place", out.get("s_turf_type_place")),
+        ("cond_last3f_filled", "h_cond_best_last3f", out.get("s_cond_last3f")),
+    ):
+        mine = out[own] if own in out.columns else pd.Series(np.nan, index=out.index)
+        back = fallback if fallback is not None else pd.Series(np.nan, index=out.index)
+        out[name] = mine.where(mine.notna(), back)
+        filled = filled + (mine.isna() & back.notna()).astype("int8")
+    out["filled_from_pedigree"] = filled
 
     return out.drop(columns=["is_yoshiba", "is_noshiba", "_py", "_pn"])
 
