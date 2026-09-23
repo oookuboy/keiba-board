@@ -193,7 +193,7 @@ def build_features(
     有料データで、手元に無い環境（テストなど）でも同じ列がそろっていないと
     「呼び出し側によって列が違う」に逆戻りする。
     """
-    from keiba import comment_features, pace_features, speed, workout_features
+    from keiba import aptitude, comment_features, pace_features, speed, workout_features
 
     out = df.copy()
 
@@ -297,6 +297,12 @@ def build_features(
         out, pd.DataFrame() if workouts is None else workouts
     )
 
+    # --- 条件適性（洋芝/野芝・条件ごとの走りの中身） ----------------------
+    # 条件ごとの実績を複勝率の形でしか持っておらず、4着と最下位が同じ 0 に
+    # なっていた。着順に潰さず、その条件で出した上がり3F・最高着順・出走数を
+    # そのまま渡す。洋芝（札幌・函館）と野芝の区別もここで入れる。
+    out = aptitude.attach(out)
+
     # --- 展開・隊列 ------------------------------------------------------
     # SKILL.md が「予想の核心」と書いている展開読みは手置きの側にしか無く、
     # 学習モデルで採点する本番では丸ごと捨てられていた（engine.run が
@@ -326,6 +332,7 @@ def build_features(
 # 走破時計と調教の特徴量。定義はそれぞれのモジュール側に置いてある
 # （作り方の説明が長いため）。
 from keiba.speed import SPEED_FEATURES  # noqa: E402
+from keiba.aptitude import APTITUDE_FEATURES  # noqa: E402
 from keiba.comment_features import COMMENT_FEATURES  # noqa: E402
 from keiba.pace_features import PACE_FEATURES  # noqa: E402
 from keiba.workout_features import WORKOUT_FEATURES  # noqa: E402
@@ -382,6 +389,10 @@ FEATURE_COLUMNS = [
     # しか無かったので本番では1ミリも効いていなかった。レース内の相対で
     # 作る（同じ通過順 0.2 でも、他に前へ行く馬が居るかで意味が変わる）。
     *PACE_FEATURES,
+    # 条件適性。洋芝/野芝の区別と、条件ごとの「走りの中身」。
+    # 複勝率だけに潰していたので、阪神で上がり33.9秒・札幌で38.5秒という
+    # 差が 0 としか表現できていなかった（2026-09-21 阪神10R 3着馬）。
+    *APTITUDE_FEATURES,
     # カテゴリ
     *CATEGORICAL,
 ]
