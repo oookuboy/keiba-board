@@ -190,8 +190,39 @@ def _person(row: Tag, css: str, pattern: re.Pattern[str]) -> tuple[str | None, s
     ident = None
     if isinstance(anchor, Tag):
         m = pattern.search(str(anchor.get("onclick") or ""))
-        ident = m.group(1) if m else None
+        ident = normalize_id(m.group(1)) if m else None
     return label, ident
+
+
+def normalize_id(ident: str | None) -> str | None:
+    """騎手・調教師IDを netkeiba と同じ5桁にそろえる。
+
+    JRA公式は先頭の0を落として4桁で書く（ルメール: JRA `5339` /
+    netkeiba `05339`）。そのまま入れると、8月にJRA公式へ切り替えてから
+    **全騎手・全調教師が別人扱い**になっていた。騎手の複勝率は切り替え後の
+    1か月ぶんしか数えられず、全馬が「乗り替わり」と判定された。
+    0埋めで、切り替え後の騎手127人・調教師184人が全員旧IDと一致した。
+    """
+    if ident and ident.isdigit() and len(ident) < 5:
+        return ident.zfill(5)
+    return ident
+
+
+def _waku(node: Tag | None) -> int | None:
+    """枠番。JRA公式は数字ではなく画像（alt="枠1白", src=.../waku/1.png）で書く。
+
+    文字だけを読んでいたので、JRA公式経由の出馬表は**枠が全部空**だった。
+    """
+    if node is None:
+        return None
+    if (n := _as_int(node)) is not None:
+        return n
+    img = node.find("img")
+    if isinstance(img, Tag):
+        for attr in ("alt", "src"):
+            if m := re.search(r"(?:枠|/waku/)(\d)", str(img.get(attr) or "")):
+                return int(m.group(1))
+    return None
 
 
 def _parse_entry_row(row: Tag, race_id: str) -> Entry | None:
@@ -234,7 +265,7 @@ def _parse_entry_row(row: Tag, race_id: str) -> Entry | None:
         umaban=_as_int(row.select_one("td.num")),
         horse_name=name,
         horse_id=horse_id,
-        waku=_as_int(row.select_one("td.waku")),
+        waku=_waku(row.select_one("td.waku")),
         sex=sex,
         age=age,
         weight_carried=weight_carried,
@@ -412,10 +443,28 @@ def parse_results_page(html: str) -> dict[str, list[Result]]:
     着順を1件も出していなかった（2026-08-08 実測、race_id 0件）。JRA公式は
     レース確定後すぐ出るので、当日中に回顧を回すにはこちらが要る。
     """
+    return _parse_results(html)[0]
+
+
+def parse_results_conditions(html: str) -> dict[str, dict]:
+    """レース結果一覧から、race_id → 天候・馬場状態・枠番 を取る。
+
+    出馬表（発走前）には馬場状態が無く、枠番は画像で書かれている。JRA公式に
+    切り替えてから、**馬場状態と枠番が全レースで空**のまま溜まっていた。
+    結果ページには各レースの「天候 / 芝 or ダート」と枠の画像があるので、
+    ここで拾って出馬表側へ合流させる。
+
+    戻り値: {"weather": 晴, "going": {"芝": 良, "ダ": 稍重}, "waku": {馬番: 枠}}
+    """
+    return _parse_results(html)[1]
+
+
+def _parse_results(html: str) -> tuple[dict[str, list[Result]], dict[str, dict]]:
     soup = BeautifulSoup(html, "lxml")
     race_date, venue_code, kai, nichi = _parse_meeting_heading(soup)
 
     out: dict[str, list[Result]] = {}
+    conds: dict[str, dict] = {}
     for table in soup.select("table.basic"):
         if table.select_one("td.place") is None:
             continue
@@ -430,11 +479,23 @@ def parse_results_page(html: str) -> dict[str, list[Result]]:
         race_no = int(rm.group(1))
         race_id = f"{race_date.year}{venue_code}{kai:02d}{nichi:02d}{race_no:02d}"
 
+        going: dict[str, str] = {}
+        for css, surface in (("li.turf", "芝"), ("li.durt", "ダ")):
+            if (txt := _text(block.select_one(f"{css} .txt"))):
+                going[surface] = txt
+        cond = {
+            "weather": _text(block.select_one("li.weather .txt")) or None,
+            "going": going,
+            "waku": {},
+        }
+
         results: list[Result] = []
         for row in table.select("tbody tr"):
             umaban = _as_int(row.select_one("td.num"))
             if umaban is None:
                 continue
+            if (w := _waku(row.select_one("td.waku"))) is not None:
+                cond["waku"][umaban] = w
             # 着順は「1」「中止」「除外」など。数字でなければ None（＝完走せず）
             place_raw = _text(row.select_one("td.place"))
             finish = int(place_raw) if place_raw.isdigit() else None
@@ -466,7 +527,8 @@ def parse_results_page(html: str) -> dict[str, list[Result]]:
             )
         if results:
             out[race_id] = results
-    return out
+            conds[race_id] = cond
+    return out, conds
 
 
 def parse_payouts_page(html: str) -> dict[str, list[Payout]]:
@@ -543,7 +605,7 @@ def collect_results(fetcher: Fetcher, day: date) -> dict[str, tuple[list, list]]
     経路は出馬表と同じ3階層だが、開催リンクの接頭辞が pw01srl と違う。
     レース選択ページから「レース結果一覧」と「払戻金一覧」の両方を辿る。
 
-    戻り値は race_id → (results, payouts)。開催が無ければ空。
+    戻り値は race_id → (results, payouts, 天候・馬場・枠)。開催が無ければ空。
     """
     html = open_seed(fetcher, "results")
     if html is None:
@@ -568,6 +630,7 @@ def collect_results(fetcher: Fetcher, day: date) -> dict[str, tuple[list, list]]
         # レース選択ページから、結果一覧と払戻一覧へ辿る。接頭辞が読めないので
         # 順に開いてタイトルで見分ける（出馬表と違い入口が2つある）
         results: dict[str, list] = {}
+        conds: dict[str, dict] = {}
         payouts: dict[str, list] = {}
         for action2, cname2 in DOACTION_RE.findall(race_list):
             if cname2 in nav or RESULT_KAISAI_RE.match(cname2):
@@ -579,17 +642,74 @@ def collect_results(fetcher: Fetcher, day: date) -> dict[str, tuple[list, list]]
                 if "払戻金一覧" in page[:4000]:
                     payouts = parse_payouts_page(page)
                 elif "レース結果一覧" in page[:4000]:
-                    results = parse_results_page(page)
+                    results, conds = _parse_results(page)
             except ValueError as exc:
                 log.warning("%s の解釈に失敗: %s", cname2, exc)
             if results and payouts:
                 break
 
         for race_id, rows in results.items():
-            merged[race_id] = (rows, payouts.get(race_id, []))
+            merged[race_id] = (rows, payouts.get(race_id, []), conds.get(race_id, {}))
         log.info("%s %s: 結果 %d レース", day, cname[:20], len(results))
 
     return merged
+
+
+_INFO_DATE_RE = re.compile(r"(\d{1,2})月(\d{1,2})日")
+
+
+def parse_current_going(html: str, today: date) -> tuple[date | None, dict[str, dict]]:
+    """「開催お知らせ」の「現在の天候・馬場状態」を読む。
+
+    発走前の出馬表には馬場状態が無い。ここだけが発走前に取れる経路。
+    見出しは「8月9日（日曜） 開催情報」で年が無いので、today から補う
+    （12月に1月の開催を見る場合は翌年）。
+
+    戻り値: (開催日, {競馬場: {"weather": 晴, "going": {"芝": 良, "ダ": 良}}})
+    """
+    soup = BeautifulSoup(html, "lxml")
+    unit = soup.select_one(".kaisai_info_unit") or soup
+    day = None
+    if (h2 := unit.select_one("h2")) and (m := _INFO_DATE_RE.search(_text(h2))):
+        month, dom = int(m.group(1)), int(m.group(2))
+        year = today.year + (1 if today.month == 12 and month == 1 else 0)
+        day = date(year, month, dom)
+
+    table = None
+    for t in unit.select("table"):
+        if "馬場状態" in _text(t.select_one("caption")):
+            table = t
+            break
+    if table is None:
+        return day, {}
+
+    venues = [_text(th) for th in table.select("thead th[scope=col]")]
+    weather_row = table.select_one("tr.weather")
+    baba_row = table.select_one("tr.baba")
+    weathers = [_text(td.select_one(".cap")) for td in weather_row.select("td")] if weather_row else []
+    babas = baba_row.select("td") if baba_row else []
+
+    out: dict[str, dict] = {}
+    for i, venue in enumerate(venues):
+        going: dict[str, str] = {}
+        if i < len(babas):
+            for li in babas[i].select("li"):
+                cap, main = _text(li.select_one(".cap")), _text(li.select_one(".main"))
+                if cap and main:
+                    going["ダ" if cap.startswith("ダ") else "芝"] = main
+        out[venue] = {
+            "weather": weathers[i] if i < len(weathers) and weathers[i] else None,
+            "going": going,
+        }
+    return day, out
+
+
+def current_going(fetcher: Fetcher, today: date | None = None) -> tuple[date | None, dict[str, dict]]:
+    """JRA公式の「開催お知らせ」から、今の天候・馬場状態を取る。"""
+    html = open_seed(fetcher, "info")
+    if html is None:
+        return None, {}
+    return parse_current_going(html, today or date.today())
 
 
 def post_positions_confirmed(card: RaceCard) -> bool:

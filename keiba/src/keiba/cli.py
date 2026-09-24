@@ -42,6 +42,23 @@ def _date(value: str) -> date:
 
 def cmd_backfill_races(args: argparse.Namespace) -> int:
     fetcher = Fetcher(cache_dir=args.cache)
+    if getattr(args, "refill", False):
+        # 既にあるレースの、欠けた欄（馬場・枠・馬体重・着順）を埋める。
+        stats = backfill.refill_races(fetcher, args.start, args.end, args.raw_dir)
+        log.info(
+            "埋め直し: %d日 / %d レース / %d欄 / 失敗 %d / まだ欠け %d",
+            stats["days"], stats["races"], stats["filled"],
+            stats["failed"], stats["still_missing"],
+        )
+        if stats["failed"]:
+            print(f"::error::埋め直せなかったレースが {stats['failed']} 件ある")
+            return 1
+        if stats["still_missing"]:
+            print(
+                f"::warning::まだ欠けの残るレースが {stats['still_missing']} 件ある"
+                "（db.netkeiba の反映待ちの可能性）"
+            )
+        return 0
     if getattr(args, "repair", False):
         # 既にある日の、欠けているレースだけを取り直す。
         stats = backfill.repair_races(fetcher, args.start, args.end, args.raw_dir)
@@ -72,6 +89,7 @@ def cmd_backfill_pedigree(args: argparse.Namespace) -> int:
             args.pedigree,
             args.limit,
             args.offset,
+            newest_first=args.newest_first,
         )
         remaining = len(store.horse_ids_without_pedigree())
     log.info("血統 %d頭を取得。未取得の残り %d頭", fetched, remaining)
@@ -1623,12 +1641,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--repair", action="store_true",
         help="既にある日の、欠けているレースだけを取り直す",
     )
+    p.add_argument(
+        "--refill", action="store_true",
+        help="既にあるレースの欠けた欄（馬場・枠・馬体重・着順）を db.netkeiba で埋める",
+    )
     p.set_defaults(func=cmd_backfill_races)
 
     p = sub.add_parser("backfill-pedigree", help="出走馬の血統を収集する")
     p.add_argument("--limit", type=int, default=None, help="1回で引く頭数の上限")
     p.add_argument(
         "--offset", type=int, default=0, help="対象リストの先頭から飛ばす頭数（並列分割用）"
+    )
+    p.add_argument(
+        "--newest-first", action="store_true",
+        help="新しい馬（新馬・2歳）から引く。週次の運用用",
     )
     p.set_defaults(func=cmd_backfill_pedigree)
 

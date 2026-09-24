@@ -178,14 +178,131 @@ def repair_races(
     return stats
 
 
+def needs_refill(card: RaceCard) -> bool:
+    """db.netkeiba から埋め直すべき欠けがあるか。
+
+    JRA公式経由（2026-08-08〜）の出馬表は、馬場状態と枠番が全レースで空、
+    馬体重も1割ほど欠けていた。着順が片方の開催だけ入っていない日もあった。
+    """
+    if card.race.going is None:
+        return True
+    live = [e for e in card.entries if not e.scratched and e.umaban is not None]
+    if any(e.waku is None for e in live):
+        return True
+    if not card.results:
+        return True
+    return False
+
+
+def fill_blanks(card: RaceCard, ref: RaceCard) -> int:
+    """card の空欄だけを ref（db.netkeiba）の値で埋める。埋めた欄の数を返す。
+
+    **既にある値は書き換えない。** JRA公式の着順・払戻、後から入れた調教や
+    コメントの数を消さないため。馬の突き合わせは馬番ではなく馬IDで行う
+    （取り違えたら別の馬の枠と馬体重が付く）。
+    """
+    n = 0
+    for attr in ("going", "weather", "grade", "direction"):
+        if getattr(card.race, attr) is None and getattr(ref.race, attr) is not None:
+            setattr(card.race, attr, getattr(ref.race, attr))
+            n += 1
+
+    ref_entries = {e.horse_id: e for e in ref.entries if e.horse_id}
+    for e in card.entries:
+        r = ref_entries.get(e.horse_id)
+        if r is None or (e.umaban is not None and r.umaban != e.umaban):
+            continue
+        for attr in (
+            "umaban", "waku", "body_weight", "body_weight_diff",
+            "market_odds", "market_popularity", "sire", "dam", "damsire",
+        ):
+            if getattr(e, attr, None) is None and getattr(r, attr, None) is not None:
+                setattr(e, attr, getattr(r, attr))
+                n += 1
+
+    if not card.results and ref.results:
+        card.results = list(ref.results)
+        n += len(ref.results)
+    else:
+        by_umaban = {r.umaban: r for r in ref.results}
+        for res in card.results:
+            r = by_umaban.get(res.umaban)
+            if r is None:
+                continue
+            for attr in ("time_sec", "margin", "last3f", "body_weight", "body_weight_diff"):
+                if getattr(res, attr) is None and getattr(r, attr) is not None:
+                    setattr(res, attr, getattr(r, attr))
+                    n += 1
+            if not res.corners and r.corners:
+                res.corners = list(r.corners)
+                n += 1
+    if not card.payouts and ref.payouts:
+        card.payouts = list(ref.payouts)
+        n += len(ref.payouts)
+    return n
+
+
+def refill_races(
+    fetcher: Fetcher, start: date, end: date, out_dir: Path
+) -> dict[str, int]:
+    """取ってある日の**欠けた欄**を db.netkeiba で埋める。
+
+    repair_races は「レースごと無い」を直す。こちらは「レースはあるが中身が
+    欠けている」を直す。JRA公式に切り替えた 2026-08-08 以降、馬場状態と
+    枠番が全レースで空、馬体重・着順も一部欠けていた。db.netkeiba は反映が
+    遅いだけで、数日後には全部載る。
+
+    埋まらなかったレースは数えて返す（黙って残さない）。
+    """
+    stats = {"days": 0, "races": 0, "filled": 0, "failed": 0, "still_missing": 0}
+
+    for day in racing_days(start, end):
+        out_path = out_dir / str(day.year) / f"{day.isoformat()}.jsonl.gz"
+        if not out_path.exists():
+            continue
+        cards = list(read_jsonl(out_path))
+        todo = [c for c in cards if needs_refill(c)]
+        if not todo:
+            continue
+
+        stats["days"] += 1
+        changed = 0
+        for card in todo:
+            race_id = card.race.race_id
+            try:
+                html = fetcher.fetch(RACE_URL.format(race_id=race_id))
+                ref = netkeiba.parse_race_page(html, race_id)
+            except (FetchError, ValueError) as exc:
+                log.warning("埋め直せない %s: %s", race_id, exc)
+                stats["failed"] += 1
+                continue
+            n = fill_blanks(card, ref)
+            if n:
+                changed += 1
+                stats["filled"] += n
+            if needs_refill(card):
+                stats["still_missing"] += 1
+        stats["races"] += changed
+
+        if changed:
+            write_jsonl(cards, out_path)
+            log.info("%s: %d / %d レースの欠けを埋めた", day, changed, len(todo))
+
+    return stats
+
+
 def collect_pedigrees(
     fetcher: Fetcher,
     store: Store,
     out_path: Path,
     limit: int | None = None,
     offset: int = 0,
+    newest_first: bool = False,
 ) -> int:
     """血統をまだ持っていない馬の血統ページを引く。
+
+    newest_first は週次の運用向け。新馬・2歳馬は horse_id が大きいので、
+    後ろから引くと「過去走が無く、血統でしか評価できない馬」が先に埋まる。
 
     entries に居るのに horses に居ない馬だけを対象にするので、
     途中で止めて再実行しても取り直しにならない。
@@ -194,7 +311,10 @@ def collect_pedigrees(
     重複なく分割できる。2.5万頭を1ジョブで引くと Actions の6時間上限を
     超えるので、並列ジョブに割るために使う。
     """
-    targets = store.horse_ids_without_pedigree()[offset:]
+    targets = store.horse_ids_without_pedigree()
+    if newest_first:
+        targets = targets[::-1]
+    targets = targets[offset:]
     if limit:
         targets = targets[:limit]
     if not targets:

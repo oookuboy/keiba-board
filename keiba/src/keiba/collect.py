@@ -162,6 +162,15 @@ def _keep_extras(old: RaceCard | None, new: RaceCard) -> RaceCard:
     for name in EXTRA_FIELDS:
         if not getattr(new, name) and getattr(old, name):
             setattr(new, name, getattr(old, name))
+    # 馬場状態と枠も同じ。結果ページや db.netkeiba で埋めた値を、発走前の
+    # 出馬表（どちらも空）で消さない。
+    for attr in ("going", "weather"):
+        if getattr(new.race, attr) is None and getattr(old.race, attr) is not None:
+            setattr(new.race, attr, getattr(old.race, attr))
+    old_waku = {e.horse_id: e.waku for e in old.entries if e.waku is not None}
+    for e in new.entries:
+        if e.waku is None and e.umaban is not None and e.horse_id in old_waku:
+            e.waku = old_waku[e.horse_id]
     return new
 
 
@@ -179,6 +188,28 @@ def collect_upcoming(fetcher: Fetcher, out_dir: Path) -> dict[date, int]:
     cards = jra.collect_racecards(fetcher)
     if not cards:
         return {}
+
+    # 発走前の出馬表には馬場状態が無い。「開催お知らせ」の現在の馬場状態を
+    # その日のカードに入れる。無いと、モデルは学習では馬場を見ているのに
+    # 本番だけ馬場が常に空になる（2026-08-08〜09-24 はそうだった）。
+    try:
+        going_day, going = jra.current_going(fetcher)
+    except (FetchError, ValueError) as exc:
+        log.warning("現在の馬場状態を取れない: %s", exc)
+        going_day, going = None, {}
+    if going and going_day is not None:
+        n = 0
+        for card in cards:
+            cond = going.get(card.race.venue)
+            # 当日朝の発表前は前日（金曜なら金曜発表）の状態が出ている。
+            # 同じ開催の3日以内なら、空よりそのほうが実態に近いので使う。
+            # 当日の発表が出たあとに取り直せば、そちらで上書きされる。
+            lag = (card.race.race_date - going_day).days
+            if cond and 0 <= lag <= 3 and (card.race.going is None or lag == 0):
+                apply_conditions(card, {"weather": cond["weather"] if lag == 0 else None,
+                                        "going": cond["going"]})
+                n += 1
+        log.info("%s の馬場状態: %s（%d レースに反映）", going_day, going, n)
 
     by_day: dict[date, list[RaceCard]] = defaultdict(list)
     for card in cards:
@@ -205,6 +236,27 @@ def collect_upcoming(fetcher: Fetcher, out_dir: Path) -> dict[date, int]:
     return counts
 
 
+def apply_conditions(card: RaceCard, cond: dict) -> None:
+    """結果ページの天候・馬場状態・枠番を出馬表へ入れる。
+
+    発走前の出馬表には馬場状態が無く、JRA公式経由では枠も空だった。
+    ここで埋めないと、過去走の「どの馬場で走ったか」「何枠だったか」が
+    JRA公式に切り替えた 2026-08-08 以降すべて欠ける。
+    """
+    if not cond:
+        return
+    surface = "ダ" if card.race.surface == "ダ" else "芝"
+    going = (cond.get("going") or {}).get(surface)
+    if going:
+        card.race.going = going
+    if cond.get("weather"):
+        card.race.weather = cond["weather"]
+    waku = cond.get("waku") or {}
+    for e in card.entries:
+        if e.waku is None and e.umaban in waku:
+            e.waku = waku[e.umaban]
+
+
 def collect_results_from_jra(fetcher: Fetcher, day: date, out_dir: Path) -> int:
     """JRA公式から着順と払戻を取り、既存の出馬表に合流させる。
 
@@ -225,13 +277,14 @@ def collect_results_from_jra(fetcher: Fetcher, day: date, out_dir: Path) -> int:
 
     cards = {c.race.race_id: c for c in read_jsonl(out_path)}
     filled = 0
-    for race_id, (results, payouts) in found.items():
+    for race_id, (results, payouts, cond) in found.items():
         card = cards.get(race_id)
         if card is None:
             log.warning("%s の出馬表が手元に無い（結果だけ取れた）", race_id)
             continue
         card.results = results
         card.payouts = payouts
+        apply_conditions(card, cond)
         filled += 1
 
     if filled:

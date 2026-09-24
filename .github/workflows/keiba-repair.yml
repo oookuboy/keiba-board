@@ -31,6 +31,12 @@ on:
         description: "期間を絞るとき YYYY-MM-DD（空なら年の末）"
         required: false
         default: ""
+      mode:
+        description: "repair（欠けたレースを足す）/ refill（レース内の欠けた欄を埋める）"
+        required: false
+        type: choice
+        options: [repair, refill]
+        default: repair
 
 permissions:
   contents: write
@@ -62,7 +68,11 @@ jobs:
         run: |
           FROM="${{ inputs.from }}"; [ -n "$FROM" ] || FROM="${{ matrix.year }}-01-01"
           TO="${{ inputs.to }}";     [ -n "$TO" ]   || TO="${{ matrix.year }}-12-31"
-          python -m keiba.cli -v backfill-races --repair --from "$FROM" --to "$TO"
+          if [ "${{ inputs.mode }}" = "refill" ]; then
+            python -m keiba.cli -v backfill-races --refill --from "$FROM" --to "$TO"
+          else
+            python -m keiba.cli -v backfill-races --repair --from "$FROM" --to "$TO"
+          fi
 
       # 取れたぶんは必ず残す。失敗があっても、足せたレースは捨てない
       - name: Commit
@@ -99,4 +109,12 @@ jobs:
           ok = total - sum(short.values())
           print(f"${{ matrix.year }}: 開催 {total} / 12R揃い {ok} ({ok / max(total, 1):.1%})")
           print(f"  揃わない開催の内訳: {dict(sorted(short.items()))}")
+          # 中身の欠け（馬場状態・枠）も数える
+          races = no_going = runners = no_waku = 0
+          for p in sorted(pathlib.Path("keiba/raw/${{ matrix.year }}").glob("*.jsonl.gz")):
+              for c in read_jsonl(p):
+                  races += 1; no_going += c.race.going is None
+                  live = [e for e in c.entries if not e.scratched and e.umaban is not None]
+                  runners += len(live); no_waku += sum(e.waku is None for e in live)
+          print(f"  馬場状態なし {no_going}/{races} レース / 枠なし {no_waku}/{runners} 頭")
           PY

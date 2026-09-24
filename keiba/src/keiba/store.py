@@ -166,11 +166,27 @@ def pseudo_numbered(card: RaceCard) -> list[Entry]:
     確定済みなら馬番の無い馬（取消の残骸など）だけを落とす。
     """
     if not any(e.umaban is None for e in card.live_entries()):
-        return [e for e in card.entries if e.umaban is not None]
-    return [
-        replace(e, umaban=i) if e.umaban is None else e
-        for i, e in enumerate(card.live_entries(), 1)
-    ]
+        entries = [e for e in card.entries if e.umaban is not None]
+    else:
+        entries = [
+            replace(e, umaban=i) if e.umaban is None else e
+            for i, e in enumerate(card.live_entries(), 1)
+        ]
+    return [_same_ids(e) for e in entries]
+
+
+def _same_ids(e: Entry) -> Entry:
+    """騎手・調教師IDを netkeiba の5桁にそろえる（JRA公式は先頭0を落とす）。
+
+    パーサ側でも直しているが、直す前に溜まった raw（2026-08-08〜）を
+    読み直すときのためにここでもそろえる。
+    """
+    from keiba.sources.jra import normalize_id
+
+    j, t = normalize_id(e.jockey_id), normalize_id(e.trainer_id)
+    if (j, t) == (e.jockey_id, e.trainer_id):
+        return e
+    return replace(e, jockey_id=j, trainer_id=t)
 
 
 class Store:

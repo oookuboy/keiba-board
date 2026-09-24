@@ -11,6 +11,7 @@ SKILL.md の各観点を、DB から計算できる 0.0〜1.0 の数値に落と
 from __future__ import annotations
 
 import json
+import re
 import logging
 from dataclasses import dataclass, field
 from datetime import date, timedelta
@@ -273,7 +274,10 @@ def condition_changes(
             notes.append(f"休養{gap_before}日明けの2走目。叩き良化を見込む")
 
     # 6. 騎手強化
-    if entry.jockey_id and previous.jockey and entry.jockey != previous.jockey:
+    if (
+        entry.jockey_id and previous.jockey
+        and _person_key(entry.jockey) != _person_key(previous.jockey)
+    ):
         since = (
             as_of - timedelta(days=jockey_cfg["lookback_days"]) if as_of else None
         )
@@ -285,6 +289,16 @@ def condition_changes(
             notes.append(f"{previous.jockey}→{entry.jockey}へ乗り替わり（勝率{now_win:.0%}）")
 
     return score, [n for n in notes if n]
+
+
+def _person_key(name: str | None) -> str:
+    """騎手名の表記ゆれをそろえる。
+
+    JRA公式は「武 豊」「C.ルメール」、netkeiba は「武豊」「ルメール」と書く。
+    そのまま比べていたので、JRA公式に切り替えてから全馬が「武豊→武 豊へ
+    乗り替わり」と判定されていた。
+    """
+    return re.sub(r"^[A-Z]\.", "", re.sub(r"\s+", "", name or ""))
 
 
 def _keyword_sides(

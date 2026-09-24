@@ -204,6 +204,24 @@ jobs:
           python -m keiba.cli collect --upcoming
           python -m keiba.cli build
 
+      # 初めて出てきた馬（新馬・2歳・転入）の血統を引く。
+      #
+      # 血統は keiba-backfill で一度まとめて引いたきりで、それ以降に出てきた
+      # 馬は**父も母父も空のまま**だった（2026-09-24 時点で1,036頭）。
+      # 過去走の無い馬は血統でしか評価できないのに、その馬ほど空になる。
+      # 新しい馬から先に引く。落ちても週末は続ける。
+      - name: 新しく出てきた馬の血統を引く
+        if: steps.plan.outputs.job == 'preview' || steps.plan.outputs.job == 'collect'
+        continue-on-error: true
+        run: |
+          python -m keiba.cli -v backfill-pedigree --newest-first --limit 1500
+          python -m keiba.cli build
+          if [ "${{ steps.plan.outputs.job }}" = "preview" ]; then
+            for D in ${{ steps.plan.outputs.days }}; do
+              python -m keiba.cli predict --date "$D" --provisional || true
+            done
+          fi
+
       # 今週の出走馬の調教を引き直す。約500頭・1.5秒ウェイトで約12分。
       #
       # 一度引いた馬も対象にする。調教は毎週更新され、特徴量は21日より古い
@@ -332,6 +350,20 @@ jobs:
             || python -m keiba.cli collect --date "$DATE" --days-ahead 0 --results
           python -m keiba.cli build
           python -m keiba.cli review --date "$DATE" --catch-up
+
+      # 直近3週の欠けた欄（馬場状態・枠・馬体重・着順）を db.netkeiba で埋める。
+      #
+      # JRA公式は当日中に結果が出るが、発走前の出馬表には馬場状態が無い。
+      # db.netkeiba は数日遅れで全部載る。毎回の回顧のついでに埋めておけば、
+      # 学習にも過去走にも欠けが溜まらない（2026-08-08〜09-21 は溜まっていた）。
+      - name: 直近の欠けた欄を埋める
+        if: steps.plan.outputs.job == 'review'
+        continue-on-error: true
+        run: |
+          FROM=$(date -u -d '-21 day' +%F)
+          TO=$(date -u -d 'yesterday' +%F)
+          python -m keiba.cli -v backfill-races --refill --from "$FROM" --to "$TO"
+          python -m keiba.cli build
 
       # 収集は済んだのに予想で落ちた、という形でも生データは残す。
       # 取り直しには1.5秒ウェイトぶんの時間がかかるので捨てたくない。
