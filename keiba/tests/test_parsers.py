@@ -284,3 +284,41 @@ def test_workouts_survive_the_round_trip_through_sqlite(tmp_path) -> None:
     import json
 
     assert len(json.loads(got[0]["times"])) == 5
+
+
+# --- コース表記 ---------------------------------------------------------
+
+
+import pytest as _pytest
+
+
+@_pytest.mark.parametrize(("spec", "surface", "direction", "distance"), [
+    ("芝右1200m",      "芝", "右",   1200),
+    ("芝右 外1200m",   "芝", "右",   1200),   # 中山芝1200（スプリンターズS）
+    ("芝右\xa0外1200m", "芝", "右",   1200),   # ノーブレークスペース
+    ("芝右外1200m",    "芝", "右",   1200),
+    ("芝左 外1600m",   "芝", "左",   1600),   # 阪神・京都・新潟の外回り
+    ("芝右 内2000m",   "芝", "右",   2000),   # 京都・新潟の内回り
+    ("芝直線1000m",    "芝", "直線", 1000),   # 新潟直線（アイビスSD）
+    ("芝右 外-内3600m", "芝", "右",  3600),   # ステイヤーズS
+    ("ダ右1200m",      "ダ", "右",   1200),
+    ("障芝ダ3570m",    "障芝ダ", None, 3570),
+])
+def test_外回り内回り直線も読める(spec, surface, direction, distance) -> None:
+    """外回り・内回り・直線のレースを全部捨てていた。
+
+    以前の正規表現は向きと外内の間に空白が入ると外れた。「芝右 外1200m」は
+    読めず、レースページの解析が ValueError を投げ、バックフィルはそのレースを
+    **黙ってスキップ**していた。
+
+    3年分の学習データで、開催（日×場）の半分が12レース揃っていなかった
+    （1,072中 534）。中山芝1200 は3年間1レースも無く、スプリンターズS・
+    オーシャンS がデータに存在しなかった。
+    """
+    from keiba.sources.netkeiba import COURSE_RE
+
+    m = COURSE_RE.search(spec)
+    assert m, f"{spec!r} を読めない。このレースは学習データから消える"
+    assert m.group(1) == surface
+    assert (m.group(2) or None) == direction
+    assert int(m.group(4)) == distance

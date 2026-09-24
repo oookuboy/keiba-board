@@ -42,6 +42,19 @@ def _date(value: str) -> date:
 
 def cmd_backfill_races(args: argparse.Namespace) -> int:
     fetcher = Fetcher(cache_dir=args.cache)
+    if getattr(args, "repair", False):
+        # 既にある日の、欠けているレースだけを取り直す。
+        stats = backfill.repair_races(fetcher, args.start, args.end, args.raw_dir)
+        log.info(
+            "取り直し: %d日 / 足した %d レース / 失敗 %d / 12R揃わない開催 %d",
+            stats["days"], stats["added"], stats["failed"], stats["still_short"],
+        )
+        # 読めなかったレースを黙って捨てていたのが原因だったので、失敗が
+        # 残るなら落として見えるようにする。
+        if stats["failed"]:
+            print(f"::error::取り直せなかったレースが {stats['failed']} 件ある")
+            return 1
+        return 0
     written, failed = backfill.collect_races(
         fetcher, args.start, args.end, args.raw_dir
     )
@@ -1606,6 +1619,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("backfill-races", help="期間内の中央レースを収集する")
     p.add_argument("--from", dest="start", type=_date, required=True)
     p.add_argument("--to", dest="end", type=_date, required=True)
+    p.add_argument(
+        "--repair", action="store_true",
+        help="既にある日の、欠けているレースだけを取り直す",
+    )
     p.set_defaults(func=cmd_backfill_races)
 
     p = sub.add_parser("backfill-pedigree", help="出走馬の血統を収集する")

@@ -40,8 +40,26 @@ HORSE_ID_RE = re.compile(r"/horse/(\d+)")
 JOCKEY_ID_RE = re.compile(r"/jockey/(?:result/recent/)?(\w+)")
 TRAINER_ID_RE = re.compile(r"/trainer/(?:result/recent/)?(\w+)")
 
-# '芝左1200m' / 'ダ右1800m' / '障芝ダ3000m' / '直200m'(ばんえい)
-COURSE_RE = re.compile(r"(障芝ダ|障芝|障ダ|芝|ダ|直)\s*([右左内外直]*)\s*(\d+)\s*m")
+# '芝左1200m' / 'ダ右1800m' / '障芝ダ3000m' / '芝右 外1200m' / '芝直線1000m'
+#
+# ## 外回り・内回り・直線を全部捨てていた
+#
+# 以前は `(芝|ダ)\s*([右左内外直]*)\s*(\d+)m` で、**向きと外内の間に空白が
+# 入ると外れた**。「芝右 外1200m」は読めず、レースページの解析が ValueError
+# を投げ、バックフィルはそのレースを**黙ってスキップ**していた。
+#
+# 3年分の学習データで、開催（日×場）の半分が12レース揃っていなかった
+# （1,072中 534）。中山芝1200（スプリンターズS・オーシャンS）は3年間
+# **1レースも**入っておらず、中山・京都・阪神の芝率が25〜30%しか無かった
+# （外回り・内回りを持つ場だから）。
+#
+# 向き・外内・直線の順に、空白（ノーブレークスペース含む）を挟んでも読む。
+COURSE_RE = re.compile(
+    r"(障芝ダ|障芝|障ダ|芝|ダ|直)"
+    r"\s*(右|左|直線|直)?"
+    r"\s*(外-内|内-外|外|内|2周)?"
+    r"\s*(\d+)\s*m"
+)
 GOING_RE = re.compile(r"(?:芝|ダート|ダ|障)\s*[:：]\s*(良|稍重|重|不良)")
 WEATHER_RE = re.compile(r"天候\s*[:：]\s*(\S+?)(?:\s|/|$)")
 POST_RE = re.compile(r"発走\s*[:：]\s*(\d{1,2}:\d{2})")
@@ -128,7 +146,8 @@ def _parse_header(soup: BeautifulSoup, race_id: str) -> Race:
     course = COURSE_RE.search(spec)
     if not course:
         raise ValueError(f"コース情報を読めない: {spec!r} ({race_id})")
-    raw_surface, direction, distance = course.groups()
+    raw_surface, direction, _inout, distance = course.groups()
+    direction = {"直": "直線"}.get(direction or "", direction or "")
     surface = "障" if raw_surface.startswith("障") else raw_surface
     if surface == "直":  # ばんえい。中央には出ないが型は保つ
         surface = "ダ"

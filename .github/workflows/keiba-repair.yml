@@ -1,0 +1,102 @@
+name: keiba-repair
+
+# 学習データの欠けたレースを取り直す。
+#
+# ## 開催の半分が欠けていた
+#
+# コース表記「芝右 外1200m」の読み取りに失敗し、外回り・内回り・直線の
+# レースを**黙ってスキップ**していた。3年分で開催（日×場）の半分が12レース
+# 揃っておらず（1,072中 534）、中山芝1200（スプリンターズS・オーシャンS）は
+# 1レースも入っていなかった。
+#
+# 正規表現は直したが、既存のバックフィルは「ファイルがある日は触らない」
+# ので、欠けたレースは戻ってこない。既にある日の欠けた分だけを足す。
+#
+# ## 年ごとに並列
+#
+# 触るファイルは keiba/raw/<年>/ だけなので、年をまたいでぶつからない。
+
+on:
+  workflow_dispatch:
+    inputs:
+      years:
+        description: "取り直す年のJSON配列"
+        required: false
+        default: '["2023","2024","2025","2026"]'
+      from:
+        description: "期間を絞るとき YYYY-MM-DD（空なら年の頭）"
+        required: false
+        default: ""
+      to:
+        description: "期間を絞るとき YYYY-MM-DD（空なら年の末）"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  # 週末の運用とは別の群。長く走るので予想を待たせない
+  group: keiba-repair-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        year: ${{ fromJSON(inputs.years) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+
+      - name: 欠けたレースを取り直す（${{ matrix.year }}）
+        id: repair
+        continue-on-error: true
+        run: |
+          FROM="${{ inputs.from }}"; [ -n "$FROM" ] || FROM="${{ matrix.year }}-01-01"
+          TO="${{ inputs.to }}";     [ -n "$TO" ]   || TO="${{ matrix.year }}-12-31"
+          python -m keiba.cli -v backfill-races --repair --from "$FROM" --to "$TO"
+
+      # 取れたぶんは必ず残す。失敗があっても、足せたレースは捨てない
+      - name: Commit
+        if: always()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A keiba/raw/${{ matrix.year }}
+          if git diff --cached --quiet; then
+            echo "変化なし"
+            exit 0
+          fi
+          git commit -m "chore(keiba): repair ${{ matrix.year }}"
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep $((i * 5))
+          done
+          exit 1
+
+      # 最後に、その年の開催が12レース揃ったかを数える（ログは末尾が読める）
+      - name: 揃ったかを数える
+        if: always()
+        run: |
+          python - <<'PY'
+          import collections, pathlib
+          from keiba.store import read_jsonl
+          short = collections.Counter(); total = 0
+          for p in sorted(pathlib.Path("keiba/raw/${{ matrix.year }}").glob("*.jsonl.gz")):
+              by = collections.Counter(c.race.venue for c in read_jsonl(p))
+              for v, n in by.items():
+                  total += 1
+                  if n < 12:
+                      short[n] += 1
+          ok = total - sum(short.values())
+          print(f"${{ matrix.year }}: 開催 {total} / 12R揃い {ok} ({ok / max(total, 1):.1%})")
+          print(f"  揃わない開催の内訳: {dict(sorted(short.items()))}")
+          PY

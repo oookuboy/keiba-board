@@ -108,6 +108,76 @@ def collect_races(
     return written, failed
 
 
+def repair_races(
+    fetcher: Fetcher, start: date, end: date, out_dir: Path
+) -> dict[str, int]:
+    """既に取ってある日の、**欠けているレースだけ**を取り直す。
+
+    ## collect_races では直らない
+
+    collect_races は「ファイルがある日は触らない」。途中で止まっても最初から
+    やり直さないための作りだが、そのせいで**一度欠けたレースは永久に欠けた
+    まま**になる。
+
+    コース表記（「芝右 外1200m」）を読めずに捨てていたレースが、3年分で
+    開催の半分に及んでいた。正規表現を直しても、既存の日を触らない限り
+    戻ってこない。
+
+    ## 既にあるものは書き換えない
+
+    その日の一覧を取り直し、raw に無い race_id だけを引いて**足す**。既存の
+    カードはそのまま残す（後から入れた調教・コメント・払戻を消さないため。
+    出馬表の取り直しで一度その形を踏んでいる）。
+
+    ## 失敗を数えて返す
+
+    読めなかったレースを黙って捨てていたのが今回の原因なので、失敗は必ず
+    数えて返し、呼ぶ側で見えるようにする。
+    """
+    stats = {"days": 0, "added": 0, "failed": 0, "still_short": 0}
+
+    for day in racing_days(start, end):
+        out_path = out_dir / str(day.year) / f"{day.isoformat()}.jsonl.gz"
+        if not out_path.exists():
+            continue
+
+        existing = list(read_jsonl(out_path))
+        have = {c.race.race_id for c in existing}
+        listed = race_ids_for_day(fetcher, day)
+        missing = [r for r in listed if r not in have]
+        if not missing:
+            continue
+
+        stats["days"] += 1
+        added: list[RaceCard] = []
+        for race_id in missing:
+            try:
+                html = fetcher.fetch(RACE_URL.format(race_id=race_id))
+                card = netkeiba.parse_race_page(html, race_id)
+            except (FetchError, ValueError) as exc:
+                log.warning("取り直せない %s: %s", race_id, exc)
+                stats["failed"] += 1
+                continue
+            if card.race.race_date != day or not card.results:
+                continue
+            added.append(card)
+
+        if added:
+            merged = sorted(existing + added, key=lambda c: c.race.race_id)
+            write_jsonl(merged, out_path)
+            stats["added"] += len(added)
+            log.info("%s: %d レースを足した（計 %d）", day, len(added), len(merged))
+
+        # 場ごとに12レース揃ったかを見る。揃わない場合は一覧側の取りこぼし
+        # なので、ここで数えて見えるようにする。
+        by_venue: dict[str, int] = {}
+        for c in existing + added:
+            by_venue[c.race.venue] = by_venue.get(c.race.venue, 0) + 1
+        stats["still_short"] += sum(1 for n in by_venue.values() if n < 12)
+
+    return stats
+
+
 def collect_pedigrees(
     fetcher: Fetcher,
     store: Store,
