@@ -67,13 +67,35 @@ def model_scores(store: Store, day: date, config_dir: Path) -> dict[str, dict[in
         return {}
 
     today = today.copy()
-    today["p"] = ml.predict(booster, today)
+    today["p"] = ml.predict(booster, _blank_unknown_draw(today))
     scores = {
         race_id: dict(zip(group["umaban"], group["p"]))
         for race_id, group in today.groupby("race_id", observed=True)
     }
     log.info("学習モデルで採点: %d レース / %d頭", len(scores), len(today))
     return scores
+
+
+# 枠順が決まって初めて意味を持つ列。枠順確定前の行は仮番号なので、
+# ここを欠損にしてモデルに「枠は分からない」と渡す。
+DRAW_COLUMNS = ("waku", "umaban", "draw_ratio", "pc_draw_x_front")
+
+
+def _blank_unknown_draw(df):
+    """枠が未確定（waku が空）の行の枠由来の列を欠損にした写しを返す。
+
+    仮番号は出馬表の表示順（五十音順）でしかない。そのまま渡すと、
+    モデルは「1番の馬」「大外の馬」として採点してしまう。
+    """
+    unknown = df["waku"].isna()
+    if not unknown.any():
+        return df
+    out = df.copy()
+    for col in DRAW_COLUMNS:
+        if col in out.columns:
+            out[col] = out[col].astype(float)
+            out.loc[unknown, col] = float("nan")
+    return out
 
 
 def predict_card(
@@ -108,9 +130,9 @@ def predict_card(
             for i, e in enumerate(entries, 1)
         ]
         log.info("%s: 枠順未確定。印だけ出して買い目は組まない", race.race_id)
-        # 仮番号はこの関数の中だけの通し番号で、モデル側の馬番とは無関係。
-        # 突き合わせると別の馬のスコアを付けることになるので捨てる。
-        ml_scores = None
+        # DB 側も store.pseudo_numbered で同じ仮番号を振っている（取消を除いた
+        # 表示順の通し番号）ので、モデルのスコアはそのまま突き合わせられる。
+        # 以前はここで捨てていて、木曜の印は手置きの重みだけで付いていた。
 
     features = build_features(
         race, entries, store, sire_table, weights, as_of=race.race_date

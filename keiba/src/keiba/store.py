@@ -16,6 +16,7 @@ import logging
 import re
 import sqlite3
 from collections.abc import Iterable, Iterator
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 
@@ -159,6 +160,19 @@ def band_of(distance: int) -> str:
     return "long"
 
 
+def pseudo_numbered(card: RaceCard) -> list[Entry]:
+    """DB へ入れる出走馬。枠順未確定なら predict_card と同じ仮番号を振る。
+
+    確定済みなら馬番の無い馬（取消の残骸など）だけを落とす。
+    """
+    if not any(e.umaban is None for e in card.live_entries()):
+        return [e for e in card.entries if e.umaban is not None]
+    return [
+        replace(e, umaban=i) if e.umaban is None else e
+        for i, e in enumerate(card.live_entries(), 1)
+    ]
+
+
 class Store:
     def __init__(self, path: Path | str = "keiba/keiba.db") -> None:
         self.path = Path(path)
@@ -196,18 +210,29 @@ class Store:
 
     def save_card(self, card: RaceCard) -> None:
         # 枠順確定前の出馬表（木曜〜金曜）は馬番が None で入ってくる。
-        # umaban は entries の主キーなので DB には入れられない。生の JSONL 側は
-        # 正として持ち続け、DB へは確定した馬だけを入れる。
-        # ここを弾かないと NOT NULL 制約で build ごと落ち、確定済みの他の開催日
-        # まで巻き添えで予想が作れなくなる（実際そうなった）。
-        entries = [e for e in card.entries if e.umaban is not None]
+        # umaban は entries の主キーなので、そのままでは DB に入れられない。
+        #
+        # 以前は未確定の馬を丸ごと捨てていた。すると木曜の暫定予想では
+        # その日の行が特徴量の表に1行も出ず、**学習モデルが一度も使われずに
+        # 手置きの重みで印が付いていた**（スプリンターズSの週に踏んだ）。
+        #
+        # predict_card と同じ仮番号（取消を除いた表示順の通し番号）で入れる。
+        # 枠は None のまま残すので、枠由来の特徴量は予想側で欠損扱いにできる。
+        # 仮番号の行は結果が無いので学習には入らない。
+        entries = pseudo_numbered(card)
         if len(entries) != len(card.entries):
             log.info(
-                "%s: 枠順未確定の %d 頭を DB へ入れない（金曜確定）",
+                "%s: 取消・枠順未確定で %d 頭を DB へ入れない",
                 card.race.race_id, len(card.entries) - len(entries),
             )
 
         self._upsert("races", [card.race.to_dict()])
+        if entries:
+            # 出馬表が正。仮番号で入れた行が、枠順確定後に同じ馬の別番号として
+            # 残らないよう、そのレースの出走馬は入れ替える。
+            self.conn.execute(
+                "DELETE FROM entries WHERE race_id = ?", (card.race.race_id,)
+            )
         self._upsert("entries", [e.to_dict() for e in entries])
         self._upsert("results", [r.to_dict() for r in card.results])
         self._upsert("payouts", [p.to_dict() for p in card.payouts])

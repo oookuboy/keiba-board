@@ -90,12 +90,12 @@ def test_without_model_the_hand_weights_are_used(store: Store) -> None:
     }
 
 
-def test_provisional_cards_do_not_take_model_scores(store: Store) -> None:
-    """枠順未確定のときはモデルのスコアを使わないこと。
+def test_provisional_cards_take_model_scores(store: Store) -> None:
+    """枠順未確定でもモデルのスコアで印が付くこと。
 
-    馬番が空の出馬表には内部用の仮番号を振っている。モデル側の馬番は
-    **確定した本物の馬番**なので、突き合わせると別の馬のスコアが付く。
-    静かに間違った印が出るので、ここで断つ。
+    以前はここでスコアを捨てていて、木曜の印は手置きの重みだけで付いていた。
+    DB 側（store.pseudo_numbered）と予想側で同じ仮番号を振るので、
+    突き合わせても別の馬のスコアにはならない。出力に馬番は載せない。
     """
     card = make_card(confirmed=False)
     scores = {i: 0.05 * i for i in range(1, 9)}
@@ -104,8 +104,63 @@ def test_provisional_cards_do_not_take_model_scores(store: Store) -> None:
     assert payload is not None
     assert payload["post_positions_confirmed"] is False
     assert all(h["umaban"] is None for h in payload["horses"])
-    # モデルのスコアを当てていたら 40.0 が最大になるはず
-    assert max(h["score"] for h in payload["horses"]) != pytest.approx(40.0)
+    assert not payload["bets"], "仮番号で券を組んではいけない"
+    # 仮番号 8 = 表示順 8 頭目の馬に 0.40 が付く
+    top = payload["horses"][0]
+    assert top["name"] == "馬8"
+    assert top["score"] == pytest.approx(40.0)
+
+
+def test_unconfirmed_card_enters_db_with_the_same_pseudo_numbers(store: Store) -> None:
+    """枠順確定前の出走馬が、予想側と同じ仮番号で DB に入ること。
+
+    入らないと、その日の行が特徴量の表に1行も出ず、モデルが使われない。
+    """
+    from keiba.store import pseudo_numbered
+
+    card = make_card(confirmed=False)
+    store.save_cards([card])
+    rows = store.conn.execute(
+        "SELECT umaban, horse_name, waku FROM entries WHERE race_id = ? ORDER BY umaban",
+        (card.race.race_id,),
+    ).fetchall()
+    assert [(r[0], r[1]) for r in rows] == [(i, f"馬{i}") for i in range(1, 9)]
+    assert all(r[2] is None for r in rows), "枠は未確定のまま残すこと"
+    assert [e.umaban for e in pseudo_numbered(card)] == list(range(1, 9))
+
+
+def test_confirmed_card_replaces_pseudo_rows(store: Store) -> None:
+    """枠順確定後に、仮番号の行が同じ馬の別番号として残らないこと。"""
+    from dataclasses import replace
+
+    store.save_cards([make_card(confirmed=False)])
+    confirmed = make_card(confirmed=True)
+    # 確定した馬番は表示順と逆
+    confirmed.entries = [replace(e, umaban=9 - e.umaban) for e in confirmed.entries]
+    store.save_cards([confirmed])
+    rows = store.conn.execute(
+        "SELECT horse_name, umaban FROM entries WHERE race_id = ?",
+        (confirmed.race.race_id,),
+    ).fetchall()
+    assert len(rows) == 8, "仮番号の行が残って同じ馬が2頭いる"
+    assert dict(rows)["馬1"] == 8
+
+
+def test_unknown_draw_is_blanked_for_the_model() -> None:
+    """枠が未確定の行は、枠由来の列を欠損にしてモデルへ渡すこと。
+
+    仮番号は五十音順でしかない。そのまま渡すと「1番の馬」として採点される。
+    """
+    import pandas as pd
+
+    df = pd.DataFrame({
+        "waku": [None, 3.0], "umaban": [1, 5],
+        "draw_ratio": [0.1, 0.5], "pc_draw_x_front": [0.1, 0.2],
+    })
+    out = predict._blank_unknown_draw(df)
+    assert out.loc[0, ["umaban", "draw_ratio", "pc_draw_x_front"]].isna().all()
+    assert out.loc[1, "umaban"] == 5 and out.loc[1, "draw_ratio"] == 0.5
+    assert df.loc[0, "umaban"] == 1, "元の表（スコアの突き合わせに使う馬番）を壊さない"
 
 
 def test_predict_day_records_what_scored_it(store: Store) -> None:
