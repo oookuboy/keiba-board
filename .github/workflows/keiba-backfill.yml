@@ -165,6 +165,6 @@ jobs:
             echo "変化なし"
           else
             git commit -m "chore(keiba): バックフィル（${{ inputs.phase || 'pedigree' }}）の結果を取り込む"
-            git pull --rebase origin ${{ github.ref_name }}
+            git pull --rebase --autostash origin ${{ github.ref_name }}
             git push origin HEAD:${{ github.ref_name }}
           fi

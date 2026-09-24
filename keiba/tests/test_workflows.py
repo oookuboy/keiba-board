@@ -431,3 +431,22 @@ def test_コメントに式の記法を書かない() -> None:
             f"{path.name}: 空の式 ${{{{ }}}} がある。"
             " 説明で式の記法に触れるときは別の書き方にすること"
         )
+
+
+def test_rebaseの前に残った変更で止まらない() -> None:
+    """build が作り直すファイルが作業ツリーに残ると、rebase が止まる。
+
+    2026-09-24 の再学習は、学習そのものは成功していたのに、push の直前の
+    `git pull --rebase` が「You have unstaged changes」で落ちた。build が
+    sire_aptitude.json を作り直し、ジョブはモデルの2ファイルしか add して
+    いなかったため。**学習したモデルが push されずに消えた。**
+
+    どのワークフローでも同じ形で落ちうるので、全部に --autostash を付ける。
+    """
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            code = line.split("#", 1)[0]
+            if "git pull --rebase" in code:
+                assert "--autostash" in code, (
+                    f"{path.name}:{n} が --autostash なしで rebase している"
+                )

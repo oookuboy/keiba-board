@@ -104,11 +104,22 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A keiba/config/model.txt keiba/config/model.json
+          # 種牡馬適性も一緒に入れる。build が毎回作り直すファイルで、
+          # モデルと同じデータから計算されている。以前はモデルの2ファイル
+          # しか add しておらず、作業ツリーに変更が残ったまま rebase しよう
+          # として「You have unstaged changes」で落ちた（2026-09-24）。
+          # 学習は成功していたのに、モデルが push されずに消えた。
+          git add -A keiba/config/model.txt keiba/config/model.json \
+                     keiba/config/sire_aptitude.json
           if git diff --cached --quiet; then
             echo "変化なし"
-          else
-            git commit -m "chore(keiba): モデルを再学習"
-            git pull --rebase origin ${{ github.ref_name }}
-            git push origin HEAD:${{ github.ref_name }}
+            exit 0
           fi
+          git commit -m "chore(keiba): モデルを再学習"
+          # 他に残った変更があっても rebase を止めない
+          for i in 1 2 3 4 5; do
+            git pull --rebase --autostash origin ${{ github.ref_name }} \
+              && git push origin HEAD:${{ github.ref_name }} && exit 0
+            sleep $((i * 5))
+          done
+          exit 1

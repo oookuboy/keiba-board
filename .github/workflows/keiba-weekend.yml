@@ -354,6 +354,6 @@ jobs:
             echo "変化なし"
           else
             git commit -m "chore(keiba): ${{ steps.plan.outputs.job }} ${{ steps.plan.outputs.date }}"
-            git pull --rebase origin ${{ github.ref_name }}
+            git pull --rebase --autostash origin ${{ github.ref_name }}
             git push origin HEAD:${{ github.ref_name }}
           fi

@@ -124,7 +124,7 @@ jobs:
             echo "変化なし"
           else
             git commit -m "chore(keiba): backfill comments"
-            git pull --rebase origin main
+            git pull --rebase --autostash origin main
             git push origin HEAD:main
           fi
 
