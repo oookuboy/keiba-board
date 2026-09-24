@@ -61,7 +61,7 @@ TRAINER_ID_RE = re.compile(r"/trainer/(?:result/recent/)?(\w+)")
 COURSE_RE = re.compile(
     r"(障\s*芝\s*ダート|障\s*芝\s*ダ|障\s*芝|障\s*ダート|障\s*ダ|芝|ダート|ダ|直)"
     r"\s*(右|左|直線|直)?"
-    r"\s*(外-内|内-外|外|内|2周)?"
+    r"\s*(外-内|内-外|内2周|外2周|外|内|2周)?"
     r"\s*(\d+)\s*m"
 )
 GOING_RE = re.compile(r"(?:芝|ダート|ダ|障)\s*[:：]\s*(良|稍重|重|不良)")
