@@ -54,8 +54,12 @@ TRAINER_ID_RE = re.compile(r"/trainer/(?:result/recent/)?(\w+)")
 # （外回り・内回りを持つ場だから）。
 #
 # 向き・外内・直線の順に、空白（ノーブレークスペース含む）を挟んでも読む。
+#
+# 障害は「障芝 ダート2880m」と、芝からダートへ横切るコースを**略さずに**
+# 書く。これも読めずに各開催の1R（障害未勝利）を捨てていた。取り直しの
+# 実地確認で、失敗を数えて落とすようにした仕組みが見つけた。
 COURSE_RE = re.compile(
-    r"(障芝ダ|障芝|障ダ|芝|ダ|直)"
+    r"(障\s*芝\s*ダート|障\s*芝\s*ダ|障\s*芝|障\s*ダート|障\s*ダ|芝|ダート|ダ|直)"
     r"\s*(右|左|直線|直)?"
     r"\s*(外-内|内-外|外|内|2周)?"
     r"\s*(\d+)\s*m"
@@ -148,7 +152,12 @@ def _parse_header(soup: BeautifulSoup, race_id: str) -> Race:
         raise ValueError(f"コース情報を読めない: {spec!r} ({race_id})")
     raw_surface, direction, _inout, distance = course.groups()
     direction = {"直": "直線"}.get(direction or "", direction or "")
-    surface = "障" if raw_surface.startswith("障") else raw_surface
+    raw_surface = raw_surface.replace(" ", "").replace("\xa0", "")
+    surface = (
+        "障" if raw_surface.startswith("障")
+        else "ダ" if raw_surface.startswith("ダ")
+        else raw_surface
+    )
     if surface == "直":  # ばんえい。中央には出ないが型は保つ
         surface = "ダ"
 
