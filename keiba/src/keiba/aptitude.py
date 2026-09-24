@@ -76,6 +76,21 @@ APTITUDE_FEATURES = [
     "turf_place_filled",    # 自身の芝種別複勝率。無ければ父の値
     "cond_last3f_filled",   # 自身の同条件最速上がり。無ければ父産駒の平均
     "filled_from_pedigree", # 血統で埋めた数（0〜3）。どれだけ推測かを渡す
+    # --- そのコースそのもの・回りの向き ------------------------------------
+    # 競馬場だけ・距離帯だけでは「中山芝1200」が見えない。スプリンターズSで
+    # ジューンブレア（中山芝1200 4戦4連対、他場の大敗2つ）を 8.9% とした。
+    # レッドモンレーヴ（右回り 0-0-0-4 / 左回り 80%）も区別できていなかった。
+    # 着順そのものではなく「普段よりここで走るか」を差で渡す。
+    "h_course_runs",        # 同じ競馬場・芝ダ・距離での出走数
+    "h_course_place_rate",  # そのコースの複勝率
+    "h_course_vs_all",      # そのコースの着順比 − 全体の着順比（負ほどここが得意）
+    "h_dir_runs",           # 同じ芝ダ・回りの向きでの出走数
+    "h_dir_place_rate",     # その向きの複勝率
+    "h_dir_vs_all",         # その向きの着順比 − 全体の着順比
+    "s_course_place",       # 父産駒のそのコースの複勝率
+    "course_place_filled",  # 自身のコース複勝率。無ければ父産駒の値
+    "course_place_filled_z",  # 上をレース内で比べた値
+    "h_course_vs_all_z",    # 「ここが得意か」をレース内で比べた値
 ]
 
 
@@ -195,6 +210,32 @@ def attach(frame: pd.DataFrame) -> pd.DataFrame:
         out[name] = mine.where(mine.notna(), back)
         filled = filled + (mine.isna() & back.notna()).astype("int8")
     out["filled_from_pedigree"] = filled
+
+    # --- そのコースそのもの・回りの向き ------------------------------------
+    if "finish_ratio" in out.columns:
+        all_ratio = _prior_mean(out, horse, "finish_ratio")
+        course = ["horse_id", "venue", "surface", "distance"]
+        out["h_course_runs"] = _prior_count(out, course)
+        out["h_course_place_rate"] = _prior_mean(out, course, "placed")
+        out["h_course_vs_all"] = _prior_mean(out, course, "finish_ratio") - all_ratio
+        if "direction" in out.columns:
+            way = ["horse_id", "surface", "direction"]
+            out["h_dir_runs"] = _prior_count(out, way)
+            out["h_dir_place_rate"] = _prior_mean(out, way, "placed")
+            out["h_dir_vs_all"] = _prior_mean(out, way, "finish_ratio") - all_ratio
+        if "sire" in out.columns:
+            out["s_course_place"] = _prior_mean(
+                out, ["sire", "venue", "surface", "distance"], "placed"
+            )
+        own = out["h_course_place_rate"]
+        out["course_place_filled"] = own.where(own.notna(), out["s_course_place"])
+        filled = filled + (own.isna() & out["s_course_place"].notna()).astype("int8")
+        out["filled_from_pedigree"] = filled
+        for col in ("course_place_filled", "h_course_vs_all"):
+            g = out.groupby("race_id", observed=True)[col]
+            out[f"{col}_z"] = (out[col] - g.transform("mean")) / g.transform(
+                "std"
+            ).replace(0, np.nan)
 
     return out.drop(columns=["is_yoshiba", "is_noshiba", "_py", "_pn"])
 

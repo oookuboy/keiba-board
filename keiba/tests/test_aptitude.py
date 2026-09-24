@@ -209,3 +209,32 @@ def test_父が分からなければ埋めない() -> None:
     ])
     out = attach(df)
     assert out.loc[0, "filled_from_pedigree"] == 0
+
+
+def test_コースそのものと回りの得手不得手が見える() -> None:
+    """ジューンブレア／レッドモンレーヴの形。
+
+    ジューンブレアは中山芝1200で4戦4連対、他場で大敗。競馬場だけ・距離帯
+    だけの列では「中山芝1200が得意」が見えず、モデルは 8.9% を付けた。
+    レッドモンレーヴは右回り 0-0-0-4 / 左回り好走。向きの列が無かった。
+    """
+    def run(race, venue, dist, direction, fin, placed):
+        return {"race_id": race, "race_date": race, "venue": venue, "surface": "芝",
+                "distance": dist, "direction": direction, "finish_ratio": fin,
+                "placed": placed, "last3f": 34.0, "finish_pos": 1, "sire": "s"}
+
+    df = _horse([
+        run("r1", "中山", 1200, "右", 0.06, 1),
+        run("r2", "中京", 1200, "左", 0.95, 0),
+        run("r3", "中山", 1200, "右", 0.06, 1),
+        run("r4", "阪神", 1400, "右", 0.70, 0),
+        run("r5", "中山", 1200, "右", 0.10, None),   # 今走
+    ])
+    out = attach(df).iloc[-1]
+    assert out["h_course_runs"] == 2
+    assert out["h_course_place_rate"] == 1.0
+    assert out["h_course_vs_all"] < -0.3, "中山芝1200が普段より走ることが見えない"
+    assert out["h_dir_runs"] == 3
+    assert out["h_dir_vs_all"] < 0
+    # 自分の結果は入らない（今走の 0.10 を混ぜない）
+    assert out["h_course_place_rate"] == pytest.approx(1.0)
