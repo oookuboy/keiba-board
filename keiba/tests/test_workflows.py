@@ -450,3 +450,25 @@ def test_rebaseの前に残った変更で止まらない() -> None:
                 assert "--autostash" in code, (
                     f"{path.name}:{n} が --autostash なしで rebase している"
                 )
+
+
+def test_有料ページを引く手順にはログイン情報を渡す() -> None:
+    """collect-paid / --refetch / backfill-workouts を呼ぶ手順は必ず env で資格情報を持つこと。
+
+    金曜の点検（health --refetch）にだけ渡し忘れ、欠けたレースの引き直しが
+    「認証情報が env に届いていない」の警告だけで素通りしていた（2026-09-25）。
+    """
+    import yaml
+
+    paid = re.compile(r"collect-paid|--refetch|backfill-workouts")
+    missing = []
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+        for job_name, job in (doc.get("jobs") or {}).items():
+            for step in job.get("steps") or []:
+                if not paid.search(str(step.get("run") or "")):
+                    continue
+                env = {**(job.get("env") or {}), **(step.get("env") or {})}
+                if not {"NETKEIBA_EMAIL", "NETKEIBA_PASSWORD"} <= set(env):
+                    missing.append(f"{path.name}:{job_name}:{step.get('name')}")
+    assert not missing, f"ログイン情報なしで有料ページを引く手順: {missing}"

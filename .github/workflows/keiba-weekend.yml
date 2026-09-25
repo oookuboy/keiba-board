@@ -274,6 +274,11 @@ jobs:
       # 「警告は出したが誰も見ない」でこれまで3回通り抜けている。
       - name: 今週の有料データが入ったか確かめる
         if: steps.plan.outputs.job == 'collect'
+        # --refetch は欠けたレースを有料ページから引き直す。ログイン情報が
+        # 無いと「引き直しに失敗」と警告だけ出して素通りしていた（2026-09-25）
+        env:
+          NETKEIBA_EMAIL: ${{ secrets.NETKEIBA_EMAIL }}
+          NETKEIBA_PASSWORD: ${{ secrets.NETKEIBA_PASSWORD }}
         run: |
           for D in ${{ steps.plan.outputs.days }}; do
             echo "--- $D"
