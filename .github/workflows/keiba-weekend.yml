@@ -280,9 +280,19 @@ jobs:
           NETKEIBA_EMAIL: ${{ secrets.NETKEIBA_EMAIL }}
           NETKEIBA_PASSWORD: ${{ secrets.NETKEIBA_PASSWORD }}
         run: |
+          # 落とすのは翌開催日（土曜）だけ。日曜の追い切りは金曜夜には半分も
+          # 公開されておらず（2026-09-25: ログインして16R引き直しても0本）、
+          # 「まだ出ていない」を「欠けた」と数えて毎週赤くなっていた。
+          # 日曜ぶんは土曜夜の予想の直前にもう一度引き直して点検する。
+          FIRST=1
           for D in ${{ steps.plan.outputs.days }}; do
             echo "--- $D"
-            python -m keiba.cli health --date "$D" --refetch --strict
+            if [ "$FIRST" = 1 ]; then
+              python -m keiba.cli health --date "$D" --refetch --strict
+              FIRST=0
+            else
+              python -m keiba.cli health --date "$D" --refetch
+            fi
           done
 
       # 当日ぶんの厩舎コメントと追い切りを引き直す。
