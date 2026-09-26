@@ -228,3 +228,14 @@ def test_narrowing_shrinks_the_box_instead_of_planting_an_axis() -> None:
 
     # 軸は立っていない。◎13 を含まない点が必ずある
     assert any(13 not in c for c in trio), "絞った結果◎軸になっている"
+
+
+def test_三連単は組まない() -> None:
+    """自信度◎のレースでも三連単を買わないこと。
+
+    本番の実績で 9/5〜9/21 の14日で回収 11.6%（最大の1件を除くと 0%）、
+    9/26 も 200円 → 0円。やめると伝えてから実装が遅れていた。
+    """
+    tickets = betting.build(horses(), grade(), WEIGHTS)
+    assert tickets, "三連複まで消えている"
+    assert not [t for t in tickets if t.bet_type == betting.TRIFECTA]
