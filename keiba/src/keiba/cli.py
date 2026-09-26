@@ -527,6 +527,18 @@ def cmd_health(args: argparse.Namespace) -> int:
         "comments": ("厩舎コメント", 3),
     }
 
+    # レースごとの内訳。日の合計だけでは「重賞に入ったか」が分からず、
+    # スプリンターズSの調教が入ったかを確かめられなかった（2026-09-27）。
+    # 数だけを出す（中身は出さない）。
+    from keiba.models import VENUES
+
+    for race_id, runners, fresh, commented in sorted(rows, key=lambda r: r[0]):
+        log.info(
+            "  %s%sR: 調教 %d/%d頭・厩舎コメント %d/%d頭",
+            VENUES.get(race_id[4:6], race_id[4:6]), race_id[-2:].lstrip("0"),
+            fresh, runners, commented, runners,
+        )
+
     path = args.data_dir / "health.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     health = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
