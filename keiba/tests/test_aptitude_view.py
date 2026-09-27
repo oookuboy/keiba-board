@@ -24,6 +24,7 @@ def _runs(rows):
         fp = d.get("finish_pos")
         d["placed"] = np.nan if fp is None else float(fp <= 3)
         d["umaban"] = 1
+        d.setdefault("band", "sprint" if d.get("distance", 1200) <= 1400 else "mile")
         out.append(d)
     return pd.DataFrame(out)
 
@@ -98,3 +99,28 @@ def test_良馬場のコース成績で稍重の日の評価を打ち消さな�
     assert row["apt_gc_n"] == 3 and row["apt_gc_1"] == 3, "稍重の成績を別に数えていない"
     assert row["apt_m_soft"] > 1.3
     assert any("稍重は3-0-0-0" in x for x in av.reasons(row))
+
+
+def test_長い距離の凡走と位置取りで短距離を割り引かない() -> None:
+    """マーゴットゲインの形（2026-09-27 中山12R 1着・6番人気）。
+
+    ダ1800の右回りで2戦とも4着以下・後方。初めてのダ1200で1着（中団）。
+    ダ1200の日に、1800mの右回りと後方の位置取りで割り引いてはいけない。
+    """
+    df = _runs([
+        dict(horse_id="m", venue="中山", distance=1800, surface="ダ", finish_pos=7,
+             corner_ratio=0.62, h_corner_ratio_r5=0.6),
+        dict(horse_id="m", venue="新潟", distance=1800, surface="ダ", direction="左",
+             finish_pos=6, corner_ratio=0.9, h_corner_ratio_r5=0.7),
+        dict(horse_id="m", venue="東京", distance=1600, finish_pos=10,
+             corner_ratio=1.0, h_corner_ratio_r5=0.8),
+        dict(horse_id="m", venue="新潟", distance=1200, surface="ダ", direction="左",
+             finish_pos=1, corner_ratio=0.6, h_corner_ratio_r5=0.8),
+        dict(horse_id="m", venue="中山", distance=1200, surface="ダ", finish_pos=None,
+             h_corner_ratio_r5=0.8),  # 今走
+    ])
+    row = av.attach(df).iloc[-1]
+    assert row["apt_dir_n"] == 0, "1800mの右回りを1200mの向きの成績に数えている"
+    assert row["apt_band_n"] == 1 and row["apt_band_1"] == 1
+    assert row["apt_m_band"] > 1.15
+    assert abs(row["apt_pos_ratio"] - 0.6) < 1e-9, "位置取りを別の距離帯から取っている"

@@ -41,6 +41,7 @@ SOFT = {"稍重", "重", "不良"}
 # （2026-09-27 スプリンターズSの勝ち馬ピューロマジックは道悪3勝がすべて稍重）。
 GOING_CLASS = {"良": 0, "稍重": 1, "重": 2, "不良": 2}
 GOING_LABEL = {0: "良", 1: "稍重", 2: "重・不良"}
+BAND_LABEL = {"sprint": "短距離", "mile": "マイル", "middle": "中距離", "long": "長距離"}
 
 # 1 に寄せる強さ（何走ぶんの「普段どおり」を足すか）
 K_HORSE = 3.0
@@ -124,10 +125,22 @@ def attach(df: pd.DataFrame, bias_before: str | None = None) -> pd.DataFrame:
     ).values
 
     # --- 回りの向き（芝ダ・右左）-----------------------------------------
-    way = ["horse_id", "surface", "direction"]
+    # 向きは同じ距離帯で数える。1800mの右回りの凡走で1200mを割り引かない
+    # （2026-09-27 中山12R 1着マーゴットゲインは「ダ右回り 0-0-0-2」が
+    # すべて1800mだった）。
+    way = ["horse_id", "surface", "direction", "band"]
     _record(out, way, "apt_dir_")
     out["apt_m_dir"] = _ratio(
         _prior_sum(out, way, "_pl"), out["apt_dir_n"], base, K_HORSE
+    ).values
+
+    # --- 同じ芝ダ・距離帯 ---------------------------------------------------
+    # 距離を替えて一変する馬がいる。マーゴットゲインは初めてのダ1200で
+    # 13番人気1着、2走目の中山12Rも6番人気1着。
+    band = ["horse_id", "surface", "band"]
+    _record(out, band, "apt_band_")
+    out["apt_m_band"] = _ratio(
+        _prior_sum(out, band, "_pl"), out["apt_band_n"], base, K_HORSE
     ).values
 
     # --- 道悪（今走が稍重以上のときだけ効かせる）-------------------------
@@ -176,7 +189,16 @@ def attach(df: pd.DataFrame, bias_before: str | None = None) -> pd.DataFrame:
     hist = hist.assign(_q=np.minimum((hist["corner_ratio"] * 4).fillna(-1), 3).astype(int))
     hist = hist.loc[hist["_q"] >= 0]
     pos = _bias_table(hist, ckey, "_q")
-    out["_q"] = np.minimum((out["h_corner_ratio_r5"] * 4).fillna(-1), 3).astype(int)
+    # 位置取りは同じ芝ダ・距離帯の走りから。芝1600やダ1800で後ろにいた馬を、
+    # ダ1200でも後ろと決めつけない（マーゴットゲインがそうだった）。
+    # 同じ帯の走りが無ければ、全体の直近5走に落とす。
+    out["_cr"] = out["corner_ratio"].fillna(0.0)
+    out["_crn"] = out["corner_ratio"].notna().astype(float)
+    cr_sum = _prior_sum(out, band, "_cr")
+    cr_n = _prior_sum(out, band, "_crn")
+    pos_here = (cr_sum / cr_n.replace(0, np.nan))
+    out["apt_pos_ratio"] = pos_here.fillna(out["h_corner_ratio_r5"]).values
+    out["_q"] = np.minimum((out["apt_pos_ratio"] * 4).fillna(-1), 3).astype(int)
     m = out[ckey + ["_q"]].merge(pos, on=ckey + ["_q"], how="left")
     m_pos = (m["sum"] + K_BIAS * m["course_rate"]) / (m["count"] + K_BIAS) / m["course_rate"]
     out["apt_m_pos"] = m_pos.fillna(1.0).clip(*CLIP).values
@@ -190,7 +212,10 @@ def attach(df: pd.DataFrame, bias_before: str | None = None) -> pd.DataFrame:
     ) / m["course_rate"]
     out["apt_m_waku"] = m_waku.fillna(1.0).clip(*CLIP).values
 
-    parts = ["apt_m_course", "apt_m_dir", "apt_m_soft", "apt_m_layoff", "apt_m_pos", "apt_m_waku"]
+    parts = [
+        "apt_m_course", "apt_m_dir", "apt_m_band", "apt_m_soft",
+        "apt_m_layoff", "apt_m_pos", "apt_m_waku",
+    ]
     out["apt_log"] = np.log(out[parts].astype(float)).sum(axis=1)
     out["_wet_label"] = out["_wet"]
     out["apt_gc_class"] = out["_gc"]
@@ -228,11 +253,14 @@ def reasons(row: pd.Series, threshold: float = 1.15) -> list[str]:
         out.append(
             f"{course}（{side}）は{_fmt(row, 'apt_course_')}（{mark(row['apt_m_course'])}）"
         )
+    band = BAND_LABEL.get(str(row["band"]), str(row["band"]))
     if big(row["apt_m_dir"]) and row["apt_dir_n"] > 0:
         out.append(
-            f"{row['surface']}の{row['direction']}回りは{_fmt(row, 'apt_dir_')}"
+            f"{row['surface']}{band}の{row['direction']}回りは{_fmt(row, 'apt_dir_')}"
             f"（{mark(row['apt_m_dir'])}）"
         )
+    if big(row["apt_m_band"]) and row["apt_band_n"] > 0:
+        out.append(f"{row['surface']}{band}は{_fmt(row, 'apt_band_')}（{mark(row['apt_m_band'])}）")
     if big(row["apt_m_soft"]):
         if row["apt_gc_n"] > 0:
             out.append(
