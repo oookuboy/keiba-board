@@ -40,7 +40,7 @@ def test_コースの成績と回りの成績を数える() -> None:
     row = av.attach(df).iloc[-1]
     assert row["apt_course_n"] == 2 and row["apt_course_1"] == 1 and row["apt_course_2"] == 1
     assert row["apt_m_course"] > 1.15
-    assert any("中山芝1200は1-1-0-0" in x for x in av.reasons(row))
+    assert any("中山芝1200（良）は1-1-0-0" in x for x in av.reasons(row))
 
 
 def test_道悪は今走が稍重以上のときだけ効く() -> None:
@@ -75,3 +75,26 @@ def test_掛けてもレース内の確率の合計は変わらない() -> None:
     adj = av.adjust(p, frame, 1.0)
     assert abs(adj.sum() - p.sum()) < 1e-9
     assert adj.iloc[0] > adj.iloc[1] > adj.iloc[2]
+
+
+def test_良馬場のコース成績で稍重の日の評価を打ち消さない() -> None:
+    """ピューロマジックの形（2026-09-27 スプリンターズS 1着・8番人気）。
+
+    良馬場の中山芝1200は3回走って全部4着以下。稍重では3勝。稍重の日に、
+    良馬場のコース成績で割り引いてはいけない。
+    """
+    df = _runs([
+        dict(horse_id="p", venue="中山", distance=1200, going="良", finish_pos=8),
+        dict(horse_id="p", venue="中山", distance=1200, going="良", finish_pos=8),
+        dict(horse_id="p", venue="中山", distance=1200, going="良", finish_pos=16),
+        dict(horse_id="p", venue="京都", distance=1200, going="稍重", finish_pos=1),
+        dict(horse_id="p", venue="小倉", distance=1200, going="稍重", finish_pos=1),
+        dict(horse_id="p", venue="阪神", distance=1200, going="稍重", finish_pos=1),
+        dict(horse_id="p", venue="阪神", distance=1200, going="重", finish_pos=2),
+        dict(horse_id="p", venue="中山", distance=1200, going="稍重", finish_pos=None),  # 今走
+    ])
+    row = av.attach(df).iloc[-1]
+    assert row["apt_m_course"] == 1.0, "良馬場のコース成績で稍重の日を割り引いている"
+    assert row["apt_gc_n"] == 3 and row["apt_gc_1"] == 3, "稍重の成績を別に数えていない"
+    assert row["apt_m_soft"] > 1.3
+    assert any("稍重は3-0-0-0" in x for x in av.reasons(row))

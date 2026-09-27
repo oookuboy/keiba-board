@@ -37,6 +37,10 @@ import numpy as np
 import pandas as pd
 
 SOFT = {"稍重", "重", "不良"}
+# 馬場を3つに分ける。稍重は良に近く、重・不良とは別物として数える
+# （2026-09-27 スプリンターズSの勝ち馬ピューロマジックは道悪3勝がすべて稍重）。
+GOING_CLASS = {"良": 0, "稍重": 1, "重": 2, "不良": 2}
+GOING_LABEL = {0: "良", 1: "稍重", 2: "重・不良"}
 
 # 1 に寄せる強さ（何走ぶんの「普段どおり」を足すか）
 K_HORSE = 3.0
@@ -98,6 +102,8 @@ def attach(df: pd.DataFrame, bias_before: str | None = None) -> pd.DataFrame:
     for k in (1, 2, 3):
         out[f"_w{k}"] = ((out["finish_pos"] == k) & done).astype(float)
     out["_soft"] = out["going"].astype(str).isin(SOFT)
+    out["_gc"] = out["going"].astype(str).map(GOING_CLASS).fillna(0).astype(int)
+    out["_wet"] = out["_gc"] > 0
 
     horse = ["horse_id"]
     g = float(out.loc[done, "placed"].mean())
@@ -107,7 +113,11 @@ def attach(df: pd.DataFrame, bias_before: str | None = None) -> pd.DataFrame:
     out["apt_base"] = base
 
     # --- そのコース（場・芝ダ・距離）------------------------------------
-    course = ["horse_id", "venue", "surface", "distance"]
+    # 良馬場で走ったコースの成績で、道悪の日の評価を打ち消さない。
+    # そのコースの成績は「今日と同じ側（良 / 道悪）」の走りだけで数える。
+    # スプリンターズSで、良馬場の中山芝1200 0-0-0-3 を理由に、稍重で3勝の
+    # ピューロマジックを消した（その馬が勝った）。
+    course = ["horse_id", "venue", "surface", "distance", "_wet"]
     _record(out, course, "apt_course_")
     out["apt_m_course"] = _ratio(
         _prior_sum(out, course, "_pl"), out["apt_course_n"], base, K_HORSE
@@ -121,11 +131,18 @@ def attach(df: pd.DataFrame, bias_before: str | None = None) -> pd.DataFrame:
     ).values
 
     # --- 道悪（今走が稍重以上のときだけ効かせる）-------------------------
+    # 今日と同じ馬場（稍重 / 重・不良）での成績を優先し、無ければ道悪全体
     soft_key = ["horse_id", "surface", "_soft"]
     _record(out, soft_key, "apt_soft_")
-    m_soft_horse = _ratio(
+    m_soft_all = _ratio(
         _prior_sum(out, soft_key, "_pl"), out["apt_soft_n"], base, K_HORSE
     ).values
+    gc_key = ["horse_id", "surface", "_gc"]
+    _record(out, gc_key, "apt_gc_")
+    m_soft_same = _ratio(
+        _prior_sum(out, gc_key, "_pl"), out["apt_gc_n"], base, K_HORSE
+    ).values
+    m_soft_horse = np.where(out["apt_gc_n"] > 0, m_soft_same, m_soft_all)
     # 経験の無い馬は父の産駒の「道悪 ÷ 全体」で補う
     sire_soft_pl = _prior_sum(out, ["sire", "surface", "_soft"], "_pl")
     sire_soft_n = _prior_sum(out, ["sire", "surface", "_soft"], "_ran")
@@ -175,7 +192,10 @@ def attach(df: pd.DataFrame, bias_before: str | None = None) -> pd.DataFrame:
 
     parts = ["apt_m_course", "apt_m_dir", "apt_m_soft", "apt_m_layoff", "apt_m_pos", "apt_m_waku"]
     out["apt_log"] = np.log(out[parts].astype(float)).sum(axis=1)
-    return out.drop(columns=[c for c in out.columns if c.startswith("_")])
+    out["_wet_label"] = out["_wet"]
+    out["apt_gc_class"] = out["_gc"]
+    out = out.drop(columns=[c for c in out.columns if c.startswith("_") and c != "_wet_label"])
+    return out
 
 
 def adjust(p: pd.Series, frame: pd.DataFrame, weight: float) -> pd.Series:
@@ -204,14 +224,22 @@ def reasons(row: pd.Series, threshold: float = 1.15) -> list[str]:
 
     course = f"{row['venue']}{row['surface']}{int(row['distance'])}"
     if big(row["apt_m_course"]) and row["apt_course_n"] > 0:
-        out.append(f"{course}は{_fmt(row, 'apt_course_')}（{mark(row['apt_m_course'])}）")
+        side = "道悪" if row["_wet_label"] else "良"
+        out.append(
+            f"{course}（{side}）は{_fmt(row, 'apt_course_')}（{mark(row['apt_m_course'])}）"
+        )
     if big(row["apt_m_dir"]) and row["apt_dir_n"] > 0:
         out.append(
             f"{row['surface']}の{row['direction']}回りは{_fmt(row, 'apt_dir_')}"
             f"（{mark(row['apt_m_dir'])}）"
         )
     if big(row["apt_m_soft"]):
-        if row["apt_soft_n"] > 0:
+        if row["apt_gc_n"] > 0:
+            out.append(
+                f"{GOING_LABEL[int(row['apt_gc_class'])]}は{_fmt(row, 'apt_gc_')}"
+                f"（{mark(row['apt_m_soft'])}）"
+            )
+        elif row["apt_soft_n"] > 0:
             out.append(f"道悪は{_fmt(row, 'apt_soft_')}（{mark(row['apt_m_soft'])}）")
         elif row["apt_sire_soft_n"] > 0:
             out.append(
