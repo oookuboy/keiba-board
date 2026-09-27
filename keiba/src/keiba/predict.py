@@ -32,7 +32,14 @@ def predict_race(race_id: str, store: Store, weights: dict, sire_table: dict) ->
     return predict_card(card, store, weights, sire_table)
 
 
-def model_scores(store: Store, day: date, config_dir: Path) -> dict[str, dict[int, float]]:
+def model_scores(
+    store: Store,
+    day: date,
+    config_dir: Path,
+    *,
+    aptitude_weight: float = 0.0,
+    notes: dict[str, dict[int, list[str]]] | None = None,
+) -> dict[str, dict[int, float]]:
     """その日の全出走馬に、学習モデルの3着以内確率を付ける。
 
     ## なぜ要るのか
@@ -68,6 +75,23 @@ def model_scores(store: Store, day: date, config_dir: Path) -> dict[str, dict[in
 
     today = today.copy()
     today["p"] = ml.predict(booster, _blank_unknown_draw(today))
+
+    # 適性評価（aptitude_view）を掛ける。モデルだけでは印が人気順とほぼ同じに
+    # なり、市場と違う結論を出せない。そのコース・回り・道悪・休み明け・
+    # 位置取り・枠の実績を、数えた倍率としてモデルの確率に掛ける。
+    if aptitude_weight or notes is not None:
+        from keiba import aptitude_view
+
+        view = aptitude_view.attach(df)
+        view = view.loc[today.index]
+        if aptitude_weight:
+            today["p"] = aptitude_view.adjust(today["p"], view, aptitude_weight)
+            log.info("適性評価を重み %.2f で掛けた", aptitude_weight)
+        if notes is not None:
+            for idx, row in view.iterrows():
+                why = aptitude_view.reasons(row)
+                if why:
+                    notes.setdefault(row["race_id"], {})[int(row["umaban"])] = why
     scores = {
         race_id: dict(zip(group["umaban"], group["p"]))
         for race_id, group in today.groupby("race_id", observed=True)
@@ -104,6 +128,7 @@ def predict_card(
     weights: dict,
     sire_table: dict,
     ml_scores: dict[int, float] | None = None,
+    notes: dict[int, list[str]] | None = None,
 ) -> dict | None:
     """出馬表そのものから予想する。
 
@@ -140,6 +165,10 @@ def predict_card(
     horses = engine.run(
         features, {e.umaban: e for e in entries}, weights, ml_scores
     )
+    # 適性の根拠（そのコースの成績・道悪など）を理由の先頭に出す
+    for h in horses:
+        if notes and h.umaban in notes:
+            h.reasons = list(notes[h.umaban]) + h.reasons
     grade = confidence.grade(horses, weights)
     tickets = [] if unconfirmed else betting.build(horses, grade, weights)
 
@@ -336,9 +365,15 @@ def predict_day(
     # 学習モデルで能力を採点する。ここが無いと、バックテストで測っている
     # ものとボードに出るものが別になる。
     scores: dict[str, dict[int, float]] = {}
+    notes: dict[str, dict[int, list[str]]] = {}
     if config_dir is not None and cards:
         try:
-            scores = model_scores(store, day, config_dir)
+            apt_cfg = weights.get("aptitude_view") or {}
+            scores = model_scores(
+                store, day, config_dir,
+                aptitude_weight=float(apt_cfg.get("weight", 0.0)),
+                notes=notes,
+            )
         except (KeyError, ValueError) as exc:
             # 採点できなくても手置きの重みで予想自体は出せる。ただし黙って
             # 落ちると「モデルを繋いだつもりで繋がっていない」に戻るので残す。
@@ -349,7 +384,8 @@ def predict_day(
         race_id = card.race.race_id
         try:
             payload = predict_card(
-                card, store, weights, sire_table, scores.get(race_id)
+                card, store, weights, sire_table, scores.get(race_id),
+                notes.get(race_id),
             )
         except (AssertionError, KeyError, ValueError) as exc:
             log.warning("%s の予想に失敗: %s", race_id, exc)
