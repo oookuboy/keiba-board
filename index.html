@@ -144,6 +144,24 @@ tr.placed td{background:#121e16}
 .result{margin-top:11px;font-size:12px;font-family:"SF Mono",Menlo,monospace;color:var(--dim)}
 .result b{color:var(--ink)}
 .empty{color:var(--dim);font-size:12px;padding:26px 0;text-align:center;line-height:1.9}
+/* 回顧（表） */
+.rv h2{font-size:12px;letter-spacing:.12em;color:var(--amber);margin:18px 0 6px}
+.rv .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.rv table{border-collapse:collapse;width:100%;font-size:11px;min-width:520px}
+.rv th{white-space:nowrap}
+.rv td{padding:5px 5px;white-space:nowrap}
+.rv td.wrap{white-space:normal;min-width:160px}
+.rv .g{color:var(--green)} .rv .r{color:var(--red)} .rv .d{color:var(--dim)}
+.rv .kpi{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.rv .kpi div{background:#15181d;border:1px solid var(--line);border-radius:4px;padding:6px 9px;font-size:11px}
+.rv .kpi b{display:block;font-size:15px;font-family:"SF Mono",Menlo,monospace}
+.rv .rr{border-bottom:1px solid var(--line);padding:8px 2px;font-size:12px;line-height:1.6}
+.rv .rr .h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.rv .rr .h b{font-size:12px}
+.rv .rr .h .res{margin-left:auto}
+.rv .rr .fin{font-size:11px;margin-top:2px}
+.rv .rr .fin span{display:inline-block;min-width:2.6em;color:var(--dim)}
+.rv .rr .why{font-size:10px}
 .note{color:var(--dim);font-size:10px;line-height:1.8;margin-top:22px;
   border-top:1px solid var(--line);padding-top:13px}
 </style>
@@ -171,6 +189,7 @@ tr.placed td{background:#121e16}
     <button data-f="△">△</button>
     <button data-f="×">× 見送り</button>
     <button data-f="?">? オッズ待ち</button>
+    <button data-f="review">回顧（表）</button>
   </div>
   <div id="races"></div>
   <p class="note">
@@ -314,7 +333,7 @@ async function load(date){
     .forEach(b=>b.classList.toggle("on",b.dataset.date===date));
   DAY=await (await fetch(`keiba/data/${date}.json`,{cache:"no-cache"})).json();
   renderSummary();
-  renderRaces();
+  FILTER==="review" ? renderReview() : renderRaces();
 }
 
 function renderSummary(){
@@ -345,7 +364,7 @@ document.getElementById("filters").onclick=e=>{
   FILTER=b.dataset.f;
   [...document.querySelectorAll("#filters button")]
     .forEach(x=>x.classList.toggle("on",x===b));
-  renderRaces();
+  FILTER==="review" ? renderReview() : renderRaces();
 };
 
 function visible(r){
@@ -477,6 +496,128 @@ function raceBody(r){
       (r.result.hit?` ／ <b style="color:var(--green)">的中 ${yen(r.result.returned)}</b>`:"")));
   }
   return body;
+}
+
+/* ===== 回顧（表） =====
+   回顧が済んだ日の結果を表にまとめる。毎回同じ形で見られるよう、JSON から
+   その場で組み立てる（手で書く回顧は作らない）。
+   人気は予想の画面では隠しているが、ここは**結果が出たあと**の振り返りなので
+   出す。穴が来たか・拾えたかは人気が無いと判断できない。 */
+const pct=(a,b)=>b?`${Math.round(a/b*100)}%`:"—";
+const MARKS=["◎","○","▲","☆"];
+let DAYCACHE={};
+
+async function dayJson(date){
+  if(!DAYCACHE[date])
+    DAYCACHE[date]=await (await fetch(`keiba/data/${date}.json`,{cache:"no-cache"})).json();
+  return DAYCACHE[date];
+}
+
+function graded(d){ return d.races.filter(r=>r.result&&r.result.top3&&r.result.top3.length===3); }
+
+function markStats(d){
+  // 印ごと＋1番人気の、頭数・1着・3着内
+  const rows={}; [...MARKS,"1番人気"].forEach(k=>rows[k]={n:0,win:0,p3:0});
+  for(const r of graded(d)){
+    const top=r.result.top3;
+    for(const h of r.horses){
+      const keys=[]; if(h.mark&&rows[h.mark])keys.push(h.mark);
+      if(h.popularity===1)keys.push("1番人気");
+      for(const k of keys){
+        rows[k].n++; if(top[0]===h.umaban)rows[k].win++; if(top.includes(h.umaban))rows[k].p3++;
+      }
+    }
+  }
+  return rows;
+}
+
+function table(head, rows){
+  return `<div class="scroll"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead>`+
+         `<tbody>${rows.map(r=>`<tr>${r.map(c=>`<td${c&&c.wrap?' class="wrap"':''}>${c&&c.v!=null?c.v:(c??"")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+
+async function renderReview(){
+  const box=document.getElementById("races");
+  box.innerHTML="";
+  const d=DAY, g=graded(d), s=d.summary;
+  const wrap=el("div","rv");
+  if(!g.length){
+    box.appendChild(el("p","empty","この日はまだ回顧が済んでいない（結果が入っていない）。"));
+    return;
+  }
+  const hitR=g.filter(r=>r.result.hit).length;
+  const roi=s.spend?(s.returned||0)/s.spend*100:0;
+  let html=`<h2>${d.date} のまとめ</h2><div class="kpi">`+
+    `<div>回収率<b class="${roi>=100?'g':'r'}">${roi.toFixed(1)}%</b></div>`+
+    `<div>投資 → 払戻<b>${yen(s.spend)} → ${yen(s.returned)}</b></div>`+
+    `<div>的中<b>${hitR} / ${s.bet}R</b></div>`+
+    `<div>見送り<b>${s.skipped}R</b></div>`+
+    `<div>最高配当<b>${yen(s.best_race||0)}</b></div></div>`;
+
+  // 印の成績
+  const ms=markStats(d);
+  html+=`<h2>印の成績（${g.length}R）</h2>`+table(["印","頭数","1着","勝率","3着内","3着内率"],
+    Object.entries(ms).map(([k,v])=>[k,v.n,v.win,pct(v.win,v.n),v.p3,pct(v.p3,v.n)]));
+
+  // レース別（スマホで横にはみ出さないよう、1レースずつ縦に積む）
+  html+=`<h2>レース別</h2>`;
+  for(const r of g){
+    const by=Object.fromEntries(r.horses.map(h=>[h.umaban,h]));
+    const bet=r.bets.length?(r.result.hit?`<span class="g">的中 ${yen(r.result.returned)}</span>`:`<span class="r">外れ ${yen(r.spend)}</span>`):'<span class="d">見送り</span>';
+    const hon=r.horses.find(h=>h.mark==="◎");
+    const honPos=hon?(r.result.top3.indexOf(hon.umaban)+1):0;
+    const fin=r.result.top3.map((u,i)=>{
+      const h=by[u]||{};
+      const hole=(h.popularity||0)>=6;
+      return `<div class="fin"><span>${i+1}着</span>${u} ${h.name||""}`+
+        `（${h.popularity||"?"}番人気・${h.mark?h.mark:'<span class="r" style="min-width:0">無印</span>'}）`+
+        (hole?' <b class="g">穴</b>':'')+`</div>`;
+    }).join("");
+    html+=`<div class="rr"><div class="h"><b>${r.venue}${r.race_no}R</b>${r.name}`+
+      `<span class="d">${r.going||""}・判定${r.confidence}</span><span class="res">${bet}</span></div>`+
+      (hon?`<div class="fin"><span>◎</span>${hon.name}（${hon.popularity||"?"}番人気）→ `+
+        (honPos?`<span class="g" style="min-width:0">${honPos}着</span>`:'<span class="r" style="min-width:0">着外</span>')+`</div>`:"")+
+      fin+`</div>`;
+  }
+
+  // 穴の見立て: 6番人気以下で3着以内に来た馬を、印で拾えたか
+  const holes=[];
+  for(const r of g){
+    for(const [i,u] of r.result.top3.entries()){
+      const h=r.horses.find(x=>x.umaban===u);
+      if(h&&h.popularity>=6){
+        const apt=(h.reasons||[]).filter(x=>x.includes("適性")).slice(0,3).join(" ／ ")
+                  ||(h.reasons||[]).slice(0,2).join(" ／ ");
+        holes.push(`<div class="rr"><div class="h"><b>${r.venue}${r.race_no}R ${i+1}着</b>`+
+          `${h.umaban} ${h.name}（${h.popularity}番人気）<span class="res">`+
+          (h.mark?`<span class="g">${h.mark} 拾えた</span>`:'<span class="r">無印＝見逃し</span>')+
+          `</span></div><div class="why">${apt}</div></div>`);
+      }
+    }
+  }
+  const caught=holes.filter(x=>x.includes("拾えた")).length;
+  html+=`<h2>穴（6番人気以下）の3着内 ${holes.length}頭 ／ 印で拾えた ${caught}頭</h2>`+
+    (holes.length?holes.join(""):'<p class="d">なし</p>');
+  wrap.innerHTML=html;
+  box.appendChild(wrap);
+
+  // 通算（回顧の済んだ日）
+  const done=INDEX.days.filter(x=>x.returned!=null&&x.spend);
+  const rows=[]; let S=0,R=0;
+  for(const x of done){
+    let hon="—", fav="—";
+    try{
+      const dj=await dayJson(x.date); const m=markStats(dj);
+      hon=pct(m["◎"].p3,m["◎"].n); fav=pct(m["1番人気"].p3,m["1番人気"].n);
+    }catch(e){}
+    S+=x.spend; R+=x.returned;
+    const r=x.returned/x.spend*100;
+    rows.push([x.date,yen(x.spend),yen(x.returned),`<span class="${r>=100?'g':'r'}">${r.toFixed(1)}%</span>`,x.hits||0,hon,fav]);
+  }
+  const tot=el("div","rv");
+  tot.innerHTML=`<h2>通算（回収率 ${(R/S*100).toFixed(1)}%）</h2>`+
+    table(["日付","投資","払戻","回収率","的中R","◎の3着内率","1番人気の3着内率"],rows);
+  box.appendChild(tot);
 }
 
 boot();
