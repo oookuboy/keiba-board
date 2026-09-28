@@ -126,6 +126,47 @@ def _blank_unknown_draw(df):
     return out
 
 
+# 穴（☆）は適性で選ぶ。2024-01〜2026-09 の6番人気以下 82,148頭で:
+#
+#   距離・回り・コースの＋が0個          3着内 7.5〜8.5%
+#   ＋が2個以上・弱点なし               3着内 13.4〜14.8%（3年とも同じ水準）
+#
+# 弱点は、距離・回り・コースの－、位置取りの－（後ろからになりやすい）、
+# 休み明けの好走歴なし。人気の確率ではなく、その馬の実績を根拠にする。
+LONGSHOT_FROM = 6
+STRENGTHS = {"距離", "回り", "コース"}
+WEAKNESSES = {"距離", "回り", "コース", "位置", "休み明け"}
+
+
+def longshot_candidates(horses, aptitude: dict[int, dict]) -> list:
+    """適性の根拠がある人気薄。＋の数が多い順、同数ならスコア順。"""
+    out = []
+    for h in horses:
+        a = aptitude.get(h.umaban)
+        if not a or not h.market_popularity or h.market_popularity < LONGSHOT_FROM:
+            continue
+        plus = STRENGTHS & set(a.get("plus", []))
+        if len(plus) >= 2 and not (WEAKNESSES & set(a.get("minus", []))):
+            out.append((len(plus), h.score, h))
+    return [h for _, _, h in sorted(out, key=lambda x: (-x[0], -x[1]))]
+
+
+def pick_longshot_by_aptitude(horses, aptitude: dict[int, dict]) -> None:
+    """☆ を、適性の根拠がある人気薄に付け替える。候補がいなければ触らない。"""
+    cands = longshot_candidates(horses, aptitude)
+    if not cands:
+        return
+    best = cands[0]
+    if best.mark:
+        return  # すでに印が付いている（拾えている）
+    current = next((h for h in horses if h.mark == "☆"), None)
+    if current is not None:
+        current.mark = None
+    best.mark = "☆"
+    plus = "・".join(sorted(STRENGTHS & set(aptitude[best.umaban]["plus"])))
+    best.reasons = [f"適性で選んだ穴（{plus}に好走実績・弱点なし）"] + best.reasons
+
+
 def predict_card(
     card: RaceCard,
     store: Store,
@@ -174,6 +215,8 @@ def predict_card(
     for h in horses:
         if notes and h.umaban in notes:
             h.reasons = list(notes[h.umaban]) + h.reasons
+    if aptitude:
+        pick_longshot_by_aptitude(horses, aptitude)
     grade = confidence.grade(horses, weights)
     tickets = [] if unconfirmed else betting.build(horses, grade, weights)
 

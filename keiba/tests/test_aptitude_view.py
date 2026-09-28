@@ -124,3 +124,23 @@ def test_長い距離の凡走と位置取りで短距離を割り引かない()
     assert row["apt_band_n"] == 1 and row["apt_band_1"] == 1
     assert row["apt_m_band"] > 1.15
     assert abs(row["apt_pos_ratio"] - 0.6) < 1e-9, "位置取りを別の距離帯から取っている"
+
+
+def test_穴の印は適性の根拠がある人気薄に付く() -> None:
+    """☆ は、距離・回り・コースのうち2つ以上に好走実績があり、弱点の無い人気薄へ。"""
+    from keiba import predict
+    from keiba.engine import ScoredHorse
+
+    def h(u, mark, pop, score):
+        return ScoredHorse(umaban=u, horse_id=str(u), horse_name=f"馬{u}", score=score,
+                           style="先行", reasons=[], mark=mark, market_popularity=pop)
+    horses = [h(1, "◎", 1, 30), h(2, "○", 2, 28), h(3, "☆", 9, 20), h(4, None, 11, 10), h(5, None, 7, 12)]
+    apt = {
+        3: {"plus": [], "minus": ["距離"]},
+        4: {"plus": ["距離", "回り"], "minus": []},             # 候補
+        5: {"plus": ["距離", "回り", "コース"], "minus": ["位置"]},  # 弱点ありで外す
+    }
+    predict.pick_longshot_by_aptitude(horses, apt)
+    marks = {x.umaban: x.mark for x in horses}
+    assert marks[4] == "☆" and marks[3] is None and marks[5] is None
+    assert "適性で選んだ穴" in horses[3].reasons[0]
