@@ -282,3 +282,30 @@ def reasons(row: pd.Series, threshold: float = 1.15) -> list[str]:
     if big(row["apt_m_waku"]):
         out.append(f"{int(row['waku'])}枠（このコースで{mark(row['apt_m_waku'])}）")
     return out
+
+
+FACTOR_LABEL = {
+    "apt_m_course": "コース", "apt_m_dir": "回り", "apt_m_band": "距離",
+    "apt_m_soft": "馬場", "apt_m_layoff": "休み明け", "apt_m_pos": "位置",
+    "apt_m_waku": "枠",
+}
+
+
+def summary(row: pd.Series, threshold: float = 1.15) -> dict:
+    """予想の JSON に残す適性の要約。回顧で「なぜ走ったか」を見るために使う。
+
+    total は倍率の積。plus / minus は大きく動いた要素の名前、facts は実績の数。
+    """
+    plus, minus = [], []
+    for col, label in FACTOR_LABEL.items():
+        m = float(row.get(col, 1.0) or 1.0)
+        if m >= threshold:
+            plus.append(label)
+        elif m <= 1 / threshold:
+            minus.append(label)
+    return {
+        "total": round(float(np.exp(row.get("apt_log", 0.0) or 0.0)), 2),
+        "plus": plus,
+        "minus": minus,
+        "facts": reasons(row, threshold),
+    }

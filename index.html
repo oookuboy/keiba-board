@@ -569,9 +569,13 @@ async function renderReview(){
     const fin=r.result.top3.map((u,i)=>{
       const h=by[u]||{};
       const hole=(h.popularity||0)>=6;
+      const a=h.aptitude;
+      const apt=a?` <span class="d" style="min-width:0">適性${
+        a.plus.length?'＋'+a.plus.join("・"):""}${a.minus.length?' －'+a.minus.join("・"):""}${
+        !a.plus.length&&!a.minus.length?"目立たず":""}</span>`:"";
       return `<div class="fin"><span>${i+1}着</span>${u} ${h.name||""}`+
         `（${h.popularity||"?"}番人気・${h.mark?h.mark:'<span class="r" style="min-width:0">無印</span>'}）`+
-        (hole?' <b class="g">穴</b>':'')+`</div>`;
+        (hole?' <b class="g">穴</b>':'')+apt+`</div>`;
     }).join("");
     html+=`<div class="rr"><div class="h"><b>${r.venue}${r.race_no}R</b>${r.name}`+
       `<span class="d">${r.going||""}・判定${r.confidence}</span><span class="res">${bet}</span></div>`+
@@ -580,14 +584,38 @@ async function renderReview(){
       fin+`</div>`;
   }
 
+  // 3着以内に来た馬が、どの適性を持っていたか（全出走馬と比べる）
+  const LBL=["コース","回り","距離","馬場","休み明け","位置","枠"];
+  const cnt={top:{n:0,p:{},m:{}},all:{n:0,p:{},m:{}}};
+  for(const r of g){
+    for(const h of r.horses){
+      if(!h.aptitude)continue;
+      const keys=["all"]; if(r.result.top3.includes(h.umaban))keys.push("top");
+      for(const k of keys){
+        cnt[k].n++;
+        h.aptitude.plus.forEach(l=>cnt[k].p[l]=(cnt[k].p[l]||0)+1);
+        h.aptitude.minus.forEach(l=>cnt[k].m[l]=(cnt[k].m[l]||0)+1);
+      }
+    }
+  }
+  if(cnt.top.n){
+    const f=(k,t,l)=>pct(cnt[k][t][l]||0,cnt[k].n);
+    html+=`<h2>3着以内に来た馬の適性（${cnt.top.n}頭 ／ 全${cnt.all.n}頭と比べる）</h2>`+
+      table(["適性","＋ 3着内の馬","＋ 全馬","－ 3着内の馬","－ 全馬"],
+        LBL.map(l=>[l,f("top","p",l),f("all","p",l),f("top","m",l),f("all","m",l)]))+
+      '<p class="d" style="font-size:10px;margin-top:4px">＋の列で「3着内の馬」が「全馬」より高い適性ほど、その日よく効いた。'+
+      '－の列で「3着内の馬」が低いほど、その弱点を持つ馬は来なかった。</p>';
+  }
+
   // 穴の見立て: 6番人気以下で3着以内に来た馬を、印で拾えたか
   const holes=[];
   for(const r of g){
     for(const [i,u] of r.result.top3.entries()){
       const h=r.horses.find(x=>x.umaban===u);
       if(h&&h.popularity>=6){
-        const apt=(h.reasons||[]).filter(x=>x.includes("適性")).slice(0,3).join(" ／ ")
-                  ||(h.reasons||[]).slice(0,2).join(" ／ ");
+        const apt=(h.aptitude&&h.aptitude.facts.length?h.aptitude.facts.slice(0,3).join(" ／ "):null)
+                  ||(h.reasons||[]).filter(x=>x.includes("適性")).slice(0,3).join(" ／ ")
+                  ||"適性の目立つ根拠なし";
         holes.push(`<div class="rr"><div class="h"><b>${r.venue}${r.race_no}R ${i+1}着</b>`+
           `${h.umaban} ${h.name}（${h.popularity}番人気）<span class="res">`+
           (h.mark?`<span class="g">${h.mark} 拾えた</span>`:'<span class="r">無印＝見逃し</span>')+
