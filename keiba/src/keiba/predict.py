@@ -167,6 +167,24 @@ def pick_longshot_by_aptitude(horses, aptitude: dict[int, dict]) -> None:
     best.reasons = [f"適性で選んだ穴（{plus}に好走実績・弱点なし）"] + best.reasons
 
 
+def top3_prob(horses) -> float:
+    """能力上位3頭の、モデルの3着内確率の合計（スコアは確率×100）。"""
+    return sum(sorted((h.score for h in horses), reverse=True)[:3]) / 100
+
+
+def is_solid(horses, bcfg: dict) -> bool:
+    """堅いレースか。上位3頭の3着内確率の合計が閾値以上。
+
+    2026-06-27〜09-21 の931R（モデルの学習外）で、この合計の上位1割
+    （1.92以上・93R）は、上位4頭の三連複ボックス4点が的中46%・回収104%、
+    上位3頭の1点が的中23%・回収163%。残り9割は4頭ボックスで的中7〜23%。
+    「この3頭で来ると言えるなら安くても買う」をここで実装する。
+    再学習で確率の尺度が変わったら閾値を測り直すこと。
+    """
+    th = bcfg.get("solid_top3_prob")
+    return th is not None and top3_prob(horses) >= float(th)
+
+
 def judge_by_longshot(grade, cands):
     """買うか見送るかを、適性の根拠がある穴がいるかで決める。
 
@@ -244,9 +262,21 @@ def predict_card(
     if aptitude:
         pick_longshot_by_aptitude(horses, aptitude)
     grade = confidence.grade(horses, weights)
-    if aptitude and (weights.get("betting") or {}).get("bet_only_with_longshot"):
+    bcfg = weights.get("betting") or {}
+    solid = ml_scores is not None and is_solid(horses, bcfg)
+    if solid:
+        grade = replace(
+            grade, grade="○",
+            reason=f"堅い（上位3頭の3着内確率の合計 {top3_prob(horses):.2f}）。{grade.reason}",
+        )
+    elif aptitude and bcfg.get("bet_only_with_longshot"):
         grade = judge_by_longshot(grade, longshot_candidates(horses, aptitude))
-    tickets = [] if unconfirmed else betting.build(horses, grade, weights)
+    if unconfirmed:
+        tickets = []
+    elif solid:
+        tickets = betting.solid_box(horses, int(bcfg.get("solid_box", 4)), bcfg["unit"])
+    else:
+        tickets = betting.build(horses, grade, weights)
 
     # 展開は全頭共通の判断なので、1頭ぶんの理由から取り出して見出しにする
     pace_note = next(

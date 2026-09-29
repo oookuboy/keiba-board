@@ -165,3 +165,15 @@ def test_適性の根拠がある穴がいないレースは見送る() -> None:
 def replace_grade(c, g):
     from dataclasses import replace
     return replace(c, grade=g)
+
+
+def test_堅いレースは上位4頭のボックス4点で買う() -> None:
+    from keiba import betting, predict
+    from keiba.engine import ScoredHorse
+    hs = [ScoredHorse(umaban=u, horse_id=str(u), horse_name=f"馬{u}", score=sc,
+                      style="先行", reasons=[]) for u, sc in [(1, 75), (2, 65), (3, 60), (4, 30), (5, 10)]]
+    assert predict.is_solid(hs, {"solid_top3_prob": 1.92})
+    assert not predict.is_solid(hs[1:], {"solid_top3_prob": 1.92})
+    t = betting.solid_box(hs, 4, 100)
+    assert len(t) == 4 and all(x.bet_type == betting.TRIO for x in t)
+    assert {x.combination for x in t} == {"1-2-3", "1-2-4", "1-3-4", "2-3-4"}

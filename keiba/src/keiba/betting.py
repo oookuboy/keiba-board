@@ -140,6 +140,15 @@ def build(
     return tickets
 
 
+def solid_box(horses: list[ScoredHorse], size: int, unit: int) -> list[Ticket]:
+    """堅いレース用。能力上位 size 頭の三連複ボックス（4頭なら4点）。"""
+    top = sorted(horses, key=lambda h: -h.score)[:size]
+    return [
+        Ticket(TRIO, _trio(tuple(h.umaban for h in combo)), unit, "堅い（上位の三連複ボックス）")
+        for combo in itertools.combinations(top, 3)
+    ]
+
+
 def _box_marks(cfg: dict, grade: str, available: int) -> int:
     """その自信度で、箱に何頭入れるか。
 
