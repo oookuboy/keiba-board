@@ -144,3 +144,24 @@ def test_穴の印は適性の根拠がある人気薄に付く() -> None:
     marks = {x.umaban: x.mark for x in horses}
     assert marks[4] == "☆" and marks[3] is None and marks[5] is None
     assert "適性で選んだ穴" in horses[3].reasons[0]
+
+
+def test_適性の根拠がある穴がいないレースは見送る() -> None:
+    from keiba import confidence, predict
+
+    base = confidence.Confidence(grade="○", popularity_sum=12, separation=5.0,
+                                 expected_odds=None, reason="元の理由")
+    skip = predict.judge_by_longshot(base, [])
+    assert skip.grade == confidence.SKIP and "見送り" in skip.reason
+
+    class H: horse_name = "穴馬"
+    buy = predict.judge_by_longshot(replace_grade(base, confidence.SKIP), [H()])
+    assert buy.grade != confidence.SKIP and "穴馬" in buy.reason
+
+    pending = predict.judge_by_longshot(replace_grade(base, confidence.PENDING), [])
+    assert pending.grade == confidence.PENDING
+
+
+def replace_grade(c, g):
+    from dataclasses import replace
+    return replace(c, grade=g)

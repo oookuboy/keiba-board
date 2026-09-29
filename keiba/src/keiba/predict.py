@@ -167,6 +167,32 @@ def pick_longshot_by_aptitude(horses, aptitude: dict[int, dict]) -> None:
     best.reasons = [f"適性で選んだ穴（{plus}に好走実績・弱点なし）"] + best.reasons
 
 
+def judge_by_longshot(grade, cands):
+    """買うか見送るかを、適性の根拠がある穴がいるかで決める。
+
+    2026-06-27〜09-21 の931R（モデルは学習に使っていない期間）で、印5頭の
+    三連複ボックス（☆は適性で選び直し）を全レース買うと:
+
+        適性の根拠がある穴がいるレース  433R  回収100%
+        いないレース                    498R  回収 64%
+
+    人気の組み合わせで決めていた見送り（上位3頭の人気和）は使わない。
+    オッズ待ち（?）はそのまま。
+    """
+    if grade.grade == confidence.PENDING:
+        return grade
+    if cands:
+        names = "・".join(h.horse_name for h in cands[:2])
+        note = f"適性の根拠がある穴がいる（{names}）"
+        # △ に落とすと穴枠の1日上限で黙って削られる。本線（○）として扱う
+        g = grade.grade if grade.grade != confidence.SKIP else "○"
+        return replace(grade, grade=g, reason=f"{note}。{grade.reason}")
+    return replace(
+        grade, grade=confidence.SKIP,
+        reason=f"適性の根拠がある穴がいないので見送り。{grade.reason}",
+    )
+
+
 def predict_card(
     card: RaceCard,
     store: Store,
@@ -218,6 +244,8 @@ def predict_card(
     if aptitude:
         pick_longshot_by_aptitude(horses, aptitude)
     grade = confidence.grade(horses, weights)
+    if aptitude and (weights.get("betting") or {}).get("bet_only_with_longshot"):
+        grade = judge_by_longshot(grade, longshot_candidates(horses, aptitude))
     tickets = [] if unconfirmed else betting.build(horses, grade, weights)
 
     # 展開は全頭共通の判断なので、1頭ぶんの理由から取り出して見出しにする
