@@ -169,11 +169,18 @@ jobs:
         if: steps.plan.outputs.job == 'preview'
         run: |
           set -o pipefail
-          DAYS="${{ steps.plan.outputs.days }}"
-          echo "対象: ${DAYS:-なし}"
           # 発走前は JRA公式が唯一の経路。db.netkeiba には race_id が無い
           python -m keiba.cli collect --upcoming
           python -m keiba.cli build
+          # 開催日は**収集してから**決める。plan の段階では今週の出馬表が
+          # まだ無いので、木曜は毎回「開催なし」になっていた（2026-10-01、
+          # 9/26 の下見が出なかったのも同じ原因）。
+          DAYS=""
+          for i in $(seq 0 7); do
+            D=$(date -u -d "+$i day" +%F)
+            [ -f "keiba/raw/${D%%-*}/$D.jsonl.gz" ] && DAYS="$DAYS $D"
+          done
+          echo "対象: ${DAYS:-なし}"
 
           FOUND=0
           for D in $DAYS; do
@@ -217,7 +224,10 @@ jobs:
           python -m keiba.cli -v backfill-pedigree --newest-first --limit 1500
           python -m keiba.cli build
           if [ "${{ steps.plan.outputs.job }}" = "preview" ]; then
-            for D in ${{ steps.plan.outputs.days }}; do
+            # plan の days は収集前に決まるので使わない（木曜は空になる）
+            for i in $(seq 0 7); do
+              D=$(date -u -d "+$i day" +%F)
+              [ -f "keiba/raw/${D%%-*}/$D.jsonl.gz" ] || continue
               python -m keiba.cli predict --date "$D" --provisional || true
             done
           fi

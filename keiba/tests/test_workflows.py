@@ -472,3 +472,15 @@ def test_有料ページを引く手順にはログイン情報を渡す() -> No
                 if not {"NETKEIBA_EMAIL", "NETKEIBA_PASSWORD"} <= set(env):
                     missing.append(f"{path.name}:{job_name}:{step.get('name')}")
     assert not missing, f"ログイン情報なしで有料ページを引く手順: {missing}"
+
+
+def test_木曜の下見は収集してから開催日を決める() -> None:
+    """plan の days は収集前に決まる。木曜はまだ今週の出馬表が無く空になる。
+
+    2026-10-01 に下見が「1レースも収集できなかった」で落ちた（実際は24R×2日
+    取れていた）。9/26 の下見が出なかったのも同じ原因。
+    """
+    text = (WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8")
+    preview = text[text.index("name: Preview"):text.index("name: Collect")]
+    assert "steps.plan.outputs.days" not in preview
+    assert preview.index("collect --upcoming") < preview.index('DAYS=""')
