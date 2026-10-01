@@ -172,6 +172,11 @@ jobs:
           # 発走前は JRA公式が唯一の経路。db.netkeiba には race_id が無い
           python -m keiba.cli collect --upcoming
           python -m keiba.cli build
+          # 新しく出てきた馬の血統を、予想の**前に**引く。後に引いて予想を
+          # 作り直していたので、下見は予想を2回作っていた（1回約17分）。
+          # 落ちても下見は続ける。
+          python -m keiba.cli -v backfill-pedigree --newest-first --limit 1500 \
+            && python -m keiba.cli build || echo "::warning::血統の取得に失敗（予想は続ける）"
           # 開催日は**収集してから**決める。plan の段階では今週の出馬表が
           # まだ無いので、木曜は毎回「開催なし」になっていた（2026-10-01、
           # 9/26 の下見が出なかったのも同じ原因）。
@@ -218,19 +223,12 @@ jobs:
       # 過去走の無い馬は血統でしか評価できないのに、その馬ほど空になる。
       # 新しい馬から先に引く。落ちても週末は続ける。
       - name: 新しく出てきた馬の血統を引く
-        if: steps.plan.outputs.job == 'preview' || steps.plan.outputs.job == 'collect'
+        # 木曜（preview）は Preview の手順の中で、予想の前に引いている
+        if: steps.plan.outputs.job == 'collect'
         continue-on-error: true
         run: |
           python -m keiba.cli -v backfill-pedigree --newest-first --limit 1500
           python -m keiba.cli build
-          if [ "${{ steps.plan.outputs.job }}" = "preview" ]; then
-            # plan の days は収集前に決まるので使わない（木曜は空になる）
-            for i in $(seq 0 7); do
-              D=$(date -u -d "+$i day" +%F)
-              [ -f "keiba/raw/${D%%-*}/$D.jsonl.gz" ] || continue
-              python -m keiba.cli predict --date "$D" --provisional || true
-            done
-          fi
 
       # 今週の出走馬の調教を引き直す。約500頭・1.5秒ウェイトで約12分。
       #
