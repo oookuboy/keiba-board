@@ -204,10 +204,11 @@ def judge_by_longshot(grade, cands):
         note = f"適性の根拠がある穴がいる（{names}）"
         # △ に落とすと穴枠の1日上限で黙って削られる。本線（○）として扱う
         g = grade.grade if grade.grade != confidence.SKIP else "○"
-        return replace(grade, grade=g, reason=f"{note}。{grade.reason}")
+        # 人気の組み合わせによる説明（人気和など）は載せない。判断は適性でしている
+        return replace(grade, grade=g, reason=note)
     return replace(
         grade, grade=confidence.SKIP,
-        reason=f"適性の根拠がある穴がいないので見送り。{grade.reason}",
+        reason="適性の根拠がある穴がいないので見送り",
     )
 
 
@@ -267,7 +268,7 @@ def predict_card(
     if solid:
         grade = replace(
             grade, grade="○",
-            reason=f"堅い（上位3頭の3着内確率の合計 {top3_prob(horses):.2f}）。{grade.reason}",
+            reason=f"堅い（能力上位3頭の記録が抜けている・3着内確率の合計 {top3_prob(horses):.2f}）",
         )
     elif aptitude and bcfg.get("bet_only_with_longshot"):
         grade = judge_by_longshot(grade, longshot_candidates(horses, aptitude))
