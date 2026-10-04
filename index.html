@@ -348,6 +348,11 @@ function renderSummary(){
     html+=` → 払戻 <b>${yen(s.returned)}</b>`+
           ` <span style="color:${roi>=100?'var(--green)':'var(--red)'}">`+
           `回収率 ${roi.toFixed(1)}%</span>（的中 ${s.hits}R）`;
+    // 払戻がまだ入っていないレースは外れとして数えている。確定値ではないと明示する
+    if(s.payout_missing&&s.payout_missing.length){
+      html+=`<br><span style="color:var(--amber)">払戻未反映 ${s.payout_missing.length}R（${
+        s.payout_missing.join("・")}）。回収率は暫定</span>`;
+    }
   }else{
     html+=" ／ 結果待ち";
   }

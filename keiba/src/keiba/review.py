@@ -123,6 +123,9 @@ def review_day(store: Store, payload: dict) -> dict:
     alternatives: dict[str, list[int]] = {k: [0, 0, 0] for k in ALTERNATIVES}
     by_type: dict[str, list[int]] = {}
     best_race = 0
+    # 着順は出たのに、買った券種の払戻がまだ無いレース。ここを外れと数えると
+    # 回収率を低く見誤る（2026-10-03 は 112.2% を 94.3% と報告した）。
+    payout_missing: list[str] = []
 
     for race in payload["races"]:
         card = store.load_card(race["race_id"])
@@ -139,6 +142,10 @@ def review_day(store: Store, payload: dict) -> dict:
         ]
         race_spent, race_returned, hit_types, best = _settle(tickets, card, top3)
         hit = bool(hit_types)
+        bought = {t.bet_type for t in tickets}
+        paid = {p.bet_type for p in card.payouts}
+        if bought - paid:
+            payout_missing.append(f"{card.race.venue}{card.race.race_no}R")
 
         # 券種ごとの内訳。三連単は当たれば大きいが点数あたりの確率が桁違いに
         # 低いので、全体に混ぜたままだと三連複の成績が読めない。
@@ -214,6 +221,12 @@ def review_day(store: Store, payload: dict) -> dict:
     # 「全部外した」がどちらも 払戻0円・的中0R になって見分けられない。
     # 2026-08-08 に実際そうなり、全敗したように見えていた。
     payload["summary"]["graded"] = graded
+    payload["summary"]["payout_missing"] = payout_missing
+    if payout_missing:
+        log.warning(
+            "払戻が未反映のレースがある（外れとして数えている）: %s",
+            "・".join(payout_missing),
+        )
     payload["summary"]["returned"] = returned
     payload["summary"]["hits"] = hits
     payload["summary"]["roi"] = round(returned / spent * 100, 1) if spent else None
