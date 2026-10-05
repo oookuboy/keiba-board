@@ -161,6 +161,17 @@ jobs:
           echo "paid=$PAID" >> "$GITHUB_OUTPUT"
           echo "sat=$SAT"  >> "$GITHUB_OUTPUT"
           echo "sun=$SUN"  >> "$GITHUB_OUTPUT"
+          # 開催の無い日は何もしない。予想と回顧の cron は月曜開催（祝日）に
+          # 備えて日・月にも置いてあるので、普通の週は出馬表の無い日に当たる。
+          # 以前はそこで「予想ファイルが無い」で赤く落ち、毎週失敗の通知が
+          # 何通も届いていた（2026-10-05）。出馬表の raw が無ければ開催は無い。
+          # 手で日付を指定したときは指定どおりに走らせる。
+          if [ -z "${{ inputs.date }}" ] && { [ "$JOB" = "predict" ] || [ "$JOB" = "review" ]; }; then
+            if [ ! -f "keiba/raw/${DATE%%-*}/$DATE.jsonl.gz" ]; then
+              echo "$DATE は開催なし。何もしない"
+              JOB=none
+            fi
+          fi
           echo "job=$JOB"   >> "$GITHUB_OUTPUT"
           echo "date=$DATE" >> "$GITHUB_OUTPUT"
           echo "→ $JOB / $DATE"
@@ -168,7 +179,7 @@ jobs:
       # 調教（netkeiba 有料）を手元に戻す。予想する側でも学習した側と同じ列が
       # 埋まっていないと、モデルが使っている特徴量が本番だけ欠損になる。
       - name: 調教を artifact から戻す
-        if: steps.plan.outputs.job != 'review'
+        if: steps.plan.outputs.job != 'review' && steps.plan.outputs.job != 'none'
         uses: ./.github/actions/workouts
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

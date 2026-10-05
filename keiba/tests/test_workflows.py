@@ -484,3 +484,24 @@ def test_木曜の下見は収集してから開催日を決める() -> None:
     preview = text[text.index("name: Preview"):text.index("name: Collect")]
     assert "steps.plan.outputs.days" not in preview
     assert preview.index("collect --upcoming") < preview.index('DAYS=""')
+
+
+def test_開催の無い日は予想も回顧もせずに終わる() -> None:
+    """出馬表の無い日に予想・回顧の cron が当たっても、赤く落ちないこと。
+
+    予想と回顧の cron は祝日の月曜開催に備えて日・月にも置いてある。普通の
+    週は開催の無い月曜に当たり、「予想ファイルが無い」で失敗していた。
+    2026-10-05 に失敗の通知が何通も届いた。
+    """
+    text = (WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8")
+    plan = text.split("id: plan", 1)[1].split("- name:", 1)[0]
+    assert "JOB=none" in plan, "開催の無い日に予想・回顧を止めていない"
+    assert 'keiba/raw/${DATE%%-*}/$DATE.jsonl.gz' in plan
+    # none のときに走る手順が無いこと（Commit は変化なしで終わる）
+    for step in text.split("      - name: ")[1:]:
+        cond = re.search(r"^\s+if: (.+)$", step, re.M)
+        if cond is None or "always()" in cond.group(1) and "job ==" not in cond.group(1):
+            continue
+        assert "!= 'review'" not in cond.group(1) or "!= 'none'" in cond.group(1), (
+            f"開催の無い日にも走る手順がある: {step.splitlines()[0]}"
+        )
