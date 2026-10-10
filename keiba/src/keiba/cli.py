@@ -206,6 +206,9 @@ def cmd_collect(args: argparse.Namespace) -> int:
 
     if args.results and args.from_jra:
         filled = collect.collect_results_from_jra(fetcher, args.day, args.raw_dir)
+        # 重賞の格は出走表に無いので、入口ページの重賞一覧から入れる。
+        # 過ぎた数週ぶんも載っているので、欠けていた開催もここで埋まる。
+        collect.fill_grades(fetcher, args.raw_dir)
         if not filled:
             log.warning(
                 "%s の結果をJRA公式から取得できなかった（まだ確定前の可能性）cache=%s",

@@ -164,7 +164,7 @@ def _keep_extras(old: RaceCard | None, new: RaceCard) -> RaceCard:
             setattr(new, name, getattr(old, name))
     # 馬場状態と枠も同じ。結果ページや db.netkeiba で埋めた値を、発走前の
     # 出馬表（どちらも空）で消さない。
-    for attr in ("going", "weather"):
+    for attr in ("going", "weather", "grade"):
         if getattr(new.race, attr) is None and getattr(old.race, attr) is not None:
             setattr(new.race, attr, getattr(old.race, attr))
     old_waku = {e.horse_id: e.waku for e in old.entries if e.waku is not None}
@@ -291,6 +291,32 @@ def collect_results_from_jra(fetcher: Fetcher, day: date, out_dir: Path) -> int:
         write_jsonl(cards.values(), out_path)
         log.info("%s: %d レースに着順と払戻を入れた → %s", day, filled, out_path.name)
     return filled
+
+
+def apply_grades(out_dir: Path, grades: dict[str, str]) -> int:
+    """重賞の格を、空のままの raw に入れる。入れたレース数を返す。
+
+    入口ページの重賞一覧は数週ぶん載っているので、過ぎた開催の欠けも
+    ここで埋まる。既にある格は書き換えない。
+    """
+    by_day: dict[str, dict[str, str]] = defaultdict(dict)
+    for race_id, grade in grades.items():
+        by_day[race_id[:4]][race_id] = grade
+    n = 0
+    for year, wanted in by_day.items():
+        for path in sorted((out_dir / year).glob("*.jsonl.gz")):
+            cards = list(read_jsonl(path))
+            hit = 0
+            for card in cards:
+                grade = wanted.get(card.race.race_id)
+                if grade and card.race.grade is None:
+                    card.race.grade = grade
+                    hit += 1
+            if hit:
+                write_jsonl(cards, path)
+                log.info("%s: 重賞の格を %d レースに入れた", path.name, hit)
+                n += hit
+    return n
 
 
 def collect_range(
@@ -421,3 +447,8 @@ def collect_paid(
         stats["races"], stats["workouts"], stats["comments"], stats["failed"],
     )
     return stats
+
+
+def fill_grades(fetcher: Fetcher, out_dir: Path) -> int:
+    """JRA公式の入口ページから重賞の格を引き、raw の空欄に入れる。"""
+    return apply_grades(out_dir, jra.grade_races(fetcher))

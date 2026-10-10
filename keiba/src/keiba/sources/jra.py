@@ -79,6 +79,19 @@ ALL_RACES_RE = re.compile(r"pw01des01\d+/\w+")
 # pw01srl0…、過去は pw01srl1… と1桁目が変わるので \d で受ける。
 RESULT_KAISAI_RE = re.compile(r"pw01srl\d0?(\d{2})(\d{4})(\d{2})(\d{2})(\d{8})")
 HORSE_ID_RE = re.compile(r"CNAME=pw01dud00(\d{10})")
+# 重賞の格。出馬表・結果の入口ページに重賞の一覧があり、各リンクに
+# アイコン（icon_grade_g3.png 等）が付く。出走表のほうには格が書かれて
+# いないので、ここで拾わないと JRA公式経由の重賞は全部 grade 空になる
+# （2026-09-19〜10-12 がそうだった）。リンクの中身は race_id と同じ並び。
+GRADE_LINK_RE = re.compile(
+    r"CNAME=pw01[ds]de\d{2}(\d{2})(\d{4})(\d{2})(\d{2})(\d{2})\d{8}/\w+"
+    r"(?:(?!CNAME=).){0,800}?icon_grade_(?:s_)?([a-z0-9]+)\.png",
+    re.S,
+)
+GRADE_ICONS = {
+    "g1": "GI", "g2": "GII", "g3": "GIII", "listed": "L",
+    "jg1": "J.GI", "jg2": "J.GII", "jg3": "J.GIII",
+}
 JOCKEY_ID_RE = re.compile(r"pw04kmk00(\d+)")
 TRAINER_ID_RE = re.compile(r"pw05cmk00(\d+)")
 
@@ -152,6 +165,26 @@ def find_kaisai_links(html: str) -> list[dict]:
                 "year": int(year),
             }
         )
+    return out
+
+
+def parse_grade_races(html: str) -> dict[str, str]:
+    """入口ページの重賞一覧から race_id → 格（GI/GII/GIII/L）を返す。"""
+    out: dict[str, str] = {}
+    for venue, year, kai, nichi, race_no, icon in GRADE_LINK_RE.findall(html):
+        grade = GRADE_ICONS.get(icon)
+        if grade:
+            out[f"{year}{venue}{kai}{nichi}{race_no}"] = grade
+    return out
+
+
+def grade_races(fetcher: Fetcher) -> dict[str, str]:
+    """出馬表と結果の入口ページに載っている重賞の格をまとめて返す。"""
+    out: dict[str, str] = {}
+    for name in ("results", "racecard"):
+        html = open_seed(fetcher, name)
+        if html:
+            out.update(parse_grade_races(html))
     return out
 
 
@@ -735,6 +768,7 @@ def collect_racecards(fetcher: Fetcher) -> list[RaceCard]:
     if not kaisai:
         log.info("JRA公式に開催リンクなし（出馬表は木曜公開）")
         return []
+    grades = parse_grade_races(html)
 
     cards: list[RaceCard] = []
     for meeting in kaisai:
@@ -768,6 +802,8 @@ def collect_racecards(fetcher: Fetcher) -> list[RaceCard]:
             log.warning("%s %s の出馬表を解釈できない: %s",
                         meeting["race_date"], meeting["venue"], exc)
             continue
+        for card in found:
+            card.race.grade = card.race.grade or grades.get(card.race.race_id)
         log.info("%s %s: %d レース", meeting["race_date"], meeting["venue"], len(found))
         cards += found
     return cards
