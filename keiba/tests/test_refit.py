@@ -67,3 +67,23 @@ def test_再学習は本番に置く前に学び直す() -> None:
     assert source.index("ml.refit(") < source.index("ml.save("), (
         "検証期間を学ばないモデルを本番に置いている"
     )
+
+
+def test_予想の文章の最後に調教評価を載せる() -> None:
+    from keiba.models import Entry, Race, RaceCard
+
+    race = Race(race_id="202605040407", race_date=date(2026, 10, 11), venue="東京",
+                venue_code="05", kai=4, nichi=4, race_no=7, name="1勝クラス",
+                surface="芝", distance=1600)
+    card = RaceCard(race=race, entries=[
+        Entry(race_id=race.race_id, umaban=1, horse_name="ヒラバイチ", horse_id="2022104123"),
+        Entry(race_id=race.race_id, umaban=2, horse_name="ヒラバニ", horse_id="2022100002"),
+    ], results=[], payouts=[])
+    payload = {"horses": [
+        {"name": "ヒラバイチ", "reasons": ["芝マイルは1-0-0-0（適性＋）"]},
+        {"name": "ヒラバニ", "reasons": []},
+    ]}
+    predict._append_workout_rank(payload, card, {"2022104123": "A"})
+    assert payload["horses"][0]["reasons"][-1] == "調教評価 A"
+    assert payload["horses"][0]["workout_rank"] == "A"
+    assert "workout_rank" not in payload["horses"][1]

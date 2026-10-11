@@ -430,6 +430,33 @@ def apply_daily_cap(races: list[dict], cfg: dict) -> list[str]:
     return actions
 
 
+def _workout_ranks(store: Store, day: date, within_days: int = 21) -> dict[str, str]:
+    """馬ID → 直近の追い切りの評価（netkeiba の S/A/B/C/D）。"""
+    since = (day - timedelta(days=within_days)).isoformat()
+    try:
+        rows = store.conn.execute(
+            "SELECT horse_id, rank FROM horse_workouts"
+            " WHERE workout_date < ? AND workout_date >= ?"
+            " AND rank IS NOT NULL AND rank != ''"
+            " ORDER BY workout_date",
+            (day.isoformat(), since),
+        ).fetchall()
+    except Exception as exc:  # noqa: BLE001 — 調教が無くても予想は出す
+        log.warning("調教の評価を読めない: %s", exc)
+        return {}
+    return {horse_id: rank for horse_id, rank in rows}  # 後の日付で上書き＝最新
+
+
+def _append_workout_rank(payload: dict, card: RaceCard, ranks: dict[str, str]) -> None:
+    """予想の文章の最後に、追い切りの評価を載せる（ユーザーの指定）。"""
+    ids = {e.horse_name: e.horse_id for e in card.entries}
+    for h in payload["horses"]:
+        rank = ranks.get(ids.get(h["name"]) or "")
+        if rank:
+            h["reasons"] = list(h["reasons"] or []) + [f"調教評価 {rank}"]
+            h["workout_rank"] = rank
+
+
 def _model_trained_through(config_dir: Path | None) -> str | None:
     """モデルが学んだ最後のレース日。古い形式は検証開始の前日まで。"""
     if config_dir is None or not (config_dir / "model.json").exists():
@@ -502,6 +529,7 @@ def predict_day(
             # 落ちると「モデルを繋いだつもりで繋がっていない」に戻るので残す。
             log.warning("モデルでの採点に失敗: %s（手置きの重みで続ける）", exc)
 
+    ranks = _workout_ranks(store, day)
     races: list[dict] = []
     for card in cards:
         race_id = card.race.race_id
@@ -514,6 +542,7 @@ def predict_day(
             log.warning("%s の予想に失敗: %s", race_id, exc)
             continue
         if payload:
+            _append_workout_rank(payload, card, ranks)
             races.append(payload)
 
     if provisional:

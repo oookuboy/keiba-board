@@ -470,7 +470,9 @@ function raceBody(r){
     const tr=el("tr",(h.mark?"marked ":"")+(placed.has(h.umaban)?"placed":""));
     tr.appendChild(el("td","hmark",h.mark||""));
     tr.appendChild(el("td",null,`<span class="umaban">${h.umaban}</span>`));
-    const why=(h.reasons||[]).slice(0,3).join(" ／ ");
+    // 調教の評価は文章の最後に必ず出す（先頭3つに切ると消えるため分けて足す）
+    const why=(h.reasons||[]).filter(x=>!x.startsWith("調教評価")).slice(0,3)
+      .concat(h.workout_rank?[`調教評価 <b>${h.workout_rank}</b>`]:[]).join(" ／ ");
     tr.appendChild(el("td",null,
       `<div class="hname">${h.name}</div><div class="why">${why}</div>`));
     tr.appendChild(el("td","num",h.score.toFixed(1)));
