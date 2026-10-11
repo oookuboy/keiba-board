@@ -1509,6 +1509,19 @@ def cmd_train(args: argparse.Namespace) -> int:
         # 比較は同じ検証行の上で行う。前のモデルにも今回の valid を採点させ、
         # そこで負けているときだけ止める。列は ml.predict がモデル自身の
         # feature_name() で選ぶので、特徴量を足した直後でもそのまま通る。
+        # 前のモデルが今回の検証期間を学習済みなら、同じ行で比べても前の
+        # モデルが有利になるだけ（見た答えで採点される）。その場合は比べない。
+        previous_through = None
+        if meta_path.exists():
+            previous_through = json.loads(meta_path.read_text(encoding="utf-8")).get(
+                "trained_through"
+            )
+        if previous_through and previous_through >= str(args.valid_from):
+            log.info(
+                "前のモデルは %s まで学習済みで、検証期間（%s〜）を見ている。"
+                "同じ行での比較は公平でないので飛ばす", previous_through, args.valid_from,
+            )
+            previous_booster = None
         if previous_booster is not None and not args.force:
             previous = ml.roc_auc(
                 valid[dataset.TARGET].to_numpy(),
@@ -1531,6 +1544,8 @@ def cmd_train(args: argparse.Namespace) -> int:
                 )
 
         _check_score_separation(valid, scores, args.config_dir)
+        # 止めどころと AUC は上で測った。本番には検証期間も学んだモデルを置く
+        result = ml.refit(df, result, objective=getattr(args, "objective", "binary"))
         ml.save(result, args.config_dir / "model.txt", meta_path)
         log.info("モデルを差し替えた: %s", args.config_dir / "model.txt")
     return 0

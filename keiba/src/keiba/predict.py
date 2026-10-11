@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from keiba import betting, confidence, engine
@@ -430,6 +430,18 @@ def apply_daily_cap(races: list[dict], cfg: dict) -> list[str]:
     return actions
 
 
+def _model_trained_through(config_dir: Path | None) -> str | None:
+    """モデルが学んだ最後のレース日。古い形式は検証開始の前日まで。"""
+    if config_dir is None or not (config_dir / "model.json").exists():
+        return None
+    meta = json.loads((config_dir / "model.json").read_text(encoding="utf-8"))
+    if meta.get("trained_through"):
+        return meta["trained_through"]
+    if meta.get("valid_from"):
+        return (date.fromisoformat(meta["valid_from"]) - timedelta(days=1)).isoformat()
+    return None
+
+
 def predict_day(
     store: Store,
     weights: dict,
@@ -526,6 +538,9 @@ def predict_day(
         # 何で採点したか。手置きと学習モデルでは順位付けの精度が違うので、
         # 後から回顧するときにこれが分からないと成績を比べられない。
         "scored_by": "model" if scores else "weights",
+        # モデルが何日のレースまで学んだか。古いまま予想していないかを
+        # ボードで見えるようにする。
+        "model_trained_through": _model_trained_through(config_dir) if scores else None,
         "summary": {
             "races": len(races),
             "bet": len(bet_races),

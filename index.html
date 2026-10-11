@@ -361,6 +361,13 @@ function renderSummary(){
     html+=`<br><span style="color:var(--amber)">予算調整: ${
       s.budget_actions.join(" / ")}</span>`;
   }
+  // モデルが何日のレースまで学んだか。30日より古ければ目立たせる
+  if(DAY.model_trained_through){
+    const lag=(new Date(DAY.date)-new Date(DAY.model_trained_through))/864e5;
+    html+=`<br><span style="color:${lag>30?'var(--red)':'var(--dim)'}">`+
+          `モデルの学習: ${DAY.model_trained_through} のレースまで`+
+          (lag>30?`（${Math.round(lag)}日前で止まっている）`:"")+`</span>`;
+  }
   document.getElementById("daysum").innerHTML=html;
 }
 
