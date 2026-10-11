@@ -103,6 +103,8 @@ class TrainResult:
     valid_rows: int
     importance: list[tuple[str, int]]
     valid_from: date | None = None
+    # 学習に入れた最後のレース日。refit 前は検証開始の前日まで。
+    trained_through: date | None = None
 
     def report(self) -> str:
         lines = [
@@ -268,6 +270,41 @@ def format_vs_market(df: pd.DataFrame, scores) -> str:
     )
 
 
+def refit(df: pd.DataFrame, result: TrainResult, objective: str = "binary") -> TrainResult:
+    """検証で決めた止めどころのまま、検証期間も含めた全期間で学び直す。
+
+    train() は直近の検証期間を学習に入れない（そこで止めどころと AUC を
+    測るため）。以前はそのモデルをそのまま本番に置いていたので、毎月
+    再学習しても **常に直近3か月を知らないモデル** で予想していた
+    （2026-10 の予想が 6/28 までのレースしか学んでいなかった）。
+
+    AUC と検証期間は train() で測った数字をそのまま残す。全期間で学んだ
+    モデルの検証 AUC は自分が見た行での数字になり、意味が無いため。
+    """
+    if objective != "binary":
+        return result
+    if "finished" in df.columns and not df["finished"].all():
+        df = df[df["finished"]]
+    rounds = max(1, int(round(result.best_iteration * 1.1)))
+    full = lgb.Dataset(
+        df[FEATURE_COLUMNS], label=df[TARGET],
+        categorical_feature=CATEGORICAL, free_raw_data=False,
+    )
+    booster = lgb.train(PARAMS, full, num_boost_round=rounds)
+    through = pd.Timestamp(df["race_date"].max()).date()
+    log.info("全期間（〜%s・%d 行）で %d 回学び直した", through, len(df), rounds)
+    return TrainResult(
+        booster=booster,
+        auc=result.auc,
+        best_iteration=rounds,
+        train_rows=len(df),
+        valid_rows=result.valid_rows,
+        importance=result.importance,
+        valid_from=result.valid_from,
+        trained_through=through,
+    )
+
+
 def save(result: TrainResult, model_path: Path = MODEL_PATH, meta_path: Path = META_PATH) -> None:
     model_path.parent.mkdir(parents=True, exist_ok=True)
     result.booster.save_model(str(model_path), num_iteration=result.best_iteration)
@@ -281,6 +318,10 @@ def save(result: TrainResult, model_path: Path = MODEL_PATH, meta_path: Path = M
                 # どの期間で測った AUC かを残す。これが無いと、別の窓で
                 # 測った数字どうしを比べてしまう（実際にそれで弾いた）。
                 "valid_from": str(result.valid_from) if result.valid_from else None,
+                # 何日のレースまで学んだか。これが古いまま予想していないかを見る
+                "trained_through": (
+                    str(result.trained_through) if result.trained_through else None
+                ),
                 "features": FEATURE_COLUMNS,
                 "importance": dict(result.importance[:40]),
             },
