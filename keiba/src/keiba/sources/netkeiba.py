@@ -503,13 +503,32 @@ def parse_race_oikiri(html: str) -> list[HorseWorkout]:
             if not cells:
                 continue
 
-            m = TRAINING_DATE_HEAD_RE.match(_text(cells[0]))
-            if not m:
+            # 行の形は2通りある。特別戦・新馬戦は「馬の行」と「調教の行」が
+            # 分かれ、平場（未勝利・1勝クラス）は1行に馬と調教が並ぶ（13セル、
+            # 日付が5セル目）。平場の形を読めず、2026-09〜10 は毎週24R中
+            # 9R前後の追い切りが丸ごと0本だった。日付のセルの位置で見分ける。
+            at = next(
+                (i for i, c in enumerate(cells) if TRAINING_DATE_HEAD_RE.match(_text(c))),
+                None,
+            )
+            if at is None:
                 # 馬の行。ここでだけ馬を切り替える
                 link = row.find("a", href=HORSE_LINK_RE)
                 if link:
                     horse_id = HORSE_LINK_RE.search(link["href"]).group(1)
                 continue
+            if at > 0:
+                # 1行の形。馬は日付より前のセルのリンクから取る（後ろのセルには
+                # 併せ馬の相手へのリンクが入りうる）
+                link = next(
+                    (a for c in cells[:at] if (a := c.find("a", href=HORSE_LINK_RE))),
+                    None,
+                )
+                if link is None:
+                    continue
+                horse_id = HORSE_LINK_RE.search(link["href"]).group(1)
+                cells = cells[at:]
+            m = TRAINING_DATE_HEAD_RE.match(_text(cells[0]))
             if not horse_id:
                 continue
 

@@ -301,3 +301,31 @@ def test_同じ場所を二度数えない(tmp_path) -> None:
     )
     assert len(good) == 1, f"同じ場所を二度数えている: {good}"
     assert len(bad) == 1
+
+
+# 平場（未勝利・1勝クラス）は馬と調教が1行に並ぶ（13セル・日付が5セル目）。
+# この形を読めず、2026-09〜10 は毎週9R前後の追い切りが0本だった。
+OIKIRI_ONE_ROW = """
+<table class="race_table_01 nk_tb_common OikiriTable Stable_Time">
+  <tr><th>枠</th><th>馬 番</th><th>印</th><th>馬名</th><th>日付</th>
+      <th>コース</th><th>馬場</th><th>乗り役</th><th>調教タイム ラップ表示</th>
+      <th>位置</th><th>脚色</th><th>評価</th><th>映像</th></tr>
+  <tr><td>1</td><td>1</td><td></td>
+      <td><a href="https://db.netkeiba.com/horse/2022104123/">ヒラバイチ</a></td>
+      <td>2026/10/07(水)</td><td>美坂</td><td>良</td><td>助手</td>
+      <td>52.1 38.0 12.3</td><td>-</td><td>馬也</td><td>脚力上位</td><td>B</td></tr>
+  <tr><td>2</td><td>2</td><td></td>
+      <td><a href="https://db.netkeiba.com/horse/2022100002/">ヒラバニ</a></td>
+      <td>2026/10/08(木)</td><td>南W</td><td>良</td><td>騎手</td>
+      <td>66.0 51.2 37.1 11.8</td><td>(3)</td><td>強め</td><td>動き上々</td><td>A</td></tr>
+</table>
+"""
+
+
+def test_平場の1行の形も読む() -> None:
+    rows = by_horse(parse_race_oikiri(OIKIRI_ONE_ROW))
+    assert set(rows) == {"2022104123", "2022100002"}
+    one, two = rows["2022104123"], rows["2022100002"]
+    assert one.workout_date.isoformat() == "2026-10-07"
+    assert one.course == "美坂" and one.rank == "B" and one.evaluation == "脚力上位"
+    assert two.rank == "A" and two.leg == "強め"
