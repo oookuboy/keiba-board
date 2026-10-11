@@ -1019,6 +1019,20 @@ def cmd_probe_workouts(args: argparse.Namespace) -> int:
             "    %d bytes / title=%s / 表 %d個 / 課金の壁=%s",
             len(html), title, len(tables), walled or "なし",
         )
+        if not tables:
+            # 表が無いページは、どの要素で組んでいるかを class 名と件数だけで見る
+            # （中身は出さない）。平場の厩舎コメントがこの形だった。
+            from collections import Counter
+
+            classes = Counter(
+                ".".join(el.get("class"))
+                for el in soup.find_all(["div", "ul", "li", "dl", "section"])
+                if el.get("class")
+            )
+            horse_links = len(soup.find_all("a", href=netkeiba.HORSE_LINK_RE))
+            log.info("    馬リンク %d個 / よく出る class:", horse_links)
+            for name, n in classes.most_common(25):
+                log.info("      %4d  %s", n, name[:100])
         for table in tables[:6]:
             rows = table.find_all("tr")
             headers = (
