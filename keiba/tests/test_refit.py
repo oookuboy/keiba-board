@@ -121,3 +121,19 @@ def test_寄与を足すとモデルの出力になる() -> None:
         df.head(50)[result.booster.feature_name()], pred_contrib=True
     )[:, -1]
     assert np.allclose(parts.sum(axis=1).to_numpy() + bias, raw)
+
+
+def test_重賞の格をオープンと区別する() -> None:
+    import pandas as pd
+
+    from keiba import dataset, features
+
+    assert features.class_rank("オープン", "GI") == 7
+    assert features.class_rank("オープン", "GII") == 6
+    assert features.class_rank("オープン", "GIII") == 5
+    assert features.class_rank("オープン", "L") == 4
+    assert features.class_rank("オープン", None) == 4
+    got = dataset._class_rank(
+        pd.Series(["オープン", "オープン", "3勝クラス"]), pd.Series(["GI", None, None])
+    )
+    assert got.tolist() == [7, 4, 3]
