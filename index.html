@@ -457,6 +457,37 @@ function hidePopularity(text){
     .trim();
 }
 
+// 何を根拠にした評価かを6項目に分けて、レース内の順位で出す（1が一番良い）。
+// 利用者の指定で毎レース出す。上位3つは緑、下位3つは赤。
+const FACTORS=["最近の着順","騎手","調教","タイム","適性","その他"];
+function factorTable(r, placed){
+  const wrap=el("div","factors");
+  if(!r.horses.some(h=>h.factors)) return wrap;
+  const n=r.horses.length;
+  const tbl=el("table","ftable");
+  tbl.innerHTML="<thead><tr><th>印</th><th>馬番</th><th>馬名</th>"+
+    FACTORS.map(f=>`<th class='num'>${f==="最近の着順"?"着順":f}</th>`).join("")+
+    "</tr></thead>";
+  const tb=el("tbody");
+  r.horses.forEach(h=>{
+    if(!h.factors) return;
+    const tr=el("tr",(h.mark?"marked ":"")+(placed.has(h.umaban)?"placed":""));
+    tr.appendChild(el("td","hmark",h.mark||""));
+    tr.appendChild(el("td",null,`<span class="umaban">${h.umaban??""}</span>`));
+    tr.appendChild(el("td",null,h.name));
+    FACTORS.forEach(f=>{
+      const v=h.factors[f];
+      const c=v<=3?"var(--green)":(v>n-3?"var(--red)":"inherit");
+      tr.appendChild(el("td","num",`<span style="color:${c}">${v}</span>`));
+    });
+    tb.appendChild(tr);
+  });
+  tbl.appendChild(tb);
+  wrap.appendChild(el("div","why","評価の内訳（レース内の順位・1が一番良い）"));
+  wrap.appendChild(tbl);
+  return wrap;
+}
+
 function raceBody(r){
   const body=el("div","rbody");
   body.appendChild(el("div","reason",hidePopularity(r.confidence_reason)));
@@ -481,6 +512,7 @@ function raceBody(r){
   });
   tbl.appendChild(tb);
   body.appendChild(tbl);
+  body.appendChild(factorTable(r, placed));
 
   if(r.bets.length){
     const box=el("div","bets");

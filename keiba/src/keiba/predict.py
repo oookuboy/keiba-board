@@ -41,6 +41,7 @@ def model_scores(
     aptitude_share: float = 0.0,
     notes: dict[str, dict[int, list[str]]] | None = None,
     aptitude: dict[str, dict[int, dict]] | None = None,
+    factors: dict[str, dict[int, dict[str, float]]] | None = None,
 ) -> dict[str, dict[int, float]]:
     """その日の全出走馬に、学習モデルの3着以内確率を付ける。
 
@@ -76,7 +77,14 @@ def model_scores(
         return {}
 
     today = today.copy()
-    today["p"] = ml.predict(booster, _blank_unknown_draw(today))
+    blanked = _blank_unknown_draw(today)
+    today["p"] = ml.predict(booster, blanked)
+    # 何を根拠にした点数かを6項目に分ける（毎レースの表に出す）
+    parts = None
+    if factors is not None:
+        from keiba import factors as factor_mod
+
+        parts = factor_mod.breakdown(booster, blanked)
 
     # 適性評価（aptitude_view）を掛ける。モデルだけでは印が人気順とほぼ同じに
     # なり、市場と違う結論を出せない。そのコース・回り・道悪・休み明け・
@@ -92,6 +100,10 @@ def model_scores(
         if aptitude_share:
             today["p"] = aptitude_view.blend(today["p"], view, aptitude_share)
             log.info("順位の %.0f%% を適性で決めた", aptitude_share * 100)
+        if parts is not None:
+            from keiba import factors as factor_mod
+
+            parts = factor_mod.add_aptitude_view(parts, view["apt_log"], aptitude_share)
         if notes is not None or aptitude is not None:
             for idx, row in view.iterrows():
                 race_id, umaban = row["race_id"], int(row["umaban"])
@@ -100,6 +112,12 @@ def model_scores(
                     notes.setdefault(race_id, {})[umaban] = why
                 if aptitude is not None:
                     aptitude.setdefault(race_id, {})[umaban] = aptitude_view.summary(row)
+    if parts is not None and factors is not None:
+        for idx, row in parts.iterrows():
+            race_id, umaban = today.at[idx, "race_id"], int(today.at[idx, "umaban"])
+            factors.setdefault(race_id, {})[umaban] = {
+                k: round(float(v), 3) for k, v in row.items()
+            }
     scores = {
         race_id: dict(zip(group["umaban"], group["p"]))
         for race_id, group in today.groupby("race_id", observed=True)
@@ -461,6 +479,27 @@ def _append_workout_rank(payload: dict, card: RaceCard, ranks: dict[str, str]) -
             h["workout_rank"] = rank
 
 
+def _attach_factors(
+    payload: dict, card: RaceCard, values: dict[int, dict[str, float]] | None
+) -> None:
+    """馬ごとに6項目のレース内順位（1が一番良い）を付ける。
+
+    枠順確定前は馬番が仮なので、馬名で突き合わせる（仮番号は
+    store.pseudo_numbered と同じ振り方）。
+    """
+    from keiba import factors as factor_mod
+    from keiba.store import pseudo_numbered
+
+    if not values:
+        return
+    ranked = factor_mod.ranks(values)
+    number = {e.horse_name: e.umaban for e in pseudo_numbered(card)}
+    for h in payload["horses"]:
+        u = number.get(h["name"])
+        if u in ranked:
+            h["factors"] = ranked[u]
+
+
 def _model_trained_through(config_dir: Path | None) -> str | None:
     """モデルが学んだ最後のレース日。古い形式は検証開始の前日まで。"""
     if config_dir is None or not (config_dir / "model.json").exists():
@@ -519,6 +558,7 @@ def predict_day(
     scores: dict[str, dict[int, float]] = {}
     notes: dict[str, dict[int, list[str]]] = {}
     aptitude: dict[str, dict[int, dict]] = {}
+    factors: dict[str, dict[int, dict[str, float]]] = {}
     if config_dir is not None and cards:
         try:
             apt_cfg = weights.get("aptitude_view") or {}
@@ -528,6 +568,7 @@ def predict_day(
                 aptitude_share=float(apt_cfg.get("share", 0.0)),
                 notes=notes,
                 aptitude=aptitude,
+                factors=factors,
             )
         except (KeyError, ValueError) as exc:
             # 採点できなくても手置きの重みで予想自体は出せる。ただし黙って
@@ -548,6 +589,7 @@ def predict_day(
             continue
         if payload:
             _append_workout_rank(payload, card, ranks)
+            _attach_factors(payload, card, factors.get(race_id))
             races.append(payload)
 
     if provisional:

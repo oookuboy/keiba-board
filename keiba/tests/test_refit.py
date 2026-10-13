@@ -87,3 +87,37 @@ def test_予想の文章の最後に調教評価を載せる() -> None:
     assert payload["horses"][0]["reasons"][-1] == "調教評価 A"
     assert payload["horses"][0]["workout_rank"] == "A"
     assert "workout_rank" not in payload["horses"][1]
+
+
+def test_評価を6項目に分けてレース内の順位にする() -> None:
+    from keiba import factors
+
+    assert factors.category("w_rank_score") == "調教"
+    assert factors.category("j_place_rate_z") == "騎手"
+    assert factors.category("sp_r3") == "タイム"
+    assert factors.category("h_course_place_rate") == "適性"
+    assert factors.category("h_finish_ratio_r3_z") == "最近の着順"
+    assert factors.category("body_weight") == "その他"
+
+    ranked = factors.ranks({
+        1: {"騎手": 0.3, "調教": -0.1},
+        2: {"騎手": -0.2, "調教": 0.4},
+    })
+    assert ranked[1] == {"騎手": 1, "調教": 2}
+    assert ranked[2] == {"騎手": 2, "調教": 1}
+
+
+def test_寄与を足すとモデルの出力になる() -> None:
+    import numpy as np
+
+    from keiba import factors
+
+    df = _toy(n_days=60)
+    result = ml.train(df, valid_from=date(2026, 2, 15), rounds=30)
+    parts = factors.breakdown(result.booster, df.head(50))
+    assert list(parts.columns) == list(factors.CATEGORIES)
+    raw = result.booster.predict(df.head(50)[result.booster.feature_name()], raw_score=True)
+    bias = result.booster.predict(
+        df.head(50)[result.booster.feature_name()], pred_contrib=True
+    )[:, -1]
+    assert np.allclose(parts.sum(axis=1).to_numpy() + bias, raw)
