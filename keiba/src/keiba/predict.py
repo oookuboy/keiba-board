@@ -38,6 +38,7 @@ def model_scores(
     config_dir: Path,
     *,
     aptitude_weight: float = 0.0,
+    aptitude_share: float = 0.0,
     notes: dict[str, dict[int, list[str]]] | None = None,
     aptitude: dict[str, dict[int, dict]] | None = None,
 ) -> dict[str, dict[int, float]]:
@@ -80,7 +81,7 @@ def model_scores(
     # 適性評価（aptitude_view）を掛ける。モデルだけでは印が人気順とほぼ同じに
     # なり、市場と違う結論を出せない。そのコース・回り・道悪・休み明け・
     # 位置取り・枠の実績を、数えた倍率としてモデルの確率に掛ける。
-    if aptitude_weight or notes is not None or aptitude is not None:
+    if aptitude_weight or aptitude_share or notes is not None or aptitude is not None:
         from keiba import aptitude_view
 
         view = aptitude_view.attach(df)
@@ -88,6 +89,9 @@ def model_scores(
         if aptitude_weight:
             today["p"] = aptitude_view.adjust(today["p"], view, aptitude_weight)
             log.info("適性評価を重み %.2f で掛けた", aptitude_weight)
+        if aptitude_share:
+            today["p"] = aptitude_view.blend(today["p"], view, aptitude_share)
+            log.info("順位の %.0f%% を適性で決めた", aptitude_share * 100)
         if notes is not None or aptitude is not None:
             for idx, row in view.iterrows():
                 race_id, umaban = row["race_id"], int(row["umaban"])
@@ -521,6 +525,7 @@ def predict_day(
             scores = model_scores(
                 store, day, config_dir,
                 aptitude_weight=float(apt_cfg.get("weight", 0.0)),
+                aptitude_share=float(apt_cfg.get("share", 0.0)),
                 notes=notes,
                 aptitude=aptitude,
             )

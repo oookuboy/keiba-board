@@ -231,6 +231,21 @@ def adjust(p: pd.Series, frame: pd.DataFrame, weight: float) -> pd.Series:
     return (raw * total_before / total_after).clip(0, 0.95)
 
 
+def blend(p: pd.Series, frame: pd.DataFrame, share: float) -> pd.Series:
+    """順位の share 割を適性で決める。レース内の合計（確率の尺度）は保つ。
+
+    モデルの確率と適性の倍率（total）を、それぞれレース内の比率にしてから
+    (1 - share) : share で混ぜる。掛け算（adjust）と違い「何割を適性で
+    決めるか」がそのまま数字になる。
+    """
+    race = frame["race_id"]
+    apt = np.exp(frame["apt_log"].fillna(0.0))
+    total = p.groupby(race).transform("sum")
+    pm = p / total
+    pa = apt / apt.groupby(race).transform("sum")
+    return (((1 - share) * pm + share * pa) * total).clip(0, 0.95)
+
+
 def _fmt(row: pd.Series, prefix: str) -> str:
     w = [int(row[f"{prefix}{k}"]) for k in (1, 2, 3)]
     n = int(row[f"{prefix}n"])

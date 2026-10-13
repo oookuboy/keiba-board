@@ -177,3 +177,22 @@ def test_堅いレースは上位4頭のボックス4点で買う() -> None:
     t = betting.solid_box(hs, 4, 100)
     assert len(t) == 4 and all(x.bet_type == betting.TRIO for x in t)
     assert {x.combination for x in t} == {"1-2-3", "1-2-4", "1-3-4", "2-3-4"}
+
+
+def test_順位の2割を適性で決める() -> None:
+    import pandas as pd
+    import numpy as np
+    from keiba import aptitude_view
+
+    frame = pd.DataFrame({
+        "race_id": ["r1"] * 3,
+        "apt_log": [np.log(2.0), 0.0, np.log(0.5)],
+    })
+    p = pd.Series([0.2, 0.5, 0.3])
+    out = aptitude_view.blend(p, frame, 0.2)
+    # 合計（確率の尺度）は変わらない
+    assert abs(out.sum() - 1.0) < 1e-9
+    # 適性の高い馬が上がり、低い馬が下がる
+    assert out[0] > 0.2 and out[2] < 0.3
+    # 0割ならモデルのまま
+    assert np.allclose(aptitude_view.blend(p, frame, 0.0), p)
