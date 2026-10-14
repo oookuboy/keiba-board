@@ -239,3 +239,24 @@ def test_三連単は組まない() -> None:
     tickets = betting.build(horses(), grade(), WEIGHTS)
     assert tickets, "三連複まで消えている"
     assert not [t for t in tickets if t.bet_type == betting.TRIFECTA]
+
+
+def test_8頭以下は本命1着固定の三連単() -> None:
+    marks = ["◎", "○", "▲", "▲", "☆", None, None, None]
+    field = [
+        ScoredHorse(umaban=i + 1, horse_id=str(i), horse_name=f"h{i}",
+                    score=80 - i * 5, style="先行", mark=marks[i])
+        for i in range(8)
+    ]
+    tickets = betting.small_field_trifecta(field, 100)
+    assert len(tickets) == 12
+    assert all(t.bet_type == betting.TRIFECTA for t in tickets)
+    assert all(t.combination.startswith("1-") for t in tickets)
+    assert {u for t in tickets for u in t.umabans} == {1, 2, 3, 4, 5}
+
+
+def test_8頭以下の設定がある() -> None:
+    cfg = yaml.safe_load(
+        (pathlib.Path(__file__).parents[1] / "config/weights.yml").read_text(encoding="utf-8")
+    )
+    assert cfg["betting"]["trifecta_field_max"] == 8

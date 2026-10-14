@@ -294,8 +294,17 @@ def predict_card(
         )
     elif aptitude and bcfg.get("bet_only_with_longshot"):
         grade = judge_by_longshot(grade, longshot_candidates(horses, aptitude))
+    small = len(entries) <= int(bcfg.get("trifecta_field_max", 0) or 0)
+    if small and not unconfirmed:
+        # 8頭以下は三連単（利用者の指定）。見送りの判定は使わず必ず買う
+        grade = replace(
+            grade, grade="○",
+            reason=f"少頭数（{len(entries)}頭）なので◎1着固定の三連単",
+        )
     if unconfirmed:
         tickets = []
+    elif small:
+        tickets = betting.small_field_trifecta(horses, bcfg["unit"])
     elif solid:
         tickets = betting.solid_box(horses, int(bcfg.get("solid_box", 4)), bcfg["unit"])
     else:

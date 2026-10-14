@@ -140,6 +140,28 @@ def build(
     return tickets
 
 
+def small_field_trifecta(horses: list[ScoredHorse], unit: int) -> list[Ticket]:
+    """少頭数（8頭以下）用。◎1着固定、2・3着は残りの印4頭（12点）。
+
+    利用者の指定（2026-10-14）。6/27〜10/11 の8頭以下 91R（学習外）で、
+    印5頭の三連複ボックス 回収69%・的中55% に対し、この形は
+    回収104%（最大1本を除くと75%）・的中26%。1R 1,200円。
+    """
+    ranked = sorted(horses, key=lambda h: -h.score)
+    head = ranked[0]
+    partners = [h for h in ranked[1:] if h.mark][:4]
+    for h in ranked[1:]:
+        if len(partners) >= 4:
+            break
+        if h not in partners:
+            partners.append(h)
+    return [
+        Ticket(TRIFECTA, f"{head.umaban}-{a.umaban}-{b.umaban}", unit,
+               "少頭数（◎1着固定の三連単）")
+        for a, b in itertools.permutations(partners, 2)
+    ]
+
+
 def solid_box(horses: list[ScoredHorse], size: int, unit: int) -> list[Ticket]:
     """堅いレース用。能力上位 size 頭の三連複ボックス（4頭なら4点）。"""
     top = sorted(horses, key=lambda h: -h.score)[:size]
