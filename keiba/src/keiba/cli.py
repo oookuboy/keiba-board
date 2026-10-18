@@ -667,6 +667,50 @@ def _paid_data_reached_the_prediction(
     return bad
 
 
+def cmd_longshot_workouts(args: argparse.Namespace) -> int:
+    """人気薄（6番人気以下）の3着内率を、追い切りの評価ごとに数える。
+
+    2026-10-17/18 に3着内へ来た人気薄の多くが、そのレースで調教の評価が
+    上位だった。たまたまかどうかを過去の全レースで確かめる。
+    出すのは件数と率だけ（調教の中身は出さない。ログは公開される）。
+    """
+    import pandas as pd
+
+    from keiba import dataset
+
+    with Store(args.db) as store:
+        df = dataset.prepare(store)
+    df = df[df["finished"]] if "finished" in df else df
+    df = df[df["race_date"] >= str(args.since)]
+    df = df[df["w_rank_score"].notna() | df["w_last_1f"].notna()].copy()
+    df["placed"] = (df["finish_pos"] <= 3).astype(int)
+    race = df["race_id"]
+    df["w_rank_in_race"] = df.groupby(race)["w_rank_score"].rank(ascending=False, method="min")
+    df["w_1f_in_race"] = df.groupby(race)["w_last_1f"].rank(ascending=True, method="min")
+    letters = {4.0: "S", 3.0: "A", 2.0: "B", 1.0: "C"}
+    df["letter"] = df["w_rank_score"].map(letters).fillna("D/なし")
+
+    def line(label: str, frame: pd.DataFrame) -> None:
+        n = len(frame)
+        rate = frame["placed"].mean() * 100 if n else float("nan")
+        print(f"  {label:32s} {n:7,d}頭  3着内 {rate:5.1f}%")
+
+    for name, frame in (("全馬", df), ("6番人気以下", df[df["market_popularity"] >= 6])):
+        print(f"== {name}（{args.since}〜・調教あり）")
+        line("合計", frame)
+        for letter in ("S", "A", "B", "C", "D/なし"):
+            line(f"調教評価 {letter}", frame[frame["letter"] == letter])
+        line("レース内の調教評価 1〜3番手", frame[frame["w_rank_in_race"] <= 3])
+        line("レース内の調教評価 4番手以下", frame[frame["w_rank_in_race"] > 3])
+        line("ラスト1F レース内1〜3番手", frame[frame["w_1f_in_race"] <= 3])
+        line("ラスト1F レース内4番手以下", frame[frame["w_1f_in_race"] > 3])
+        for year in sorted(frame["race_date"].dt.year.unique()):
+            y = frame[frame["race_date"].dt.year == year]
+            line(f"{year}年 評価A以上", y[y["letter"].isin(["S", "A"])])
+            line(f"{year}年 評価B以下", y[~y["letter"].isin(["S", "A"])])
+    return 0
+
+
 def cmd_comment_value(args: argparse.Namespace) -> int:
     """厩舎コメントに、モデルが取りこぼしている情報が残っているかを測る。
 
@@ -1701,6 +1745,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="新しい馬（新馬・2歳）から引く。週次の運用用",
     )
     p.set_defaults(func=cmd_backfill_pedigree)
+
+    p = sub.add_parser(
+        "longshot-workouts",
+        help="人気薄の3着内率を追い切りの評価ごとに数える（件数と率だけ出す）",
+    )
+    p.add_argument("--since", type=_date, default=date(2024, 1, 1))
+    p.set_defaults(func=cmd_longshot_workouts)
 
     p = sub.add_parser(
         "comment-value",

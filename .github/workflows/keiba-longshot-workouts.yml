@@ -1,0 +1,34 @@
+name: keiba-longshot-workouts
+
+# 人気薄の3着内率を、追い切りの評価ごとに数える。手で回す用。
+# 調教は有料データで artifact にしか無いので、Actions で測る。
+# ログに出すのは件数と率だけ。
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+
+      - name: 調教を artifact から戻す
+        uses: ./.github/actions/workouts
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: DB を作る
+        run: python -m keiba.cli build
+
+      - name: 測る
+        run: python -m keiba.cli longshot-workouts
