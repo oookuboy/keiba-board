@@ -667,6 +667,35 @@ def _paid_data_reached_the_prediction(
     return bad
 
 
+def cmd_nk_entries(args: argparse.Namespace) -> int:
+    """netkeiba の確定前の出馬表（登録馬）から、馬名と馬IDを出す。
+
+    JRA公式の出馬表は木曜まで出ないが、netkeiba には登録の段階で載る。
+    無料ページで、出すのは馬名と馬IDだけ（公開情報）。
+    """
+    import re as _re
+
+    from bs4 import BeautifulSoup
+
+    fetcher = Fetcher(cache_dir=args.cache, use_cache=False)
+    for race_id in args.race_ids:
+        url = f"https://race.netkeiba.com/race/shutuba.html?race_id={race_id}"
+        html = fetcher.fetch(url, force=True)
+        soup = BeautifulSoup(html, "lxml")
+        title = soup.title.get_text(strip=True) if soup.title else ""
+        print(f"== {race_id} {title[:60]}")
+        seen = set()
+        for a in soup.find_all("a", href=_re.compile(r"/horse/(\d{10})")):
+            hid = _re.search(r"/horse/(\d{10})", a["href"]).group(1)
+            name = a.get_text(strip=True)
+            if hid in seen or not name:
+                continue
+            seen.add(hid)
+            print(f"ENTRY\t{hid}\t{name}")
+        print(f"   {len(seen)}頭")
+    return 0
+
+
 def cmd_longshot_workouts(args: argparse.Namespace) -> int:
     """人気薄（6番人気以下）の3着内率を、追い切りの評価ごとに数える。
 
@@ -1745,6 +1774,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="新しい馬（新馬・2歳）から引く。週次の運用用",
     )
     p.set_defaults(func=cmd_backfill_pedigree)
+
+    p = sub.add_parser(
+        "nk-entries", help="netkeiba の確定前の出馬表から馬名と馬IDを出す"
+    )
+    p.add_argument("race_ids", nargs="+")
+    p.set_defaults(func=cmd_nk_entries)
 
     p = sub.add_parser(
         "longshot-workouts",
