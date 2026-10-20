@@ -138,8 +138,3 @@ def test_重賞の格をオープンと区別する() -> None:
     )
     assert got.tolist() == [7, 4, 3]
 
-
-def test_持ち時計の書き方() -> None:
-    assert predict._fmt_time(94.3) == "1:34.3"
-    assert predict._fmt_time(181.0) == "3:01.0"
-    assert predict._fmt_time(59.6) == "59.6"

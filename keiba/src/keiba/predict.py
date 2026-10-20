@@ -508,49 +508,6 @@ def _attach_factors(
             h["factors"] = ranked[u]
 
 
-def _fmt_time(sec: float) -> str:
-    m, r = divmod(sec, 60)
-    return f"{int(m)}:{r:04.1f}" if m else f"{r:.1f}"
-
-
-def _attach_best_times(payload: dict, card: RaceCard, store: Store) -> None:
-    """馬ごとに、このレースと同じ芝/ダート・同じ距離の持ち時計（一番速い走破タイム）。
-
-    その距離を走ったことが無い馬は、いちばん近い距離の持ち時計を距離つきで出す。
-    馬場や競馬場で時計は変わるので、どこで出した時計かも一緒に残す。
-    """
-    race = card.race
-    ids = {e.horse_name: e.horse_id for e in card.entries}
-    for h in payload["horses"]:
-        horse_id = ids.get(h["name"])
-        if not horse_id:
-            continue
-        rows = store.conn.execute(
-            "SELECT re.time_sec, ra.race_date, ra.venue, ra.going, ra.distance"
-            " FROM entries e"
-            " JOIN races ra ON ra.race_id = e.race_id"
-            " JOIN results re ON re.race_id = e.race_id AND re.umaban = e.umaban"
-            " WHERE e.horse_id = ? AND ra.surface = ? AND ra.race_date < ?"
-            " AND re.time_sec IS NOT NULL AND re.time_sec > 0",
-            (horse_id, race.surface, race.race_date.isoformat()),
-        ).fetchall()
-        if not rows:
-            continue
-        gap = min(abs(r[4] - race.distance) for r in rows)
-        near = [r for r in rows if abs(r[4] - race.distance) == gap]
-        best = min(near, key=lambda r: r[0])
-        h["best_time"] = {
-            "time": round(float(best[0]), 1),
-            "text": _fmt_time(float(best[0])),
-            "distance": int(best[4]),
-            "exact": gap == 0,
-            "venue": best[2],
-            "going": best[3],
-            "date": str(best[1]),
-            "runs": len(near),
-        }
-
-
 def _model_trained_through(config_dir: Path | None) -> str | None:
     """モデルが学んだ最後のレース日。古い形式は検証開始の前日まで。"""
     if config_dir is None or not (config_dir / "model.json").exists():
@@ -641,7 +598,6 @@ def predict_day(
         if payload:
             _append_workout_rank(payload, card, ranks)
             _attach_factors(payload, card, factors.get(race_id))
-            _attach_best_times(payload, card, store)
             races.append(payload)
 
     if provisional:
