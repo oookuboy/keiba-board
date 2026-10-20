@@ -458,6 +458,39 @@ function hidePopularity(text){
     .trim();
 }
 
+// この距離の持ち時計を速い順に並べる（利用者の指定）。同じ距離を走った馬が先、
+// 走ったことの無い馬は近い距離の時計を距離つきで後ろに並べる。
+function timeTable(r, placed){
+  const wrap=el("div","factors");
+  const hs=r.horses.filter(h=>h.best_time);
+  if(!hs.length) return wrap;
+  const same=hs.filter(h=>h.best_time.exact).sort((a,b)=>a.best_time.time-b.best_time.time);
+  const other=hs.filter(h=>!h.best_time.exact)
+    .sort((a,b)=>Math.abs(a.best_time.distance-r.distance)-Math.abs(b.best_time.distance-r.distance)
+                 ||a.best_time.time-b.best_time.time);
+  const tbl=el("table","ftable");
+  tbl.innerHTML="<thead><tr><th class='num'>順</th><th>印</th><th>馬番</th><th>馬名</th>"+
+    "<th class='num'>持ち時計</th><th>どこで</th></tr></thead>";
+  const tb=el("tbody");
+  const first=same.length?same[0].best_time.time:null;
+  same.concat(other).forEach((h,i)=>{
+    const t=h.best_time;
+    const tr=el("tr",(h.mark?"marked ":"")+(placed.has(h.umaban)?"placed":""));
+    tr.appendChild(el("td","num",t.exact?String(i+1):"—"));
+    tr.appendChild(el("td","hmark",h.mark||""));
+    tr.appendChild(el("td",null,`<span class="umaban">${h.umaban??""}</span>`));
+    tr.appendChild(el("td",null,h.name));
+    const diff=(t.exact&&first!=null&&i>0)?` <span style="color:var(--dim)">+${(t.time-first).toFixed(1)}</span>`:"";
+    tr.appendChild(el("td","num",(t.exact?t.text:`${t.text}（${t.distance}m）`)+diff));
+    tr.appendChild(el("td",null,`<span class="why">${t.venue} ${t.going||""} ${t.date.slice(2).replace(/-/g,"/")}</span>`));
+    tb.appendChild(tr);
+  });
+  tbl.appendChild(tb);
+  wrap.appendChild(el("div","why",`${r.surface}${r.distance}m の持ち時計（速い順）`));
+  wrap.appendChild(tbl);
+  return wrap;
+}
+
 // 何を根拠にした評価かを6項目に分けて、レース内の順位で出す（1が一番良い）。
 // 利用者の指定で毎レース出す。上位3つは緑、下位3つは赤。
 const FACTORS=["最近の着順","騎手","調教","タイム","適性","その他"];
@@ -514,6 +547,7 @@ function raceBody(r){
   tbl.appendChild(tb);
   body.appendChild(tbl);
   body.appendChild(factorTable(r, placed));
+  body.appendChild(timeTable(r, placed));
 
   if(r.bets.length){
     const box=el("div","bets");
