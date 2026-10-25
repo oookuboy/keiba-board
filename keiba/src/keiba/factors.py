@@ -38,7 +38,7 @@ def category(feature: str) -> str:
     ):
         return "適性"
     if feature.startswith(
-        ("h_finish", "h_prev_finish", "h_place_rate", "h_win_rate", "h_margin")
+        ("h_finish", "h_prev_finish", "h_place_rate", "h_win_rate", "h_margin", "h_fr_")
     ) or feature == "h_runs":
         return "最近の着順"
     return "その他"

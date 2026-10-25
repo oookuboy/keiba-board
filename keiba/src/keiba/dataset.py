@@ -215,6 +215,20 @@ def build_features(
     out["h_prev_distance"] = out.groupby(horse, observed=True)["distance"].shift(1)
     out["h_prev_surface"] = out.groupby(horse, observed=True)["surface"].shift(1)
     out["h_prev_class"] = out.groupby(horse, observed=True)["class_rank"].shift(1)
+    # 近走の着順を、そのレースの格と合わせて見る。G1で大敗した直後に格下へ
+    # 出てきた馬を、同じ格での大敗と同じに扱わないため（2026-10-12 スワンSの
+    # スズハロームを外した形）。格が1つ上だった走りは着順比を0.1良く見る。
+    # 6/27〜10/18 の1152R（学習外）で AUC 0.7655 → 0.7673・上位3頭の3着内
+    # 49.6% → 50.4%。
+    grouped = out.groupby(horse, observed=True)
+    adj, cls = [], []
+    for k in (1, 2, 3):
+        cl = grouped["class_rank"].shift(k)
+        adj.append(grouped["finish_ratio"].shift(k) - 0.1 * (cl - out["class_rank"]))
+        cls.append(cl)
+    out["h_fr_class_adj_r3"] = pd.concat(adj, axis=1).mean(axis=1)
+    out["h_class_r3"] = pd.concat(cls, axis=1).mean(axis=1)
+    out["h_class_gap_r3"] = out["h_class_r3"] - out["class_rank"]
     prev_date = out.groupby(horse, observed=True)["race_date"].shift(1)
     out["h_days_since"] = (out["race_date"] - prev_date).dt.days
 
@@ -341,6 +355,7 @@ FEATURE_COLUMNS = [
     # 馬の履歴
     "h_runs", "h_place_rate", "h_win_rate", "h_finish_ratio_avg",
     "h_finish_ratio_r3", "h_corner_ratio_r5", "h_last3f_r3", "h_best_class",
+    "h_fr_class_adj_r3", "h_class_r3", "h_class_gap_r3",
     "h_prev_finish_ratio", "h_days_since",
     # 条件一変
     "c_distance_delta", "c_surface_switch", "c_class_delta", "c_class_drop",
