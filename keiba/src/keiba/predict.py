@@ -294,6 +294,9 @@ def predict_card(
         )
     elif aptitude and bcfg.get("bet_only_with_longshot"):
         grade = judge_by_longshot(grade, longshot_candidates(horses, aptitude))
+    if bcfg.get("bet_all_races") and grade.grade == confidence.SKIP:
+        # 見送りをやめる（利用者の指定 2026-10-25）。印のあるレースは全部買う
+        grade = replace(grade, grade="○", reason="見送りなし（印5頭のボックス）")
     # 8頭以下は券種だけ三連単に変える（利用者の指定）。買うか見送るかの
     # 判断は他のレースと同じ。見送りのレースまで買う形にはしない。
     small = len(entries) <= int(bcfg.get("trifecta_field_max", 0) or 0)
