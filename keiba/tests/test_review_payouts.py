@@ -32,3 +32,23 @@ def test_払戻未反映のレースを数える(tmp_path) -> None:
         review.review_day(s, payload)
     assert payload["summary"]["payout_missing"] == ["東京12R"]
     assert payload["races"][0]["result"]["hit"] is True
+
+
+def test_3着同着でも成績に入れる(tmp_path) -> None:
+    """2026-10-25 新潟11R・12R は3着同着で、買ったのに成績から抜けていた。"""
+    rid = "202604040411"
+    race = Race(race_id=rid, race_date=date(2026, 10, 25), venue="新潟", venue_code="04",
+                kai=4, nichi=4, race_no=11, name="t", surface="芝", distance=1600)
+    entries = [Entry(race_id=rid, umaban=i, horse_name=f"馬{i}", horse_id=f"h{i}") for i in range(1, 7)]
+    pos = {1: 1, 2: 2, 3: 3, 4: 3, 5: 5, 6: 6}
+    results = [Result(race_id=rid, umaban=u, finish_pos=p) for u, p in pos.items()]
+    payouts = [Payout(race_id=rid, bet_type="三連複", combination="1-2-3", payout=900, popularity=1),
+               Payout(race_id=rid, bet_type="三連複", combination="1-2-4", payout=2500, popularity=4)]
+    with Store(tmp_path / "t.db") as s:
+        s.save_cards([RaceCard(race=race, entries=entries, results=results, payouts=payouts)])
+        bet = [{"type": "三連複", "combination": "1-2-4", "amount": 100, "why": ""}]
+        payload = {"date": "2026-10-25", "summary": {"spend": 100},
+                   "races": [{"race_id": rid, "bets": bet, "horses": [], "confidence": "○", "confidence_reason": ""}]}
+        review.review_day(s, payload)
+    res = payload["races"][0]["result"]
+    assert res is not None and res["hit"] is True and res["returned"] == 2500

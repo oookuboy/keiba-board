@@ -120,11 +120,16 @@ class BacktestResult:
 
 
 def _actual_top3(card: RaceCard) -> list[int] | None:
-    """着順1〜3位の馬番。同着や中止で3頭揃わなければ None。"""
+    """着順1〜3位の馬番。3頭そろわなければ None。
+
+    3着同着では4頭になる（2026-10-25 新潟11R・12R）。以前はここで None を返し、
+    買っていたレースが成績から丸ごと抜けていた。表示用に先頭3頭を返し、
+    的中は払戻の表（同着なら当たりの組が複数載る）で判定する。
+    """
     placed = [r for r in card.results if r.finish_pos in (1, 2, 3)]
-    if len(placed) != 3:
+    if len(placed) < 3:
         return None
-    return [r.umaban for r in sorted(placed, key=lambda r: r.finish_pos or 9)]
+    return [r.umaban for r in sorted(placed, key=lambda r: r.finish_pos or 9)][:3]
 
 
 def _settle(
@@ -144,6 +149,9 @@ def _settle(
         won = (t.bet_type == betting.TRIO and t.combination == trio_key) or (
             t.bet_type == betting.TRIFECTA and t.combination == trifecta_key
         )
+        # 同着では当たりの組が複数ある。払戻の表に載っていれば当たり
+        won = won or (t.bet_type in (betting.TRIO, betting.TRIFECTA)
+                      and (t.bet_type, t.combination) in payouts)
         if not won:
             continue
         payout = payouts.get((t.bet_type, t.combination))
