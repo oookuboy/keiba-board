@@ -667,6 +667,74 @@ def _paid_data_reached_the_prediction(
     return bad
 
 
+def cmd_eval_star(args: argparse.Namespace) -> int:
+    """☆（穴）の選び方を、学習に使っていない期間で比べる（調教込み）。
+
+    今の選び方と、調教評価C以下の人気薄を☆にしない選び方。出すのは率だけ。
+    """
+    import itertools
+
+    import numpy as np
+    import pandas as pd
+
+    from keiba import aptitude_view, dataset, ml, predict as pr
+
+    test_from, valid_from = args.test_from, args.valid_from
+    with Store(args.db) as store:
+        df = dataset.prepare(store, speed_before=pd.Timestamp(str(test_from)))
+        trio = {}
+        for rid, comb, pay in store.conn.execute(
+            "SELECT race_id, combination, payout FROM payouts WHERE bet_type='三連複'"
+        ):
+            trio.setdefault(rid, {})[str(comb)] = int(pay)
+    df = df[df["finished"]]
+    past = df[df["race_date"] < str(test_from)]
+    res = ml.train(past, valid_from=valid_from)
+    view = aptitude_view.attach(df, bias_before=str(valid_from))
+    test = view[view["race_date"] >= str(test_from)].copy()
+    test["p"] = ml.predict(res.booster, test)
+    stats = {}
+    for rid, g in test.groupby("race_id"):
+        if rid not in trio:
+            continue
+        g = g.sort_values("p", ascending=False)
+        top3 = set(g.loc[g["finish_pos"] <= 3, "umaban"].astype(int))
+        key = "-".join(str(u) for u in sorted(top3))
+        rows = [r for _, r in g.iterrows()]
+        def cand(row, need_b):
+            if not row["market_popularity"] or row["market_popularity"] < pr.LONGSHOT_FROM:
+                return False
+            s = aptitude_view.summary(row)
+            plus = pr.STRENGTHS & set(s["plus"])
+            if len(plus) < 2 or pr.WEAKNESSES & set(s["minus"]):
+                return False
+            return not need_b or (row["w_rank_score"] == row["w_rank_score"] and row["w_rank_score"] >= 2)
+        for name, need_b in (("今の選び方", False), ("調教C以下の人気薄は☆にしない", True)):
+            top5 = [int(r["umaban"]) for r in rows[:5]]
+            cs = [int(r["umaban"]) for r in rows if cand(r, need_b)]
+            if cs and cs[0] not in top5:
+                top5[4] = cs[0]
+            elif need_b:
+                star = next(r for r in rows if int(r["umaban"]) == top5[4])
+                if (star["market_popularity"] or 0) >= pr.LONGSHOT_FROM and not (star["w_rank_score"] == star["w_rank_score"] and star["w_rank_score"] >= 2):
+                    alt = [int(r["umaban"]) for r in rows[5:]
+                           if (r["market_popularity"] or 0) >= pr.LONGSHOT_FROM
+                           and r["w_rank_score"] == r["w_rank_score"] and r["w_rank_score"] >= 2]
+                    if alt:
+                        top5[4] = alt[0]
+            st = stats.setdefault(name, [0, 0, 0, 0, []])
+            st[0] += 1
+            st[3] += 1 if top5[4] in top3 else 0
+            if set(top3) <= set(top5) and len(top3) == 3:
+                pay = trio[rid].get(key, 0)
+                st[1] += 1; st[2] += pay; st[4].append(pay)
+    for name, (n, h, ret, star, pays) in stats.items():
+        pays.sort(reverse=True)
+        print(f"{name}: {n}R ☆の3着内 {star/n*100:.1f}% 印5頭で決着 {h/n*100:.1f}% "
+              f"5頭箱の回収 {ret/(n*1000)*100:.1f}% 上位3本除く {(ret-sum(pays[:3]))/(n*1000)*100:.1f}%")
+    return 0
+
+
 def cmd_nk_entries(args: argparse.Namespace) -> int:
     """netkeiba の確定前の出馬表（登録馬）から、馬名と馬IDを出す。
 
@@ -1774,6 +1842,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="新しい馬（新馬・2歳）から引く。週次の運用用",
     )
     p.set_defaults(func=cmd_backfill_pedigree)
+
+    p = sub.add_parser("eval-star", help="☆の選び方を学習外の期間で比べる（調教込み）")
+    p.add_argument("--valid-from", type=_date, default=date(2026, 3, 28))
+    p.add_argument("--test-from", type=_date, default=date(2026, 6, 27))
+    p.set_defaults(func=cmd_eval_star)
 
     p = sub.add_parser(
         "nk-entries", help="netkeiba の確定前の出馬表から馬名と馬IDを出す"
