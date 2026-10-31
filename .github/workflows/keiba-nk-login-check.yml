@@ -1,0 +1,26 @@
+name: keiba-nk-login-check
+
+# netkeiba のログインが有料会員として効いているかを切り分ける。手で回す用。
+# ログにはタイトル・長さ・語の有無・クッキーの名前だけを出す（値は出さない）。
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+      - name: ログインを確かめる
+        env:
+          NETKEIBA_EMAIL: ${{ secrets.NETKEIBA_EMAIL }}
+          NETKEIBA_PASSWORD: ${{ secrets.NETKEIBA_PASSWORD }}
+        run: python -m keiba.cli -v nk-login-check

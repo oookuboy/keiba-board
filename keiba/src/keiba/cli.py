@@ -735,6 +735,45 @@ def cmd_eval_star(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_nk_login_check(args: argparse.Namespace) -> int:
+    """ログインが有料会員として効いているかを切り分ける。
+
+    出すのはページのタイトル・長さ・特定の語が出たか・クッキーの名前と
+    ドメインだけ（値は出さない。ログは公開される）。
+    """
+    from keiba.sources import netkeiba_auth as auth
+
+    fetcher = Fetcher(cache_dir=args.cache, use_cache=False)
+    try:
+        ok = auth.login(fetcher, required=True)
+    except auth.LoginError as exc:
+        print("ログイン失敗:", exc)
+        ok = False
+    print("login() の判定:", ok)
+    for c in fetcher.session.cookies:
+        print(f"cookie name={c.name} domain={c.domain} path={c.path} secure={c.secure}")
+    words = auth._PROBE_WORDS + ("プレミアムコース", "スーパープレミアム", "会員登録", "無料会員")
+    for url in (
+        auth.VERIFY_URL,
+        "https://www.netkeiba.com/",
+        "https://regist.netkeiba.com/account/?pid=my_account",
+        f"https://race.netkeiba.com/race/oikiri.html?race_id={args.race_id}",
+        f"https://race.netkeiba.com/race/comment.html?race_id={args.race_id}",
+    ):
+        try:
+            resp = fetcher.session.get(url, timeout=30)
+        except Exception as exc:  # noqa: BLE001
+            print(url.split("?")[0], "取得できない", type(exc).__name__)
+            continue
+        html = resp.text
+        hist = " -> ".join(f"{h.status_code}" for h in resp.history) or "-"
+        print(f"{url.split('?')[0]} status={resp.status_code} redirects={hist} "
+              f"final={resp.url.split('?')[0]} len={len(html)} title={auth._title(html)}")
+        print("   出た語:", [w for w in words if w in html])
+    print("ログインフォーム:", auth.inspect_login_form(fetcher))
+    return 0
+
+
 def cmd_nk_entries(args: argparse.Namespace) -> int:
     """netkeiba の確定前の出馬表（登録馬）から、馬名と馬IDを出す。
 
@@ -1847,6 +1886,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--valid-from", type=_date, default=date(2026, 3, 28))
     p.add_argument("--test-from", type=_date, default=date(2026, 6, 27))
     p.set_defaults(func=cmd_eval_star)
+
+    p = sub.add_parser("nk-login-check", help="netkeiba のログインが有料会員として効いているかを見る")
+    p.add_argument("--race-id", default="202605041111")
+    p.set_defaults(func=cmd_nk_login_check)
 
     p = sub.add_parser(
         "nk-entries", help="netkeiba の確定前の出馬表から馬名と馬IDを出す"
