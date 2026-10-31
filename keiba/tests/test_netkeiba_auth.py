@@ -78,6 +78,7 @@ def test_successful_login_switches_cache_namespace(monkeypatch) -> None:
     monkeypatch.setenv("NETKEIBA_EMAIL", "someone@example.com")
     monkeypatch.setenv("NETKEIBA_PASSWORD", "right")
     fetcher = FakeFetcher("<html>マイページ ログアウト</html>")
+    fetcher.session.cookies.set("nkauth", "x", domain=".netkeiba.com")
 
     assert login(fetcher) is True
     assert fetcher.cache_namespace == "auth"
@@ -290,3 +291,23 @@ def test_cache_namespace_changes_the_key() -> None:
     auth = Fetcher(use_cache=False, cache_namespace="auth")
     url = "https://db.netkeiba.com/?pid=horse_training&id=1"
     assert anon._cache_path(url, "GET", "") != auth._cache_path(url, "GET", "")
+
+
+def test_rejected_login_is_not_taken_for_success(monkeypatch) -> None:
+    """投稿がログイン画面のまま返り、クッキーも無いなら失敗。
+
+    「ログアウト」の語は未ログインのページにも出る。語だけで判定していたので、
+    2026-10-30〜31 はログインを弾かれているのに「ログインした」と出て、
+    無料会員向けのページを取り込んでいた（調教 304頭中40頭）。
+    """
+    monkeypatch.setenv("NETKEIBA_EMAIL", "someone@example.com")
+    monkeypatch.setenv("NETKEIBA_PASSWORD", "pw")
+
+    class Rejecting(FakeFetcher):
+        def fetch(self, url, *, method="GET", data=None, force=False):  # type: ignore[override]
+            if method == "POST":
+                return "<html><title>ログイン - netkeiba</title>パスワード</html>"
+            return self.verify_html
+
+    with pytest.raises(LoginError):
+        login(Rejecting("<html>ログアウト マイページ</html>"))

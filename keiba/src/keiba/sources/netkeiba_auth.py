@@ -156,7 +156,12 @@ def login(fetcher: Fetcher, *, required: bool = False) -> bool:
         fetcher.cache_namespace = ""
         raise LoginError(f"ログイン確認ページを取得できない: {exc}") from exc
 
-    if not any(m in page for m in LOGGED_IN_MARKERS):
+    # 「ログアウト」などの語は未ログインのページにも出る（ヘッダの切り替え用）。
+    # 語だけで判定すると、ログインを弾かれても「ログインした」と出ていた
+    # （2026-10-30〜31: 投稿の返りがログイン画面のまま・クッキー0個なのに成功扱い）。
+    # 投稿の返りがログイン画面そのものなら失敗、セッションのクッキーが無くても失敗。
+    rejected = _title(response).startswith("ログイン") or not len(fetcher.session.cookies)
+    if rejected or not any(m in page for m in LOGGED_IN_MARKERS):
         fetcher.cache_namespace = ""
         # 何が起きたかを、認証情報を出さずに分かる形で残す。
         # 当てずっぽうで直すより、手がかりを持って直すほうが早い。
