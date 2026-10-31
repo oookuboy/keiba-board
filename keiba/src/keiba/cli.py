@@ -743,6 +743,25 @@ def cmd_nk_login_check(args: argparse.Namespace) -> int:
     """
     from keiba.sources import netkeiba_auth as auth
 
+    import requests
+
+    creds = auth.credentials()
+    words = auth._PROBE_WORDS + ("プレミアムコース", "スーパープレミアム", "会員登録", "無料会員")
+    # 別の試し方: ログイン画面を先に開いてから、ブラウザと同じ見出しで投稿する
+    if creds:
+        sess = requests.Session()
+        sess.headers.update({"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36",
+                             "Accept-Language": "ja,en;q=0.8"})
+        g = sess.get(auth.LOGIN_PAGE_URL, timeout=30)
+        print("B: ログイン画面", g.status_code, auth._title(g.text), "cookies:", [c.name for c in sess.cookies])
+        r = sess.post(auth.LOGIN_URL, data={"pid": "login", "action": "auth", "rtn_url": auth.LOGIN_RETURN_URL,
+                                             "login_id": creds[0], "pswd": creds[1]},
+                      headers={"Referer": auth.LOGIN_PAGE_URL, "Origin": "https://regist.netkeiba.com"}, timeout=30)
+        print("B: 投稿", r.status_code, "redirects", [h.status_code for h in r.history], "final", r.url.split("?")[0],
+              "title", auth._title(r.text), "語", [w for w in words if w in r.text])
+        print("B: cookies:", [(c.name, c.domain) for c in sess.cookies])
+        o = sess.get(f"https://race.netkeiba.com/race/oikiri.html?race_id={args.race_id}", timeout=30)
+        print("B: 追い切りページ", len(o.text), "OikiriType2" in o.text, "日付の列" , "調教タイム" in o.text)
     fetcher = Fetcher(cache_dir=args.cache, use_cache=False)
     try:
         ok = auth.login(fetcher, required=True)
@@ -752,7 +771,6 @@ def cmd_nk_login_check(args: argparse.Namespace) -> int:
     print("login() の判定:", ok)
     for c in fetcher.session.cookies:
         print(f"cookie name={c.name} domain={c.domain} path={c.path} secure={c.secure}")
-    words = auth._PROBE_WORDS + ("プレミアムコース", "スーパープレミアム", "会員登録", "無料会員")
     for url in (
         auth.VERIFY_URL,
         "https://www.netkeiba.com/",
