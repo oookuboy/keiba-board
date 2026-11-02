@@ -260,3 +260,17 @@ def test_8頭以下の設定がある() -> None:
         (pathlib.Path(__file__).parents[1] / "config/weights.yml").read_text(encoding="utf-8")
     )
     assert cfg["betting"]["trifecta_field_max"] == 8
+
+
+def test_見送り条件は少額のボックス() -> None:
+    cfg = yaml.safe_load(
+        (pathlib.Path(__file__).parents[1] / "config/weights.yml").read_text(encoding="utf-8")
+    )
+    assert cfg["betting"]["skip_box"] == 4
+    field = [
+        ScoredHorse(umaban=i + 1, horse_id=str(i), horse_name=f"h{i}",
+                    score=80 - i * 5, style="先行", mark=m)
+        for i, m in enumerate(["◎", "○", "▲", "▲", "☆", None, None])
+    ]
+    tickets = betting.solid_box(field, cfg["betting"]["skip_box"], cfg["betting"]["unit"])
+    assert sum(t.amount for t in tickets) <= 500
