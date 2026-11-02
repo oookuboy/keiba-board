@@ -309,6 +309,16 @@ def predict_card(
     else:
         tickets = betting.build(horses, grade, weights)
 
+    # 見送りの条件に当たるレースも、少額で買う（利用者の指定 2026-11-02:
+    # 「500円内で買い目を出して」）。印上位4頭の三連複ボックス（4点・400円）。
+    skip_box = int(bcfg.get("skip_box", 0) or 0)
+    if skip_box and not unconfirmed and grade.grade == confidence.SKIP:
+        tickets = [
+            replace(t, rationale="見送り条件（印上位の三連複ボックス・少額）")
+            for t in betting.solid_box(horses, skip_box, bcfg["unit"])
+        ]
+        grade = replace(grade, reason=grade.reason + f"。少額（{len(tickets) * bcfg['unit']}円）で印上位{skip_box}頭のボックス")
+
     # 展開は全頭共通の判断なので、1頭ぶんの理由から取り出して見出しにする
     pace_note = next(
         (r for f in features for r in f.reasons if "想定" in r and "ペース" in r), ""
