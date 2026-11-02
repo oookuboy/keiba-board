@@ -165,6 +165,17 @@ tr.placed td{background:#121e16}
 .rv .rr .why{font-size:10px}
 .note{color:var(--dim);font-size:10px;line-height:1.8;margin-top:22px;
   border-top:1px solid var(--line);padding-top:13px}
+/* おじや予想（自動予想とは別枠。keiba/data/ojiya.json を読む） */
+#ojiya{margin-top:18px}
+#ojiya h2{font-size:12px;letter-spacing:.12em;color:var(--amber);margin:0 0 8px}
+.m-▲{color:#9aa0a6;border-color:#2c3038;background:#15181d}
+.ojiya-race{background:var(--frame);border:1px solid var(--line);border-radius:14px;
+  margin-bottom:10px;padding:11px 13px}
+.ojiya-race .l1{font-size:13px;font-weight:700}
+.ojiya-marks{margin-top:9px;display:grid;gap:5px}
+.ojiya-marks .row{display:flex;align-items:center;gap:8px;font-size:12px}
+.ojiya-cmt{font-size:11px;color:var(--dim);line-height:1.7;margin-top:9px}
+.ojiya-bets{font-size:12px;font-family:"SF Mono",Menlo,monospace;color:var(--amber);margin-top:7px}
 </style>
 </head>
 <body>
@@ -193,6 +204,7 @@ tr.placed td{background:#121e16}
     <button data-f="review">回顧（表）</button>
   </div>
   <div id="races"></div>
+  <section id="ojiya" hidden></section>
   <p class="note">
     ◎○△× はレース単位の自信度。能力評価の上位3頭がどれだけ人気薄に寄っているかで決まる。
     × は上位人気で堅く収まる形と判断したもので、買い目を出さない。
@@ -288,6 +300,37 @@ async function renderHealth(){
   box.textContent=`有料データが欠けている: ${bad.join(" / ")}。予想はこの状態で出ている。`;
 }
 
+/* ===== おじや予想（自動予想とは別枠の手動予想。データは keiba/data/ojiya.json、
+   自動予想のパイプラインとは無関係で、Actions は触らない） ===== */
+let OJIYA=null;
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function renderOjiya(date){
+  const box=document.getElementById("ojiya");
+  if(!box)return;
+  try{
+    if(!OJIYA) OJIYA=await (await fetch("keiba/data/ojiya.json",{cache:"no-cache"})).json();
+  }catch(e){ box.hidden=true; return; }
+  const day=(OJIYA.days||[]).find(d=>d.date===date);
+  if(!day||!day.races||!day.races.length){ box.hidden=true; box.innerHTML=""; return; }
+  let html=`<h2>おじや予想（自動予想とは別枠）</h2>`;
+  if(day.note) html+=`<p class="ojiya-cmt">${esc(day.note)}</p>`;
+  for(const r of day.races){
+    html+=`<div class="ojiya-race"><div class="l1">${esc(r.venue)} ${r.race_no}R ${esc(r.name||"")}`+
+      (r.grade?`<span class="grade">${esc(r.grade)}</span>`:"")+`</div><div class="ojiya-marks">`;
+    for(const m of (r.marks||[])){
+      html+=`<div class="row"><span class="mark m-${esc(m.mark)}">${esc(m.mark)}</span>`+
+        `<span class="umaban">${m.umaban??""}</span><span class="hname">${esc(m.name)}</span></div>`;
+    }
+    html+=`</div>`;
+    if(r.comment) html+=`<p class="ojiya-cmt">${esc(r.comment)}</p>`;
+    if(r.bets) html+=`<div class="ojiya-bets">${esc(r.bets)}</div>`;
+    if(r.result) html+=`<div class="result">${esc(r.result)}</div>`;
+    html+=`</div>`;
+  }
+  box.innerHTML=html;
+  box.hidden=false;
+}
+
 function renderTotals(){
   /* 回顧の済んだ日だけを数える。以前は returned が null の日（＝まだ結果を
      突き合わせていない日）を「投資あり・払戻0円」として足していたので、
@@ -334,6 +377,7 @@ async function load(date){
     .forEach(b=>b.classList.toggle("on",b.dataset.date===date));
   DAY=await (await fetch(`keiba/data/${date}.json`,{cache:"no-cache"})).json();
   renderSummary();
+  renderOjiya(date);
   FILTER==="review" ? renderReview() : renderRaces();
 }
 
