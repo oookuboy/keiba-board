@@ -6,10 +6,13 @@ name: keiba-retrain
 # モデルは学習した時点で凍結されるため。実際 2026-08-05 に学習したきり
 # 一度も更新されていなかった（どのワークフローにも train が無かった）。
 #
-# 頻度は月1。2週間ごとにしても増えるデータは +1.3%（週末1回で約940行 /
-# 総数14.8万行）で誤差にしかならず、再学習のたびに「うっかり悪いモデルへ
-# 差し替わる」リスクだけが増える。
-#
+# 頻度は開催日ごと。回顧（結果の取り込み）が終わるたびに keiba-weekend が
+# dispatch する。以前は月1にしていて、2026-11-21 の時点で 10/25 までしか
+# 学んでおらず、その後の192レースが物差しに入っていなかった（ユーザーの
+# 指摘）。月1の cron は dispatch が来なかったときの予備として残す。
+# 毎回の再学習では前のモデルが検証期間を見ているため同じ行での比較は
+# できない。代わりに train の --min-auc（下限）で壊れたモデルを止める。
+
 # 頻度より効くのは検証窓をずらすこと。固定のままだと時が経つほど
 # 「古いデータで検証している」状態になる。毎回、直近3か月を検証に回す。
 
@@ -33,11 +36,16 @@ on:
         type: choice
         options: [binary, lambdarank]
         default: binary
+      then_predict:
+        description: "終わったらこの日の予想を回す YYYY-MM-DD（空なら回さない）"
+        required: false
+        default: ""
 
 permissions:
   contents: write
   # 調教は artifact で持ち回っている。名前で最新を拾うのに API を引く。
-  actions: read
+  # write は終わったあとに予想を dispatch するため（末尾の step）。
+  actions: write
 
 concurrency:
   group: keiba-retrain
@@ -123,3 +131,15 @@ jobs:
             sleep $((i * 5))
           done
           exit 1
+
+      # 回顧のあとに dispatch されたときは、新しいモデルで翌日の予想を回す。
+      # 差し替えなかった（AUC 下限割れ）ときも予想は回す。予想が下見のまま
+      # 残るほうが害が大きい。
+      - name: 予想を続けて回す
+        if: always() && inputs.then_predict != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREDICT: ${{ inputs.then_predict }}
+        run: |
+          gh workflow run keiba-weekend.yml --ref "${{ github.ref_name }}" -f job=predict -f date="$PREDICT"
+          echo "→ $PREDICT の予想を dispatch した"

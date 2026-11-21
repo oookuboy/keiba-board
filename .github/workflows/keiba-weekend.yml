@@ -444,32 +444,55 @@ jobs:
       # 収集のあとは土曜の、回顧のあとは翌日の予想が**まだ暫定なら**、
       # その場で予想を dispatch する。concurrency で今の run の後ろに並ぶ。
       # 本予想が既に出ていれば何もしない（朝の予想を上書きしない）。
-      - name: 予想がまだ暫定なら続けて回す
+      #
+      # 走り終えた開催をモデルがまだ学んでいなければ、先に再学習を回し、
+      # 予想は再学習の最後に dispatch してもらう（新しいモデルで予想する）。
+      # 以前は再学習が月1で、2026-11-21 の時点で 10/25 までしか学んで
+      # いなかった（その後の192レースが物差しに入っていなかった）。
+      - name: 学び直し・予想がまだなら続けて回す
         if: success() && github.event_name == 'schedule' && (steps.plan.outputs.job == 'collect' || steps.plan.outputs.job == 'review')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "${{ steps.plan.outputs.job }}" = "collect" ]; then
             NEXT="${{ steps.plan.outputs.sat }}"
+            LAST=$(date -u -d "yesterday" +%F)
           else
             NEXT=$(date -u -d "${{ steps.plan.outputs.date }} +1 day" +%F)
+            LAST="${{ steps.plan.outputs.date }}"
           fi
-          if [ ! -f "keiba/raw/${NEXT%%-*}/$NEXT.jsonl.gz" ]; then
-            echo "$NEXT は開催なし"
-            exit 0
-          fi
-          STATE=$(python - "$NEXT" <<'PY'
-          import json, sys
-          try:
-              d = json.load(open(f"keiba/data/{sys.argv[1]}.json"))
-          except FileNotFoundError:
-              print("missing")
+          read -r STATE STALE <<< "$(python - "$NEXT" "$LAST" <<'PY'
+          import glob, json, os, sys
+          nxt, last = sys.argv[1], sys.argv[2]
+          if not os.path.exists(f"keiba/raw/{nxt[:4]}/{nxt}.jsonl.gz"):
+              state = "none"
           else:
-              print("provisional" if d.get("provisional") else "final")
-          PY
+              try:
+                  d = json.load(open(f"keiba/data/{nxt}.json"))
+              except FileNotFoundError:
+                  state = "missing"
+              else:
+                  state = "provisional" if d.get("provisional") else "final"
+          # 走り終えた最後の開催日（last 以前で raw のある日）
+          days = sorted(
+              os.path.basename(f)[:10]
+              for f in glob.glob("keiba/raw/*/*.jsonl.gz")
+              if os.path.basename(f)[:10] <= last
           )
-          echo "$NEXT の予想: $STATE"
-          if [ "$STATE" != "final" ]; then
-            gh workflow run keiba-weekend.yml --ref "${{ github.ref_name }}" -f job=predict -f date="$NEXT"
-            echo "→ $NEXT の予想を dispatch した"
+          through = json.load(open("keiba/config/model.json")).get("trained_through") or ""
+          stale = "yes" if days and through < days[-1] else "no"
+          print(state, stale)
+          PY
+          )"
+          echo "$NEXT の予想: $STATE ／ モデルが走り終えた開催を学んでいない: $STALE"
+          PREDICT=""
+          if [ "$STATE" = "provisional" ] || [ "$STATE" = "missing" ]; then
+            PREDICT="$NEXT"
+          fi
+          if [ "$STALE" = "yes" ]; then
+            gh workflow run keiba-retrain.yml --ref "${{ github.ref_name }}" -f then_predict="$PREDICT"
+            echo "→ 再学習を dispatch した（終わったら予想: ${PREDICT:-なし}）"
+          elif [ -n "$PREDICT" ]; then
+            gh workflow run keiba-weekend.yml --ref "${{ github.ref_name }}" -f job=predict -f date="$PREDICT"
+            echo "→ $PREDICT の予想を dispatch した"
           fi

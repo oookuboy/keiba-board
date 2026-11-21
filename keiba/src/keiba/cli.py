@@ -1734,6 +1734,15 @@ def cmd_train(args: argparse.Namespace) -> int:
                 "同じ行での比較は公平でないので飛ばす", previous_through, args.valid_from,
             )
             previous_booster = None
+            # 毎開催日の再学習では前のモデルが必ず検証期間を見ているので、
+            # 上の比較は常に飛ぶ。代わりに下限で止める（データ欠けなどで
+            # 壊れたモデルが黙って入るのを防ぐ）。実測は 0.76〜0.77。
+            if result.auc is not None and result.auc < args.min_auc and not args.force:
+                log.error(
+                    "検証 AUC %.5f が下限 %.5f を下回ったので差し替えない",
+                    result.auc, args.min_auc,
+                )
+                return 1
         if previous_booster is not None and not args.force:
             previous = ml.roc_auc(
                 valid[dataset.TARGET].to_numpy(),
@@ -2085,6 +2094,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--max-auc-drop", type=float, default=0.005,
         help="前回モデルからのAUC低下がこれを超えたら差し替えない（既定 0.005）",
+    )
+    p.add_argument(
+        "--min-auc", type=float, default=0.74,
+        help="前回モデルと比べられないとき、検証AUCがこれ未満なら差し替えない（既定 0.74）",
     )
     p.add_argument(
         "--objective", choices=["binary", "lambdarank"], default="binary",
