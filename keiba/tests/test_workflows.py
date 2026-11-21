@@ -338,7 +338,8 @@ def test_the_workout_artifact_chain_renews_itself() -> None:
         if "./.github/actions/workouts" not in text:
             continue
         permissions = yaml.safe_load(text).get("permissions") or {}
-        assert permissions.get("actions") == "read", f"{name}: actions:read が無い"
+        # write は read を含む（予想・再学習を dispatch するので write）
+        assert permissions.get("actions") in ("read", "write"), f"{name}: actions:read が無い"
 
 
 def test_training_and_prediction_see_the_same_workouts() -> None:
@@ -505,3 +506,25 @@ def test_開催の無い日は予想も回顧もせずに終わる() -> None:
         assert "!= 'review'" not in cond.group(1) or "!= 'none'" in cond.group(1), (
             f"開催の無い日にも走る手順がある: {step.splitlines()[0]}"
         )
+
+
+def test_race_days_retrain_then_predict():
+    """回顧のたびに再学習し、終わったら予想を回す（2026-11-21 ユーザー指摘）。
+
+    再学習が月1だったので、10/25 より後の192レースをモデルが学んでいなかった。
+    予想の cron が来ない週もあったので、予想も続けて dispatch する。
+    """
+    import yaml
+
+    weekend = yaml.safe_load((WORKFLOWS / "keiba-weekend.yml").read_text(encoding="utf-8"))
+    retrain_text = (WORKFLOWS / "keiba-retrain.yml").read_text(encoding="utf-8")
+    retrain = yaml.safe_load(retrain_text)
+    last = weekend["jobs"]["run"]["steps"][-1]
+    assert "review" in last["if"] and "collect" in last["if"]
+    assert "keiba-retrain.yml" in last["run"] and "then_predict" in last["run"]
+    assert "job=predict" in last["run"]
+    assert weekend["permissions"]["actions"] == "write"
+    assert "then_predict" in retrain[True]["workflow_dispatch"]["inputs"]
+    assert retrain["permissions"]["actions"] == "write"
+    step = retrain["jobs"]["retrain"]["steps"][-1]
+    assert step["if"].startswith("always()") and "keiba-weekend.yml" in step["run"]
