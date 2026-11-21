@@ -173,6 +173,16 @@ jobs:
               JOB=none
             fi
           fi
+          # 遅れて来た予想の cron が、発走後に予想を上書きしない。
+          # 2026-11-21 は 5:00 JST の予想 cron が7時間遅れて 12:15 JST に走り、
+          # レースの途中で印を作り直していた。本予想が出ていて、もう 9 時
+          # （JST）を過ぎていれば、定時の予想は何もしない。手で回したときは走る。
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$JOB" = "predict" ] \
+             && [ "$(TZ=Asia/Tokyo date +%H)" -ge 9 ] && [ -f "keiba/data/$DATE.json" ] \
+             && python -c "import json,sys; sys.exit(0 if not json.load(open('keiba/data/$DATE.json')).get('provisional') else 1)"; then
+            echo "$DATE は本予想済みで発走時刻を過ぎている。上書きしない"
+            JOB=none
+          fi
           echo "job=$JOB"   >> "$GITHUB_OUTPUT"
           echo "date=$DATE" >> "$GITHUB_OUTPUT"
           echo "→ $JOB / $DATE"
