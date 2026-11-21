@@ -57,7 +57,8 @@ on:
 permissions:
   contents: write
   # 調教は artifact で持ち回っている。名前で最新を拾うのに API を引く。
-  actions: read
+  # write は収集・回顧のあとに予想を続けて dispatch するため（末尾の step）。
+  actions: write
 
 concurrency:
   # 予想と回顧が同時に走ると raw/ と data/ の取り合いになる
@@ -434,4 +435,41 @@ jobs:
             git commit -m "chore(keiba): ${{ steps.plan.outputs.job }} ${{ steps.plan.outputs.date }}"
             git pull --rebase --autostash origin ${{ github.ref_name }}
             git push origin HEAD:${{ github.ref_name }}
+          fi
+
+      # 予想の定時実行は GitHub の cron の遅れで丸ごと来ないことがある。
+      # 2026-11-07 と 2026-11-21 は、金曜の収集が6〜7時間遅れて走ったあと
+      # 予想の cron（20:00 / 20:45 / 22:00 UTC）が1本も来ず、ボードが木曜の
+      # 下見（有料データ無し・調教評価は1割）のまま当日の朝になった。
+      # 収集のあとは土曜の、回顧のあとは翌日の予想が**まだ暫定なら**、
+      # その場で予想を dispatch する。concurrency で今の run の後ろに並ぶ。
+      # 本予想が既に出ていれば何もしない（朝の予想を上書きしない）。
+      - name: 予想がまだ暫定なら続けて回す
+        if: success() && github.event_name == 'schedule' && (steps.plan.outputs.job == 'collect' || steps.plan.outputs.job == 'review')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ steps.plan.outputs.job }}" = "collect" ]; then
+            NEXT="${{ steps.plan.outputs.sat }}"
+          else
+            NEXT=$(date -u -d "${{ steps.plan.outputs.date }} +1 day" +%F)
+          fi
+          if [ ! -f "keiba/raw/${NEXT%%-*}/$NEXT.jsonl.gz" ]; then
+            echo "$NEXT は開催なし"
+            exit 0
+          fi
+          STATE=$(python - "$NEXT" <<'PY'
+          import json, sys
+          try:
+              d = json.load(open(f"keiba/data/{sys.argv[1]}.json"))
+          except FileNotFoundError:
+              print("missing")
+          else:
+              print("provisional" if d.get("provisional") else "final")
+          PY
+          )
+          echo "$NEXT の予想: $STATE"
+          if [ "$STATE" != "final" ]; then
+            gh workflow run keiba-weekend.yml --ref "${{ github.ref_name }}" -f job=predict -f date="$NEXT"
+            echo "→ $NEXT の予想を dispatch した"
           fi
